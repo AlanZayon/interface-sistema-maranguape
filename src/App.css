@@ -1,0 +1,78 @@
+
+.custom-height {
+    height: 30px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+}
+
+.search-bar {
+    height: 30px;
+    gap: 5px;
+}
+
+.user-card {
+    padding: 10px;
+    font-size: 0.9rem;
+    background-color: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+    min-width: 250px;
+    position: relative; /* Define o contexto para o posicionamento absoluto */
+
+}
+.user-checkbox {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    z-index: 1; /* Garante que o checkbox fique acima de outros conteúdos do card */
+  }
+.user-card p {
+    margin-bottom: 5px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.action-btn i {
+    font-size: 0.8rem;
+}
+
+.extra-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.info-card {
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    width: 30%;
+}
+
+.financial-info {
+    border-left: 4px solid #4CAF50;
+}
+
+.personal-info {
+    border-left: 4px solid #2196F3;
+}
+
+.professional-info {
+    border-left: 4px solid #FF9800;
+}
+
+@media (max-width: 768px) {
+    .info-card {
+        width: 100%;
+    }
+
+    .user-card {
+        flex: 1 1 100%;
+    }
+}
