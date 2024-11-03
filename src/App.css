@@ -27,6 +27,20 @@
     right: -10px;
     z-index: 1; /* Garante que o checkbox fique acima de outros conteúdos do card */
   }
+  .user-checkbox .form-check-input{
+    border: 2px solid #007bff; /* Altera a cor da borda da checkbox */
+    outline: none; /* Remove o contorno padrão */
+    cursor: pointer; /* Muda o cursor ao passar sobre a checkbox */
+    width: 20px; /* Largura da checkbox */
+    height: 20px; /* Altura da checkbox */
+  }
+  .checkbox-container .form-check-input {
+    border: 2px solid #007bff; /* Altera a cor da borda da checkbox */
+    outline: none; /* Remove o contorno padrão */
+    cursor: pointer; /* Muda o cursor ao passar sobre a checkbox */
+    width: 20px; /* Largura da checkbox */
+    height: 20px; /* Altura da checkbox */
+  }
 .user-card p {
     margin-bottom: 5px;
 }

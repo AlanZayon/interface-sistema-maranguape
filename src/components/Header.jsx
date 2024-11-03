@@ -4,7 +4,7 @@ import { Button, Col, Form, InputGroup } from 'react-bootstrap';
 
 function Header({ handleShowFilter }) {
   return (
-    <header className="d-flex justify-content-between align-items-center bg-dark text-white p-3">
+    <header className="d-flex justify-content-between align-items-center bg-dark text-white p-3 header">
       <h1 style={{ fontSize: '1.2rem' }}>System Design</h1>
       <div className="d-flex">
         <InputGroup className="search-bar">

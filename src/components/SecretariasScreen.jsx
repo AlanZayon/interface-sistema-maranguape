@@ -10,7 +10,7 @@ function SecretariasScreen() {
     return (
         <Row className="mt-4">
             <Col md={4}>
-                <Link to="/secretarias/Saúde">
+                <Link to="/secretarias/Saúde" style={{ textDecoration: 'none' }}>
                     <Card className="text-center" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Secretaria de Saúde</Card.Title>
@@ -19,7 +19,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Educação">
+                <Link to="/secretarias/Educação" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Secretaria de Educação</Card.Title>
@@ -28,7 +28,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Secretaria de Infraestrutura</Card.Title>
@@ -37,7 +37,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Secretaria de Agricultura</Card.Title>
@@ -46,7 +46,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Secretaria de Meio Ambiente e Urbanização</Card.Title>
@@ -55,7 +55,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Secretaria de Finanças</Card.Title>
@@ -64,7 +64,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Gabinete do Prefeito</Card.Title>
@@ -73,7 +73,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>IPMM</Card.Title>
@@ -82,7 +82,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Hospital</Card.Title>
@@ -91,7 +91,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Secretaria de Esporte e Juventude</Card.Title>
@@ -100,7 +100,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>FITEC</Card.Title>
@@ -109,7 +109,7 @@ function SecretariasScreen() {
                 </Link>
             </Col>
             <Col md={4}>
-                <Link to="/secretarias/Transporte">
+                <Link to="/secretarias/Transporte" style={{ textDecoration: 'none' }}>
                     <Card className="text-center m-2" style={{ cursor: 'pointer' }}>
                         <Card.Body>
                             <Card.Title>Secretaria de Habitação</Card.Title>
