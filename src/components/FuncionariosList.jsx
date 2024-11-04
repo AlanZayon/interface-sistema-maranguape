@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Row, Col, Button, Modal, Form, DropdownButton, Dropdown, Collapse } from 'react-bootstrap';
+import { Row, Col, Button, Form, Collapse } from 'react-bootstrap';
 import { FaEdit, FaTrash, FaFile } from 'react-icons/fa'; // Ícones de edição e remoção
+import FilterModal from './FilterModal';
 
 
 function FuncionairosList({
@@ -372,61 +373,15 @@ function FuncionairosList({
         <Collapse in={expandedGroups[sector] || secretaria === "all"}>
             <div style={{ maxHeight: '540px', overflowY: 'auto' }}>
                 {/* Modal de Filtros */}
-                <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-                    <Modal.Header closeButton>
-                        <Modal.Title>Filtros</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        {/* Seção Natureza */}
-                        <h5>Natureza</h5>
-                        <Form.Group>
-                            {naturezas.map((natureza) => (
-                                <Form.Check
-                                className='checkbox-container'
-                                    key={natureza}
-                                    type="checkbox"
-                                    label={natureza}
-                                    name="natureza"
-                                    checked={activeFilters.natureza.includes(natureza)} // Verifica se está selecionado
-                                    onChange={() => toggleNatureza(natureza)} // Adiciona ou remove a natureza selecionada
-                                />
-                            ))}
-                        </Form.Group>
-
-                        {/* Seção Função com Dropdown de Pesquisa */}
-                        <h5>Função</h5>
-                        <DropdownButton
-                            id="dropdown-funcoes"
-                            title="Selecione Funções"
-                            variant="outline-primary"
-                            className="mb-3"
-                            autoClose="outside"
-                        >
-                            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                <Form.Control type="text" placeholder="Pesquisar função..." className="mx-3 my-2" />
-
-                                {todasFuncoes.map((funcao) => (
-                                    <Dropdown.Item
-                                        key={funcao}
-                                        onClick={() => toggleFuncao(funcao)}
-                                        active={activeFilters.funcao.includes(funcao)}
-                                        title={funcao} // Tooltip para mostrar o nome completo
-                                    >
-                                        {funcao.length > 25 ? `${funcao.substring(0, 25)}...` : funcao}
-                                    </Dropdown.Item>
-                                ))}
-                            </div>
-                        </DropdownButton>
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button variant="secondary" onClick={() => setShowModal(false)}>
-                            Fechar
-                        </Button>
-                        <Button variant="primary" onClick={() => setShowModal(false)}>
-                            Aplicar Filtros
-                        </Button>
-                    </Modal.Footer>
-                </Modal>
+                <FilterModal
+                    show={showModal}
+                    onHide={() => setShowModal(false)}
+                    activeFilters={activeFilters}
+                    naturezas={naturezas}
+                    todasFuncoes={todasFuncoes}
+                    toggleNatureza={toggleNatureza}
+                    toggleFuncao={toggleFuncao}
+                />
 
                 {/* Botões de Filtros, Editar, Apagar */}
                 <div className="d-flex justify-content-between my-3">
