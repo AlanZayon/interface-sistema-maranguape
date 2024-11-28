@@ -1,305 +1,211 @@
-import React, { useState } from 'react';
-import { Row, Col, Button, Form, Collapse } from 'react-bootstrap';
-import { FaEdit, FaTrash, FaFile } from 'react-icons/fa'; // Ícones de edição e remoção
+import React, { useState, useEffect, useMemo } from 'react';
+import { Row, Col, Button, Form, Modal, Container } from 'react-bootstrap';
+import { FaEdit, FaTrash, FaFile } from 'react-icons/fa';
+import axios from 'axios';
+import { useAuth } from './AuthContext'; // Importa o contexto
 import FilterModal from './FilterModal';
+import ObservationHistoryButton from './ObservationHistoryButton';
+import ObservationHistoryModal from './ObservationHistoryModal';
+import CoordEdit from './CoordEdit';
+import UserEdit from './userEdit';
+import { API_BASE_URL } from '../utils/apiConfig';
 
+
+const fetchSetoresData = async () => {
+    const response = await axios.get(`${API_BASE_URL}/api/setores/dados`);
+    return response.data;
+};
 
 function FuncionairosList({
-    sector,
-    expandedGroups,
-    secretaria
+    funcionarios,
+    coordenadoriaId,
+    setorPathId
 }) {
     const [showModal, setShowModal] = useState(false);
-    const [activeFilters, setActiveFilters] = useState({ natureza: [], funcao: [] });
+    const [showModalEdit, setShowModalEdit] = useState(false);
+    const [showModalSingleEdit, setShowModalSingleEdit] = useState(false);
+    const [activeFilters, setActiveFilters] = useState({
+        natureza: [],
+        funcao: [],
+        referencia: [],
+        salarioBruto: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
+        salarioLiquido: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
+        bairro: [],
+    });
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [selectAll, setSelectAll] = useState(false);
-    const [showSelectionControls, setShowSelectionControls] = useState(false);
+    const [showSelectionControlsDelete, setShowSelectionControlsDelete] = useState(false);
+    const [showSelectionControlsEdit, setShowSelectionControlsEdit] = useState(false);
     const [expandedCards, setExpandedCards] = useState([]);
+    const [observations, setObservations] = useState({});
+    const [showObservationModal, setShowObservationModal] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
+    const [naturezas, setNaturezas] = useState([]);
+    const [todasFuncoes, setTodasFuncoes] = useState([]);
+    const [todosBairros, setTodosBairros] = useState([]);
+    const [todasReferencias, setTodasReferencias] = useState([]);
+    const [funcionariosPath, setFuncionariosPath] = useState([]);
+    const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
+    const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
+    const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
+    const [newObservation, setNewObservation] = useState("");
+    const { role } = useAuth(); // Usar o contexto de autenticação
 
-    const userData = [
-        {
-            id: 'card-1',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Saúde',
-            funcao: 'Analista',
-            natureza: 'Permanente',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
+
+    const handleCloseModal = () => {
+        setShowModalEdit(false)
+    }
+    const handleCloseModalSingleEdit = () => {
+        setShowModalSingleEdit(false)
+    }
+    const buildLookupMap = (setores) => {
+        const map = new Map();
+
+        const addToMap = (setor) => {
+            map.set(setor._id, setor);
+            setor.subsetores.forEach(addToMap);
+            setor.coordenadorias.forEach(addToMap);
+        };
+
+        setores.forEach(addToMap);
+        return map;
+    };
+
+    function extrairFuncionariosDasCoordenadorias(funcionariosLookupMap) {
+
+        const setoresArray = Array.isArray(funcionariosLookupMap)
+            ? funcionariosLookupMap
+            : Array.from(funcionariosLookupMap.values());
+
+        return setoresArray.flatMap(setor => {
+            // Coletar funcionários diretamente das coordenadorias do setor
+            const funcionariosColetados = [];
+
+            if (setor.coordenadorias) {
+                setor.coordenadorias.forEach(coordenadoria => {
+                    if (coordenadoria.funcionarios) {
+                        funcionariosColetados.push(...coordenadoria.funcionarios);
+                    }
+                });
             }
-        },
-        {
-            id: 'card-2',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Saúde',
-            funcao: 'Professora',
-            natureza: 'Temporário',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
-        },
-        {
-            id: 'card-3',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Saúde',
-            funcao: 'Professora',
-            natureza: 'Permanente',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
-        },
-        {
-            id: 'card-4',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Saúde',
-            funcao: 'Analista',
-            natureza: 'Temporário',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
-        },
-        {
-            id: 'card-5',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Administração',
-            funcao: 'Analista',
-            natureza: 'Permanente',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
-        },
-        {
-            id: 'card-6',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Administração',
-            funcao: 'Analista',
-            natureza: 'Permanente',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
-        },
-        {
-            id: 'card-7',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Administração',
-            funcao: 'Analista',
-            natureza: 'Permanente',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
-        },
-        {
-            id: 'card-8',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Administração',
-            funcao: 'Analista',
-            natureza: 'Permanente',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
-        },
-        {
-            id: 'card-9',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Administração',
-            funcao: 'Analista',
-            natureza: 'Permanente',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
-        },
-        {
-            id: 'card-10',
-            codigo: '12345',
-            servidor: 'João da Silva',
-            secretaria: 'Administração',
-            funcao: 'Analista',
-            natureza: 'Permanente',
-            financeiro: {
-                bruto: 'R$ 10.000,00',
-                liquido: 'R$ 8.000,00',
-                banco: 'Banco XYZ',
-                agencia: '1234',
-                conta: '56789-0'
-            },
-            pessoal: {
-                endereco: 'Rua das Flores, 123',
-                telefone: '(11) 99999-9999',
-                cpf: '123.456.789-10',
-                dependentes: 2
-            },
-            profissional: {
-                cargo: 'Analista Sênior',
-                formacao: 'Administração',
-                setor: 'Recursos Humanos',
-                promocao: '01/01/2023'
-            }
+
+            return funcionariosColetados;
+        });
+    }
+
+
+    // Função de filtro para os funcionários com base nos filtros ativos
+    const applyFilters = (funcionarios) => {
+        return funcionarios.filter((funcionario) => {
+            const salarioBrutoMin = validateBounds(activeFilters.salarioBruto.min, Number.MIN_SAFE_INTEGER);
+            const salarioBrutoMax = validateBounds(activeFilters.salarioBruto.max, Number.MAX_SAFE_INTEGER);
+            const salarioLiquidoMin = validateBounds(activeFilters.salarioLiquido.min, Number.MIN_SAFE_INTEGER);
+            const salarioLiquidoMax = validateBounds(activeFilters.salarioLiquido.max, Number.MAX_SAFE_INTEGER);
+
+            return (
+                (activeFilters.natureza.length === 0 || activeFilters.natureza.includes(funcionario.natureza)) &&
+                (activeFilters.funcao.length === 0 || activeFilters.funcao.includes(funcionario.funcao)) &&
+                (activeFilters.referencia.length === 0 || activeFilters.referencia.includes(funcionario.referencia)) &&
+                (funcionario.salarioBruto >= salarioBrutoMin && funcionario.salarioBruto <= salarioBrutoMax) &&
+                (funcionario.salarioLiquido >= salarioLiquidoMin && funcionario.salarioLiquido <= salarioLiquidoMax) &&
+                (activeFilters.bairro.length === 0 || activeFilters.bairro.includes(funcionario.bairro)) &&
+                (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId)
+            );
+        });
+    };
+
+    useEffect(() => {
+        if (setorPathId) {
+            const fetchData = async () => {
+                try {
+                    const data = await fetchSetoresData();
+                    const lookupMap = buildLookupMap(data.setores);
+                    setSetoresLookupMap(lookupMap);
+                } catch (error) {
+                    console.error("Erro ao buscar os dados:");
+                }
+            };
+
+            fetchData();
+
         }
-    ];
 
-    const todasFuncoes = [
-        'TEC.EM PROC.DE AUTORIZACAO P/PROCEDIM.DE ALTA COMPLEXIDADE',
-        "GUARDA PATRIMONIAL ",
-        "PROFESSOR DE EDUCAÇÃO BÁSICA-EDUCAD",
-        'Analista',
-        'Professora',
-        // Adicione mais 30+ funções aqui
-    ];
+    }, [setorPathId]);
 
-    const naturezas = ['Efetivo', 'Temporário', 'Comissionado',];
+    useEffect(() => {
+        if (setorPathId && setoresLookupMap.size > 0) {
+            let funcionariosDasCoordenadorias = [];
 
+            if (setorPathId === 'mainscreen') {
+                funcionariosDasCoordenadorias = extrairFuncionariosDasCoordenadorias(setoresLookupMap);
+            } else if (setoresLookupMap.has(setorPathId)) {
+                const currentSetor = setoresLookupMap.get(setorPathId);
+                funcionariosDasCoordenadorias = (currentSetor.coordenadorias || [])
+                    .flatMap(coordenadoria => coordenadoria.funcionarios || []);
+            }
+
+            setFuncionariosPath(funcionariosDasCoordenadorias);
+        }
+    }, [setorPathId, setoresLookupMap]);
+
+
+    const processarFuncionarios = (dados) => {
+        const observacoesPorFuncionario = dados.reduce((acc, item) => {
+            acc[item._id] = item.observacoes || [];
+            return acc;
+        }, {});
+
+        const uniqueNaturezas = [...new Set(dados.map((item) => item.natureza))];
+        const uniqueFuncoes = [...new Set(dados.map((item) => item.funcao))];
+        const uniqueBairros = [...new Set(dados.map((item) => item.bairro))];
+        const uniqueReferencias = [...new Set(dados.map((item) => item.referencia))];
+
+        return {
+            observacoes: observacoesPorFuncionario,
+            naturezas: uniqueNaturezas,
+            funcoes: uniqueFuncoes,
+            bairros: uniqueBairros,
+            referencias: uniqueReferencias,
+        };
+    };
+
+    useEffect(() => {
+        const dados = funcionarios || funcionariosPath;
+
+        if (dados && dados.length > 0) {
+            const { observacoes, naturezas, funcoes, bairros, referencias } = processarFuncionarios(dados);
+
+            setNaturezas(naturezas);
+            setTodasFuncoes(funcoes);
+            setTodosBairros(bairros);
+            setTodasReferencias(referencias);
+            setObservations(observacoes);
+        }
+    }, [funcionarios, funcionariosPath]);
+
+    // Monitora mudanças em funcionariosPath e aplica filtros
+    useEffect(() => {
+        if (setorPathId) {
+            setFilteredFuncionarios(applyFilters(funcionariosPath));
+        } else {
+            setFilteredFuncionarios(applyFilters(funcionarios));
+        }
+    }, [setorPathId, funcionariosPath, funcionarios, activeFilters]);
+
+    const buscarFuncionario = (userId) => {
+        let funcionario = funcionarios.find(func => func._id === userId);
+        if (!funcionario) {
+            funcionario = funcionariosPath.find(func => func._id === userId);
+        }
+        return funcionario;
+    };
+
+    // Evento que é chamado quando o botão é clicado
+    const handleClick = (id) => {
+        const funcionario = buscarFuncionario(id);
+        setFuncionarioEncontrado(funcionario);  // Atualiza o estado com os dados encontrados
+        setShowModalSingleEdit(true);
+    };
 
     const toggleExpand = (cardId) => {
         if (expandedCards.includes(cardId)) {
@@ -328,22 +234,66 @@ function FuncionairosList({
         });
     };
 
-    // Filtrar funcionários pela secretaria e filtros ativos
-    const filteredFuncionarios = userData
-        .filter(user => secretaria === "all" || user.secretaria === secretaria) // Filtro por secretaria
-        .filter(user => {
-            if (activeFilters.natureza.length > 0 && !activeFilters.natureza.includes(user.natureza)) {
-                return false;
-            }
-            if (activeFilters.funcao.length > 0 && !activeFilters.funcao.includes(user.funcao)) {
-                return false;
-            }
-            return true;
+    const toggleBairro = (bairro) => {
+        setActiveFilters((prev) => {
+            const isSelected = prev.bairro.includes(bairro);
+            const newBairros = isSelected
+                ? prev.bairro.filter((item) => item !== bairro)
+                : [...prev.bairro, bairro];
+            return { ...prev, bairro: newBairros };
         });
+    };
+
+    const toggleReferencia = (referencia) => {
+        setActiveFilters((prev) => {
+            const isSelected = prev.referencia.includes(referencia);
+            const newReferencias = isSelected
+                ? prev.referencia.filter((item) => item !== referencia)
+                : [...prev.referencia, referencia];
+            return { ...prev, referencia: newReferencias };
+        });
+    };
+
+
+    const handleSalarioBrutoChange = (salarioBruto) => {
+        setActiveFilters((prev) => ({ ...prev, salarioBruto }));
+    };
+
+    const handleSalarioLiquidoChange = (salarioLiquido) => {
+        setActiveFilters((prev) => ({ ...prev, salarioLiquido }));
+    };
+
+    const validateBounds = (value, fallback) => {
+        return isFinite(value) ? value : fallback;
+    };
+
+
+    // const filteredFuncionarios = funcionarios.filter((funcionario) => {
+    //     const salarioBrutoMin = validateBounds(activeFilters.salarioBruto.min, Number.MIN_SAFE_INTEGER);
+    //     const salarioBrutoMax = validateBounds(activeFilters.salarioBruto.max, Number.MAX_SAFE_INTEGER);
+    //     const salarioLiquidoMin = validateBounds(activeFilters.salarioLiquido.min, Number.MIN_SAFE_INTEGER);
+    //     const salarioLiquidoMax = validateBounds(activeFilters.salarioLiquido.max, Number.MAX_SAFE_INTEGER);
+
+    //     return (
+    //         (activeFilters.natureza.length === 0 || activeFilters.natureza.includes(funcionario.natureza)) &&
+    //         (activeFilters.funcao.length === 0 || activeFilters.funcao.includes(funcionario.funcao)) &&
+    //         (activeFilters.referencia.length === 0 || activeFilters.referencia.includes(funcionario.referencia)) &&
+    //         (funcionario.salarioBruto >= salarioBrutoMin && funcionario.salarioBruto <= salarioBrutoMax) &&
+    //         (funcionario.salarioLiquido >= salarioLiquidoMin && funcionario.salarioLiquido <= salarioLiquidoMax) &&
+    //         (activeFilters.bairro.length === 0 || activeFilters.bairro.includes(funcionario.bairro)) &&
+    //         (funcionario.coordenadoria === coordenadoriaId)
+
+    //     );
+    // });
+
+    // const filteredFuncionarios = setorPathId
+    //     ? applyFilters(funcionariosPath)
+    //     : applyFilters(funcionarios);
+
 
     const handleSelectAll = () => {
         setSelectAll(!selectAll);
-        setSelectedUsers(!selectAll ? filteredFuncionarios.map(user => user.id) : []);
+        setSelectedUsers(!selectAll ? filteredFuncionarios.map(user => user._id) : []);
     };
 
     const handleUserSelect = (userId) => {
@@ -354,134 +304,343 @@ function FuncionairosList({
         );
     };
 
-    const handleDeleteSelected = () => {
-        const remainingUsers = userData.filter(user => !selectedUsers.includes(user.id));
-        console.log('Usuários restantes após exclusão:', remainingUsers);
-        setSelectedUsers([]);
-        setSelectAll(false);
-        setShowSelectionControls(false); // Esconde os controles após exclusão
+    const handleDeleteSelected = async (userId = null) => {
+
+        const idsToDelete = userId ? [userId] : selectedUsers;
+
+
+        if (idsToDelete.length === 0) {
+            alert('Nenhum usuário selecionado para deletar.');
+            return;
+        }
+
+        const userConfirmed = window.confirm('Tem certeza de que deseja apagar os usuários selecionados?');
+        if (!userConfirmed) {
+            return; // Sai da função se o usuário cancelar
+        }
+
+        try {
+            // Envia os IDs dos usuários selecionados para o backend
+            const response = await axios.delete(`${API_BASE_URL}/api/funcionarios/delete-users`, {
+                data: { userIds: idsToDelete },
+            });
+
+            if (response.status === 200) {
+                // Remove os usuários deletados da interface
+                const remainingUsers = filteredFuncionarios.filter(user => !idsToDelete.includes(user._id));
+                setFilteredFuncionarios(remainingUsers);
+                setSelectedUsers([]);
+                setSelectAll(false);
+                setShowSelectionControlsDelete(false); // Esconde os controles após exclusão
+                alert('Usuários deletados com sucesso!');
+            }
+        } catch (error) {
+            console.error('Erro ao deletar usuários:', error);
+            alert('Erro ao deletar usuários. Tente novamente.');
+        }
+
+
     };
 
-    const toggleSelectionControls = () => {
-        setShowSelectionControls(!showSelectionControls);
+
+    const toggleSelectionControlsDelete = () => {
+        setShowSelectionControlsDelete(!showSelectionControlsDelete);
+        setShowSelectionControlsEdit(false)
         setSelectedUsers([]); // Limpa qualquer seleção existente
         setSelectAll(false);   // Reseta a seleção global
     };
 
+    const toggleSelectionControlsEdit = () => {
+        setShowSelectionControlsEdit(!showSelectionControlsEdit);
+        setShowSelectionControlsDelete(false);
+        setSelectedUsers([]); // Limpa qualquer seleção existente
+        setSelectAll(false);   // Reseta a seleção global
+    };
+
+    const handleViewObservations = (userId) => {
+        setCurrentUserId(userId);
+        setShowObservationModal(true);
+    };
+
+    const handleAddObservation = (newObservation) => {
+        setObservations((prev) => ({
+            ...prev,
+            [currentUserId]: [...(prev[currentUserId] || []), newObservation]
+        }));
+    };
 
     return (
-        <Collapse in={expandedGroups[sector] || secretaria === "all"}>
-            <div style={{ maxHeight: '540px', overflowY: 'auto' }}>
-                {/* Modal de Filtros */}
-                <FilterModal
-                    show={showModal}
-                    onHide={() => setShowModal(false)}
-                    activeFilters={activeFilters}
-                    naturezas={naturezas}
-                    todasFuncoes={todasFuncoes}
-                    toggleNatureza={toggleNatureza}
-                    toggleFuncao={toggleFuncao}
-                />
+        <Container style={{ maxHeight: '540px', overflowY: 'auto' }}>
+            {/* Modal de Filtros */}
+            <FilterModal
+                show={showModal}
+                onHide={() => setShowModal(false)}
+                activeFilters={activeFilters}
+                naturezas={naturezas}
+                todasFuncoes={todasFuncoes}
+                todosBairros={todosBairros}
+                todasReferencias={todasReferencias}
+                toggleNatureza={toggleNatureza}
+                toggleFuncao={toggleFuncao}
+                toggleBairro={toggleBairro}
+                toggleReferencia={toggleReferencia}
+                handleSalarioBrutoChange={handleSalarioBrutoChange}
+                handleSalarioLiquidoChange={handleSalarioLiquidoChange}
+            />
 
-                {/* Botões de Filtros, Editar, Apagar */}
-                <div className="d-flex justify-content-between my-3">
-                    <div>
+
+            {/* Botões de Filtros, Editar, Apagar */}
+            <div className="d-flex justify-content-between mx-3">
+
+                {role === "admin" ? (
+                    <div className="position-sticky m-2">
                         <Button variant="primary" onClick={() => setShowModal(true)} className="m-2">
-                            <i className="fas fa-filter"></i> Abrir Filtros
+                            <i className="fas fa-filter"></i>
                         </Button>
-
-                        <Button variant="outline-secondary" className="m-2">
+                        <Button variant={showSelectionControlsEdit ? "secondary" : "outline-secondary"}
+                            onClick={toggleSelectionControlsEdit}
+                            className={showSelectionControlsEdit
+                                ? "secondary m-1"
+                                : showSelectionControlsDelete
+                                    ? "d-none"
+                                    : "m-1"}>
                             <FaEdit /> {/* Ícone de Editar */}
                         </Button>
 
-                        <Button variant={showSelectionControls ? "danger" : "outline-danger"}
-                            onClick={toggleSelectionControls}
-                            className={showSelectionControls ? "active" : ""}>
+                        <Button variant={showSelectionControlsDelete ? "danger" : "outline-danger"}
+                            onClick={toggleSelectionControlsDelete}
+                            className={showSelectionControlsDelete
+                                ? "active m-1"
+                                : showSelectionControlsEdit
+                                    ? "d-none"
+                                    : "m-1"}>
                             <FaTrash /> {/* Ícone de Apagar */}
                         </Button>
 
-                        <Button variant="outline-warning" className="m-2">
-                            <FaFile /> {/* Ícone de Editar */}
+                        {/* <Button variant="outline-warning" className="m-1">
+                                          <FaFile /> 
+                                      </Button> */}
+                    </div>
+                ) : (
+                    <div className="position-sticky m-2">
+                        <Button variant="primary" onClick={() => setShowModal(true)} className="m-2">
+                            <i className="fas fa-filter"></i>
                         </Button>
                     </div>
+                )}
 
-                    {/* Checkbox Global e Botão "Apagar Selecionados" */}
-                    {showSelectionControls && (
-                        <div className="d-flex align-items-center">
-                            <Form.Check
-                                type="checkbox"
-                                label="Selecionar Todos"
-                                checked={selectAll}
-                                onChange={handleSelectAll}
-                                className="me-2 checkbox-container"
-                            />
-                            <Button className='m-2' variant="danger" onClick={handleDeleteSelected} disabled={selectedUsers.length === 0}>
-                                Apagar Selecionados
-                            </Button>
-                        </div>
-                    )}
-                </div>
-                <Row className="m-3">
-                    {filteredFuncionarios.map(user => (
-                        <Col key={user.id} md={expandedCards.includes(user.id) ? 12 : 3} className="mb-3">
-                            <div className={`user-card ${expandedCards.includes(user.id) ? 'expanded' : ''}`}>
-                                <div className="card-header d-flex justify-content-between align-items-center">
-                                    {showSelectionControls && (
-                                        <Form.Check
-                                            type="checkbox"
-                                            checked={selectedUsers.includes(user.id)}
-                                            onChange={() => handleUserSelect(user.id)}
-                                            className="user-checkbox"
-                                        />
-                                    )}
-                                    <p><strong>Cód. Servidor:</strong> {user.codigo}</p>
-                                    <div className="action-buttons d-flex">
-                                        <Button variant="outline-dark" className="action-btn mx-1"><i className="fas fa-edit"></i></Button>
-                                        <Button variant="outline-dark" className="action-btn mx-1"><i className="fas fa-trash"></i></Button>
-                                        <Button variant="outline-dark" className="action-btn mx-1" onClick={() => toggleExpand(user.id)}>
-                                            <i className={`fas fa-angle-${expandedCards.includes(user.id) ? 'left' : 'right'}`}></i>
-                                        </Button>
-                                    </div>
-                                </div>
 
-                                <p><strong>Servidor:</strong> {user.servidor}</p>
-                                <p><strong>Secretaria:</strong> {user.secretaria}</p>
-                                <p><strong>Função:</strong> {user.funcao}</p>
-                                <p><strong>Natureza:</strong> {user.natureza}</p>
 
-                                {expandedCards.includes(user.id) && (
-                                    <div className="extra-info ">
-                                        <div className="info-card financial-info">
-                                            <h3>Informações Financeiras</h3>
-                                            <p><strong>Sal. Bruto:</strong> {user.financeiro.bruto}</p>
-                                            <p><strong>Sal. Líquido:</strong> {user.financeiro.liquido}</p>
-                                            <p><strong>Banco:</strong> {user.financeiro.banco}</p>
-                                            <p><strong>Agência:</strong> {user.financeiro.agencia}</p>
-                                            <p><strong>Conta:</strong> {user.financeiro.conta}</p>
-                                        </div>
-                                        <div className="info-card personal-info">
-                                            <h3>Informações Pessoais</h3>
-                                            <p><strong>Endereço:</strong> {user.pessoal.endereco}</p>
-                                            <p><strong>Telefone:</strong> {user.pessoal.telefone}</p>
-                                            <p><strong>C.P.F.:</strong> {user.pessoal.cpf}</p>
-                                            <p><strong>Dependentes:</strong> {user.pessoal.dependentes}</p>
-                                        </div>
-                                        <div className="info-card professional-info">
-                                            <h3>Informações Profissionais</h3>
-                                            <p><strong>Cargo:</strong> {user.profissional.cargo}</p>
-                                            <p><strong>Formação:</strong> {user.profissional.formacao}</p>
-                                            <p><strong>Setor:</strong> {user.profissional.setor}</p>
-                                            <p><strong>Última Promoção:</strong> {user.profissional.promocao}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </Col>
-                    ))}
-                </Row>
+
+                {/* Checkbox Global e Botão "Apagar Selecionados" */}
+                {(showSelectionControlsDelete && !showSelectionControlsEdit) && (
+                    <div className="d-flex align-items-center">
+                        <Form.Check
+                            type="checkbox"
+                            label="Todos"
+                            checked={selectAll}
+                            onChange={handleSelectAll}
+                            className="me-2 checkbox-container"
+                        />
+                        <Button className='m-1' variant="danger" onClick={() => handleDeleteSelected(null)} disabled={selectedUsers.length === 0}>
+                            Apagar
+                        </Button>
+                    </div>
+                )}
+
+                {/* Checkbox Global e Botão "Apagar Selecionados" */}
+                {(showSelectionControlsEdit && !showSelectionControlsDelete) && (
+                    <div className="d-flex align-items-center">
+                        <Form.Check
+                            type="checkbox"
+                            label="Todos"
+                            checked={selectAll}
+                            onChange={handleSelectAll}
+                            className="me-2 checkbox-container"
+                        />
+                        <Button className='m-1' variant="secondary" onClick={() => setShowModalEdit(true)} disabled={selectedUsers.length === 0}>
+                            Editar
+                        </Button>
+                    </div>
+                )}
+
+
+
+                <Modal show={showModalEdit} onHide={() => setShowModalEdit(false)}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Editar Usuarios</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+
+                        <CoordEdit
+                            usuariosIds={selectedUsers}
+                            handleCloseModal={handleCloseModal}
+                            setShowSelectionControlsEdit={setShowSelectionControlsEdit}
+                        />
+
+
+                    </Modal.Body>
+                </Modal>
+
+                <Modal show={showModalSingleEdit} onHide={() => setShowModalSingleEdit(false)}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Editar Usuarios</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+
+                        <UserEdit
+                            funcionario={funcionarioEncontrado}
+                            handleCloseModal={handleCloseModalSingleEdit}
+                        />
+
+
+                    </Modal.Body>
+                </Modal>
+
+
 
             </div>
-        </Collapse>
+            <Row className="m-3">
+                {filteredFuncionarios.map(user => (
+                    <Col key={user._id} md={expandedCards.includes(user._id) ? 12 : ''} >
+                        <div className={`user-card mb-2`}>
+
+                            {/* Header do card */}
+                            <div className="card-header d-flex justify-content-between align-items-center">
+                                {(showSelectionControlsDelete || showSelectionControlsEdit) && (
+                                    <Form.Check
+                                        type="checkbox"
+                                        checked={selectedUsers.includes(user._id)}
+                                        onChange={() => handleUserSelect(user._id)}
+                                        className="user-checkbox"
+                                    />
+                                )}
+                                <p><strong>{user.nome}</strong></p>
+                            </div>
+
+                            {/* Corpo do Card */}
+                            <div className=" d-flex">
+                                {/* Foto do usuário à esquerda */}
+                                <div className="user-photo-container">
+                                    <img src={user.fotoUrl || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt="Foto do Funcionário" className="user-photo" />
+                                    {/* Botões abaixo da foto */}
+                                    <div className="action-buttons d-flex mt-3">
+                                        {role === 'admin' ? (
+                                            <>
+                                                <Button onClick={() => handleClick(user._id)} variant="outline-dark" className="action-btn mx-1">
+                                                    <i className="fas fa-edit"></i>
+                                                </Button>
+                                                <Button
+                                                    onClick={() => handleDeleteSelected(user._id)}
+                                                    variant="outline-dark"
+                                                    className="action-btn mx-1">
+                                                    <i className="fas fa-trash"></i>
+                                                </Button>
+                                            </>
+                                        ) : null}
+                                        <Button
+                                            variant="outline-dark"
+                                            className="action-btn mx-1"
+                                            onClick={() => toggleExpand(user._id)}
+                                        >
+                                            <i
+                                                className={`fas fa-angle-${expandedCards.includes(user._id) ? 'left' : 'right'}`}
+                                            ></i>
+                                        </Button>
+                                    </div>
+
+                                </div>
+
+                                {/* Informações do usuário à direita */}
+                                <div className="user-info-container">
+                                    <p><strong>Secretaria:</strong> {user.secretaria}</p>
+                                    <p><strong>Função:</strong> {user.funcao}</p>
+                                    <p><strong>Natureza:</strong> {user.natureza}</p>
+                                    <p><strong>Referência:</strong> {user.referencia}</p>
+
+
+                                </div>
+                            </div>
+
+                            <ObservationHistoryModal
+                                show={showObservationModal}
+                                onHide={() => setShowObservationModal(false)}
+                                onAddObservation={handleAddObservation}
+                                observacoes={observations[currentUserId] || []}
+                            />
+
+
+                            {/* Botões Horizontais Acima das Informações Adicionais */}
+                            {expandedCards.includes(user._id) && (
+                                <div className="button-group d-flex justify-content-center my-5">
+                                    <ObservationHistoryButton onClick={() => handleViewObservations(user._id)} />
+                                    {user.arquivo && (
+
+                                        <Button
+                                            variant="outline-success"
+                                            className="action-btn m-1 w-25"
+                                            onClick={() => window.open(user.arquivoUrl, '_blank')} download
+                                        >
+                                            <i className="fas fa-download"></i> Baixar Arquivo
+                                        </Button>
+
+                                    )}
+                                </div>
+
+                            )}
+
+                            {/* Se o card estiver expandido, exibe mais informações */}
+                            {expandedCards.includes(user._id) && (
+                                <Row className="extra-info professional-info">
+                                    <Col className='d-flex flex-wrap justify-content-between '>
+                                        {/* Redes Sociais */}
+                                        <div className="info-card social-info my-2">
+                                            <h3>Redes Sociais</h3>
+                                            {Array.isArray(user.redesSociais) && user.redesSociais.length > 0 ? (
+                                                <div className="social-links d-flex flex-column">
+                                                    {user.redesSociais.map((social, index) => (
+                                                        <a
+                                                            key={index}
+                                                            href={social.link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="social-link"
+                                                        >
+                                                            {social.nome}
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p>Nenhuma rede social disponível.</p>
+                                            )}
+                                        </div>
+
+
+                                        {/* Informações Financeiras */}
+                                        <div className="info-card financial-info my-2">
+                                            <h3>Informações Financeiras</h3>
+                                            <p><strong>Sal. Bruto:</strong> {user.salarioBruto}</p>
+                                            <p><strong>Sal. Líquido:</strong> {user.salarioLiquido}</p>
+                                        </div>
+
+                                        {/* Informações Pessoais */}
+                                        <div className="info-card personal-info my-2">
+                                            <h3>Informações Pessoais</h3>
+                                            <p><strong>Endereço:</strong> {user.endereco}</p>
+                                            <p><strong>Bairro:</strong> {user.bairro}</p>
+                                            <p><strong>Telefone:</strong> {user.telefone}</p>
+                                        </div>
+
+                                    </Col>
+                                </Row>
+                            )}
+                        </div>
+                    </Col>
+                ))}
+            </Row>
+
+        </Container>
+
     );
 }
 

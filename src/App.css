@@ -1,4 +1,4 @@
-
+/* header*/
 .custom-height {
     height: 30px;
     padding: 4px 8px;
@@ -10,6 +10,153 @@
     gap: 5px;
 }
 
+/* mainscreen/setorscreen */
+.custom-card {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.custom-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1050; /* Adiciona z-index para garantir que o card fique acima */
+}
+
+.options-menu {
+    position: relative;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.menu-btn:hover {
+    color: #007bff;
+}
+/* Esconder a seta do Dropdown.Toggle */
+.dropdown-toggle::after {
+    display: none;
+  }
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 25px;
+    right: 0;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.dropdown-menu .dropdown-item-cards {
+    padding: 10px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #333;
+    background-color: transparent;
+    border: none;
+    text-align: left;
+}
+
+.dropdown-menu .dropdown-item-cards:hover {
+    background-color: #f0f0f0;
+}
+
+.dropdown-menu .text-danger {
+    color: #dc3545;
+}
+
+.options-menu:hover .dropdown-menu {
+    display: block;
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.create-sector-card {
+    border: 2px dashed #6c757d;
+    border-radius: 10px;
+    color: #6c757d;
+    transition: all 0.3s ease-in-out;
+    background-color: #f8f9fa;
+}
+
+.create-sector-card:hover {
+    background-color: #e9ecef;
+    border-color: #007bff;
+    color: #007bff;
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.icon-container {
+    font-size: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.custom-outline-button {
+    border-color: #007bff;
+    color: #007bff;
+    background-color: transparent;
+    padding: 12px 25px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+}
+
+.custom-outline-button:hover {
+    background-color: #007bff;
+    color: white;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.custom-outline-button:active {
+    transform: translateY(1px);
+}
+
+.coord-register-btn {
+    background-color: #fd7e14;
+    border: none;
+    border-radius: 50%;
+    padding: 12px;
+    font-size: 1.5rem;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    cursor: pointer;
+}
+
+.coord-register-btn:hover {
+    background-color: #e86a11;
+}
+
+.coord-register-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(253, 126, 20, 0.5);
+}
+
+
+
 .user-card {
     padding: 10px;
     font-size: 0.9rem;
@@ -17,30 +164,60 @@
     border-radius: 6px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     transition: all 0.3s ease;
-    min-width: 250px;
-    position: relative; /* Define o contexto para o posicionamento absoluto */
+    min-width: 330px;
+    min-height: 210px;
+    position: relative;
+}
+
+.user-photo-container {
+    width: 120px;
+    height: 120px;
+    margin-right: 20px;
 
 }
+
+.user-photo {
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+}
+
+
 .user-checkbox {
     position: absolute;
     top: -10px;
     right: -10px;
-    z-index: 1; /* Garante que o checkbox fique acima de outros conteúdos do card */
-  }
-  .user-checkbox .form-check-input{
-    border: 2px solid #007bff; /* Altera a cor da borda da checkbox */
-    outline: none; /* Remove o contorno padrão */
-    cursor: pointer; /* Muda o cursor ao passar sobre a checkbox */
-    width: 20px; /* Largura da checkbox */
-    height: 20px; /* Altura da checkbox */
-  }
-  .checkbox-container .form-check-input {
-    border: 2px solid #007bff; /* Altera a cor da borda da checkbox */
-    outline: none; /* Remove o contorno padrão */
-    cursor: pointer; /* Muda o cursor ao passar sobre a checkbox */
-    width: 20px; /* Largura da checkbox */
-    height: 20px; /* Altura da checkbox */
-  }
+    z-index: 1;
+    /* Garante que o checkbox fique acima de outros conteúdos do card */
+}
+
+.user-checkbox .form-check-input {
+    border: 2px solid #007bff;
+    /* Altera a cor da borda da checkbox */
+    outline: none;
+    /* Remove o contorno padrão */
+    cursor: pointer;
+    /* Muda o cursor ao passar sobre a checkbox */
+    width: 20px;
+    /* Largura da checkbox */
+    height: 20px;
+    /* Altura da checkbox */
+}
+
+.checkbox-container .form-check-input {
+    border: 2px solid #007bff;
+    /* Altera a cor da borda da checkbox */
+    outline: none;
+    /* Remove o contorno padrão */
+    cursor: pointer;
+    /* Muda o cursor ao passar sobre a checkbox */
+    width: 20px;
+    /* Largura da checkbox */
+    height: 20px;
+    /* Altura da checkbox */
+}
+
 .user-card p {
     margin-bottom: 5px;
 }
@@ -77,16 +254,12 @@
     border-left: 4px solid #2196F3;
 }
 
-.professional-info {
+.social-info {
     border-left: 4px solid #FF9800;
 }
-
 @media (max-width: 768px) {
     .info-card {
-        width: 100%;
-    }
-
-    .user-card {
         flex: 1 1 100%;
-    }
+        }
+
 }
