@@ -265,7 +265,7 @@ function Step1Form({
                     </Form.Group>
                 </Col>
 
-                {/* <Col md={6}>
+                <Col md={6}>
                     <Form.Group controlId="formSecretaria">
                         <Form.Label>Secretaria</Form.Label>
                         <Form.Control
@@ -276,8 +276,11 @@ function Step1Form({
                             isInvalid={!!errors.secretaria}
                         />
                     </Form.Group>
-                </Col> */}
-                             <Col md={6}>
+                </Col>
+            </Row>
+
+            <Row>
+                <Col md={6}>
                     <Form.Group controlId="formFuncao">
                         <Form.Label>Função</Form.Label>
                         <Form.Control
@@ -289,10 +292,6 @@ function Step1Form({
                         />
                     </Form.Group>
                 </Col>
-            </Row>
-
-            <Row>
-   
 
                 <Col md={6}>
                     <Form.Group controlId="formNatureza">
@@ -306,7 +305,9 @@ function Step1Form({
                         />
                     </Form.Group>
                 </Col>
+            </Row>
 
+            <Row>
                 <Col md={6}>
                     <Form.Group controlId="formReferência">
                         <Form.Label>Referência</Form.Label>
@@ -332,7 +333,6 @@ function Step1Form({
                     </Form.Group>
                 </Col>
             </Row>
-
 
             {/* Redes Sociais */}
             <Row>
