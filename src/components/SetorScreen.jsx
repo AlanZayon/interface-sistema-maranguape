@@ -266,7 +266,7 @@ function SetorScreen() {
             <FaChevronLeft size={20} />
           </Button>
         </Col>
-        Setor: {setoresLookupMap.has(currentSetorId)
+        {setoresLookupMap.has(currentSetorId)
           ?
           setoresLookupMap.get(currentSetorId).nome
           :
@@ -390,13 +390,13 @@ function SetorScreen() {
 
       {/* Exibição de coordenadorias com collapses */}
       <Container className="mt-4">
-        <h4>Coordenadorias</h4>
+        <h4>Cargo</h4>
         <Button
           variant="outline-primary"
           className="m-2 custom-outline-button"
           onClick={() => setShowCoordModal(true)}
         >
-          Criar Coordenadoria
+          Criar Cargo
         </Button>
 
         <Button
@@ -404,7 +404,7 @@ function SetorScreen() {
           variant="outline-primary"
           className="m-2 custom-outline-button"
         >
-          Editar Coordenadoria
+          Editar Cargo
         </Button>
 
         {Array.isArray(coordenadorias) && coordenadorias.map((coord, index) => (
@@ -464,12 +464,12 @@ function SetorScreen() {
       {/* Modal para criar nova coordenadoria */}
       <Modal show={showCoordModal} onHide={() => setShowCoordModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>Criar Nova Coordenadoria</Modal.Title>
+          <Modal.Title>Criar Novo Cargo</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
             <Form.Group controlId="formCoordName">
-              <Form.Label>Nome da Coordenadoria</Form.Label>
+              <Form.Label>Nome do Cargo</Form.Label>
               <Form.Control
                 type="text"
                 value={newCoordName}
