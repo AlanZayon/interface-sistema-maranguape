@@ -390,7 +390,7 @@ function SetorScreen() {
 
       {/* Exibição de coordenadorias com collapses */}
       <Container className="mt-4">
-        <h4>Cargo</h4>
+        <h4>Cargo
         <Button
           variant="outline-primary"
           className="m-2 custom-outline-button"
@@ -406,6 +406,8 @@ function SetorScreen() {
         >
           Editar Cargo
         </Button>
+        </h4>
+
 
         {Array.isArray(coordenadorias) && coordenadorias.map((coord, index) => (
           <Card key={index} className="m-3">
