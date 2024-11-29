@@ -5,6 +5,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FaAngleDown, FaAngleUp, FaChevronLeft } from 'react-icons/fa';
 import axios from 'axios';
+import { useAuth } from './AuthContext'; // Importa o contexto
 import Step1Form from './Step1Form';
 import FuncionariosList from './FuncionariosList';
 import ObservationHistoryButton from './ObservationHistoryButton';
@@ -50,9 +51,10 @@ function SetorScreen() {
   const [newCoordName, setNewCoordName] = useState('');
   const [openCoord, setOpenCoord] = useState({});
   const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
-  const [funcionarios, setFuncionarios] = useState([])
+  // const [funcionarios, setFuncionarios] = useState([])
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { funcionarios, setFuncionarios } = useAuth(); // Usar o contexto de autenticação
 
 
   // Obtém o nome do último segmento da URL

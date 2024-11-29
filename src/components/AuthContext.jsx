@@ -10,6 +10,10 @@ export const useAuth = () => useContext(AuthContext);
 
 // Provedor de autenticação
 export const AuthProvider = ({ children }) => {
+
+    const [funcionariosPath, setFuncionariosPath] = useState([]);
+    const [funcionarios, setFuncionarios] = useState([])
+
     // Tentando obter o estado de autenticação do localStorage
     const storedAuth = sessionStorage.getItem('isAuthenticated');
     const storedUsername = sessionStorage.getItem('username');
@@ -20,11 +24,18 @@ export const AuthProvider = ({ children }) => {
     const [username, setUsername] = useState(storedUsername || '');
     const [role, setRole] = useState(storedRole || '');
 
+    const addFuncionarios = (newUser) => {
+        setFuncionarios((prevUsers) => [...prevUsers, newUser]);
+    };
+    const addFuncionariosPath = (newUser) => {
+        setFuncionariosPath((prevUsers) => [...prevUsers, newUser]);
+    };
+
 
     // Função para verificar se o usuário está autenticado
     const checkAuthentication = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/usuarios/verify`, { withCredentials: true }); 
+            const response = await axios.get(`${API_BASE_URL}/api/usuarios/verify`, { withCredentials: true });
             if (response.data.authenticated) {
                 setIsAuthenticated(true);
                 setUsername(response.data.username);
@@ -78,7 +89,19 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, username, login, logout, role }}>
+        <AuthContext.Provider value={{
+            isAuthenticated,
+            username,
+            login,
+            logout,
+            role,
+            funcionarios,
+            funcionariosPath,
+            setFuncionarios,
+            setFuncionariosPath,
+            addFuncionarios,
+            addFuncionariosPath
+        }}>
             {children}
         </AuthContext.Provider>
     );

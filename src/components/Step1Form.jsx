@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Row, Col, Form, Button, Modal } from 'react-bootstrap';
 import { FaUserCircle } from 'react-icons/fa';
 import { API_BASE_URL } from '../utils/apiConfig';
+import { useAuth } from './AuthContext'; // Importa o contexto
 
 const fetchSetoresData = async () => {
     const response = await axios.get(`${API_BASE_URL}/api/referencias/referencias-dados`);
@@ -18,7 +19,7 @@ function Step1Form({
     setNewUser,
     ObservationHistoryButton,
     ObservationHistoryModal,
-    handleCloseModal
+    handleCloseModal,
 
 }) {
 
@@ -29,6 +30,7 @@ function Step1Form({
     const [previewImage, setPreviewImage] = useState(null);
     const [fileName, setFileName] = useState("");
     const [errors, setErrors] = useState({}); // Estado para armazenar erros de validação
+    const { addFuncionarios } = useAuth(); // Usar o contexto de autenticação
 
     // Regenera a pré-visualização ao montar ou ao mudar `newUser.foto`
     useEffect(() => {
@@ -162,8 +164,9 @@ function Step1Form({
             });
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries('funcionarios');
+            addFuncionarios(data)
             handleCloseModal()
             alert('cadatrado')
         },

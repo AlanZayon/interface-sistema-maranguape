@@ -17,7 +17,6 @@ const fetchSetoresData = async () => {
 };
 
 function FuncionairosList({
-    funcionarios,
     coordenadoriaId,
     setorPathId
 }) {
@@ -44,12 +43,12 @@ function FuncionairosList({
     const [todasFuncoes, setTodasFuncoes] = useState([]);
     const [todosBairros, setTodosBairros] = useState([]);
     const [todasReferencias, setTodasReferencias] = useState([]);
-    const [funcionariosPath, setFuncionariosPath] = useState([]);
+    // const [funcionariosPath, setFuncionariosPath] = useState([]);
     const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
     const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
     const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
     const [newObservation, setNewObservation] = useState("");
-    const { role } = useAuth(); // Usar o contexto de autenticação
+    const { role, funcionarios,setFuncionarios, funcionariosPath, setFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
 
 
     const handleCloseModal = () => {
@@ -329,6 +328,8 @@ function FuncionairosList({
                 // Remove os usuários deletados da interface
                 const remainingUsers = filteredFuncionarios.filter(user => !idsToDelete.includes(user._id));
                 setFilteredFuncionarios(remainingUsers);
+                setFuncionarios(remainingUsers);
+                setFuncionariosPath(remainingUsers)
                 setSelectedUsers([]);
                 setSelectAll(false);
                 setShowSelectionControlsDelete(false); // Esconde os controles após exclusão
