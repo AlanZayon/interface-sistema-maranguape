@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Form, Button, Modal } from 'react-bootstrap';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from './AuthContext'; // Importa o contexto
 import { API_BASE_URL } from '../utils/apiConfig';
 
 // Função para fazer a requisição com axios
@@ -26,6 +27,7 @@ function EditUsersForm({
     const [setorSelecionado, setSetorSelecionado] = useState(null);
     const [subsetorSelecionado, setSubsetorSelecionado] = useState([]);
     const [coordenadoriaSelecionada, setCoordenadoriaSelecionada] = useState(null);
+    const { addFuncionarios, addFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
 
     useEffect(() => {
         if (data && data.setores) {
@@ -33,9 +35,6 @@ function EditUsersForm({
         }
     }, [data]);
 
-    useEffect(() => {
-        console.log(usuariosIds)
-    }, [usuariosIds])
 
     if (isLoading) {
         return <div>Carregando...</div>;
@@ -102,7 +101,10 @@ function EditUsersForm({
                 coordenadoriaId: coordenadoriaSelecionada._id // Novo ID da coordenadoria
             });
 
+
             // Exibe a resposta da API
+            addFuncionarios(response.data)
+            addFuncionariosPath(response.data)
             handleCloseModal();
             setShowSelectionControlsEdit(false);
             alert("Usuários atualizados com sucesso!");
@@ -180,7 +182,7 @@ function EditUsersForm({
                     <Row key={`coordenadoria-${index}`}>
                         <Col md={12}>
                             <Form.Group controlId={`formCoordenadoria_${index}`}>
-                                <Form.Label>Coordenadorias: {subsetor.nome}</Form.Label>
+                                <Form.Label>Cargos: {subsetor.nome}</Form.Label>
                                 <div className="d-flex flex-wrap">
                                     {subsetor.coordenadorias.map((coordenadoria) => (
                                         <div key={coordenadoria._id} className="me-3 mb-2">
@@ -204,7 +206,7 @@ function EditUsersForm({
                 <Row>
                     <Col md={12}>
                         <Form.Group controlId="formCoordenadoriaInicial">
-                            <Form.Label>Coordenadorias: {setorSelecionado.nome}</Form.Label>
+                            <Form.Label>Cargos: {setorSelecionado.nome}</Form.Label>
                             <div className="d-flex flex-wrap">
                                 {setorSelecionado.coordenadorias.map((coordenadoria) => (
                                     <div key={coordenadoria._id} className="me-3 mb-2">

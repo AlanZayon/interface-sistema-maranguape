@@ -48,7 +48,7 @@ function FuncionairosList({
     const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
     const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
     const [newObservation, setNewObservation] = useState("");
-    const { role, funcionarios,setFuncionarios, funcionariosPath, setFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
+    const { role, funcionarios, setFuncionarios, funcionariosPath, setFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
 
 
     const handleCloseModal = () => {
@@ -112,6 +112,7 @@ function FuncionairosList({
             );
         });
     };
+
 
     useEffect(() => {
         if (setorPathId) {

@@ -226,7 +226,7 @@ function Step2Form({
                     <Row key={`coordenadoria-${index}`}>
                         <Col md={12}>
                             <Form.Group controlId={`formCoordenadoria_${index}`}>
-                                <Form.Label>Cargos: {subsetor.nome}</Form.Label>
+                                <Form.Label>Cargos - {subsetor.nome}</Form.Label>
                                 <div className="d-flex flex-wrap">
                                     {subsetor.coordenadorias.map((coordenadoria) => (
                                         <div key={coordenadoria._id} className="me-3 mb-2">
@@ -251,7 +251,7 @@ function Step2Form({
                 <Row>
                     <Col md={12}>
                         <Form.Group controlId="formCoordenadoriaInicial">
-                            <Form.Label>Cargos: {setorSelecionado.nome}</Form.Label>
+                            <Form.Label>Cargos: - {setorSelecionado.nome}</Form.Label>
                             <div className="d-flex flex-wrap">
                                 {setorSelecionado.coordenadorias.map((coordenadoria) => (
                                     <div key={coordenadoria._id} className="me-3 mb-2">
