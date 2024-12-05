@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Button, Modal } from 'react-bootstrap';
+import { Row, Col, Form, Button, Modal, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './AuthContext'; // Importa o contexto
@@ -17,7 +17,7 @@ function Step2Form({
     handleCloseModal
 }) {
 
-    const { data, isLoading, isError, error } = useQuery({
+    const { data, isError, error } = useQuery({
         queryKey: ['setores'],
         queryFn: fetchSetoresData
     });
@@ -28,7 +28,8 @@ function Step2Form({
     const [setorSelecionado, setSetorSelecionado] = useState(null);
     const [subsetorSelecionado, setSubsetorSelecionado] = useState([]);
     const [coordenadoriaSelecionada, setCoordenadoriaSelecionada] = useState(null);
-    const { addFuncionarios, addFuncionariosPath} = useAuth(); // Usar o contexto de autenticação
+    const [isLoading, setIsLoading] = useState(false);
+    const { addFuncionarios, addFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
 
 
     // Carrega os dados quando a resposta da API é recebida
@@ -37,14 +38,6 @@ function Step2Form({
             setSetoresOrganizados(data.setores);
         }
     }, [data]);
-
-    if (isLoading) {
-        return <div>Carregando...</div>;
-    }
-
-    if (isError) {
-        return <div>Erro ao carregar os dados: {error.message}</div>;
-    }
 
     const refreshAll = () => {
         setSetorSelecionado(null);
@@ -114,6 +107,7 @@ function Step2Form({
 
 
     const handleSubmit2 = async () => {
+        setIsLoading(true);
         // Filtra as redes sociais
         newUser.redesSociais = newUser.redesSociais.filter(item => item.link && item.nome);
 
@@ -149,6 +143,8 @@ function Step2Form({
             alert("cadastrado")
         } catch (error) {
             console.error('Erro ao cadastrar funcionário:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -271,14 +267,25 @@ function Step2Form({
             )}
 
             <Modal.Footer>
-                <Button variant="secondary" onClick={previousStep}>Voltar</Button>
-                <Button
-                    variant="primary"
-                    onClick={handleSubmit2}
-                    disabled={!newUser.coordenadoria}
-                >
-                    Salvar
-                </Button>
+                {isLoading ? (
+                    <div className="loading-screen">
+                        <Spinner animation="border" role="status">
+                            <span className="visually-hidden">Carregando...</span>
+                        </Spinner>
+                    </div>
+                ) : (
+                    <div>
+                        <Button className='mx-1' variant="secondary" onClick={previousStep}>Voltar</Button>
+                        <Button
+                            variant="primary"
+                            onClick={handleSubmit2}
+                            disabled={!newUser.coordenadoria}
+                        >
+                            Salvar
+                        </Button>
+                    </div>
+                )}
+
             </Modal.Footer>
         </Form>
     );

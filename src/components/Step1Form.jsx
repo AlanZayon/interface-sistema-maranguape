@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
-import { Row, Col, Form, Button, Modal } from 'react-bootstrap';
+import { Row, Col, Form, Button, Modal, Spinner } from 'react-bootstrap';
 import { FaUserCircle } from 'react-icons/fa';
 import { API_BASE_URL } from '../utils/apiConfig';
 import { useAuth } from './AuthContext'; // Importa o contexto
@@ -29,6 +29,7 @@ function Step1Form({
     const [showModalObs, setShowModalObs] = useState(false);
     const [previewImage, setPreviewImage] = useState(null);
     const [fileName, setFileName] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({}); // Estado para armazenar erros de validação
     const { addFuncionarios } = useAuth(); // Usar o contexto de autenticação
 
@@ -134,7 +135,7 @@ function Step1Form({
     const queryClient = useQueryClient();
 
     // Mutation para enviar dados ao backend
-    const { mutate: submitUserData, isLoading } = useMutation({
+    const { mutate: submitUserData } = useMutation({
         mutationFn: async () => {
 
             newUser.redesSociais = newUser.redesSociais.filter(item => item.link && item.nome);
@@ -172,6 +173,10 @@ function Step1Form({
         },
         onError: (error) => {
             console.error("Erro ao enviar os dados:", error);
+        },
+        onSettled: () => {
+            setIsLoading(false);
+            // Adicione aqui a lógica que deve ser executada em qualquer caso
         }
 
     });
@@ -179,6 +184,7 @@ function Step1Form({
     const handleSubmit = (event) => {
         event.preventDefault();
         if (!nextStep && validateFields()) {
+            setIsLoading(true);
             submitUserData();
         } else if (nextStep && validateFields()) {
             // updateNewUser(newUser);
@@ -499,16 +505,27 @@ function Step1Form({
 
             </Row>
             <Modal.Footer>
-                <Button variant="secondary" onClick={handleCloseModal}>
-                    Cancelar
-                </Button>
-                <Button
-                    variant="primary"
-                    onClick={handleSubmit}
-                    disabled={isLoading}
-                >
-                    Avançar
-                </Button>
+                {isLoading ? (
+                    <div className="loading-screen">
+                        <Spinner animation="border" role="status">
+                            <span className="visually-hidden">Carregando...</span>
+                        </Spinner>
+                    </div>
+                ) : (
+                    <div>
+                        <Button className='mx-1' variant="secondary" onClick={handleCloseModal}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={handleSubmit}
+                            disabled={isLoading}
+                        >
+                            Avançar
+                        </Button>
+                    </div>
+                )}
+
             </Modal.Footer>
         </Form>
     );
