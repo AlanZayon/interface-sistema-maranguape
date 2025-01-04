@@ -2,6 +2,10 @@
 
 This document describes the structure, features, and behavior of the system developed using **React.js** and **React-Bootstrap**. The system includes a login screen, a home page for managing departments and employees, and additional features like creating and editing job positions, performing bulk actions on employees, and displaying detailed employee data.
 
+### Access the Project
+
+You can visit the [Project](https://heroic-alfajores-da3394.netlify.app/). There you can to use functions and to experience for yourself.
+
 ---
 
 ### 1. Login Screen
