@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Row, Col, Form, Button, Modal, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
@@ -7,7 +8,7 @@ import { API_BASE_URL } from '../utils/apiConfig';
 
 // Função para fazer a requisição com axios
 const fetchSetoresData = async () => {
-    const response = await axios.get(`${API_BASE_URL}/api/setores/dados`);
+    const response = await axios.get(`${API_BASE_URL}/api/setores/setoresOrganizados`);
     return response.data;
 };
 
@@ -22,14 +23,14 @@ function Step2Form({
         queryFn: fetchSetoresData
     });
 
-    // Estado para armazenar os dados hierárquicos dos setores
+    const { setorId, '*': subPath } = useParams();
     const [setoresOrganizados, setSetoresOrganizados] = useState([]);
-    // Estados para controlar seleções
     const [setorSelecionado, setSetorSelecionado] = useState(null);
     const [subsetorSelecionado, setSubsetorSelecionado] = useState([]);
     const [coordenadoriaSelecionada, setCoordenadoriaSelecionada] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const { addFuncionarios, addFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
+    const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
 
 
     // Carrega os dados quando a resposta da API é recebida
@@ -130,7 +131,7 @@ function Step2Form({
 
         try {
             // Realiza a requisição para a API
-            const response = await axios.post(`${API_BASE_URL}/api/funcionarios`, formData, {
+            const response = await axios.post(`${API_BASE_URL}/api/funcionarios/${currentSetorId}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 }

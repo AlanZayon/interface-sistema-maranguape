@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
+import { useAuth } from './AuthContext'; // Importa o contexto
 import { Row, Col, Form, Button, Modal } from 'react-bootstrap';
 import { FaUserCircle } from 'react-icons/fa';
 import { API_BASE_URL } from '../utils/apiConfig';
@@ -16,7 +18,7 @@ function Step1Form({
     handleCloseModal
 
 }) {
-
+    const { setorId, '*': subPath } = useParams();
     const [newUser, setNewUser] = useState({
         nome: '',
         foto: null,
@@ -36,10 +38,16 @@ function Step1Form({
     const [referenciasRegistradas, setReferenciasRegistradas] = useState([]); // Lista de referências
     const [filteredReferencias, setFilteredReferencias] = useState([]);
     const [previewImage, setPreviewImage] = useState(null);
+    const [sendImage, setSendImage] = useState(null);
+    const [sendFile, setSendFile] = useState(null);
     const [errors, setErrors] = useState({}); // Estado para armazenar erros de validação
+    const { addFuncionarios, addFuncionariosPath } = useAuth();
+    const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
 
     // Regenera a pré-visualização ao montar ou ao mudar `newUser.foto`
     useEffect(() => {
+        console.log("new user foto", newUser.foto);
+        console.log("previw foto", previewImage);
         if (newUser?.foto) {
             const objectUrl = URL.createObjectURL(newUser.foto);
             setPreviewImage(objectUrl);
@@ -53,6 +61,7 @@ function Step1Form({
     }, [funcionario]);
 
     useEffect(() => {
+
         // Aqui você pode simular a obtenção das referências de uma API ou de uma lista de dados.
         const fetchReferencias = async () => {
             try {
@@ -119,7 +128,7 @@ function Step1Form({
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setNewUser((prevState) => ({ ...prevState, foto: file }));
+            setSendImage( file );
             setPreviewImage(URL.createObjectURL(file)); // Cria uma URL de pré-visualização para a imagem
         }
     };
@@ -138,7 +147,7 @@ function Step1Form({
 
             const formData = new FormData();
             formData.append('nome', newUser.nome);
-            formData.append('foto', newUser.foto || null); // Envia o arquivo de foto
+            formData.append('foto', sendImage || null); // Envia o arquivo de foto
             formData.append('secretaria', newUser.secretaria);
             formData.append('funcao', newUser.funcao);
             formData.append('natureza', newUser.natureza);
@@ -149,19 +158,22 @@ function Step1Form({
             formData.append('endereco', newUser.endereco);
             formData.append('bairro', newUser.bairro);
             formData.append('telefone', newUser.telefone);
-            formData.append('arquivo', newUser.arquivo || null);
+            formData.append('arquivo', sendFile || null);
             formData.append('coordenadoria', funcionario.coordenadoria);
 
             // Envia os dados para a rota de atualização
-            const response = await axios.put(`${API_BASE_URL}/api/funcionarios/edit-funcionario/${funcionario._id}`, formData, {
+            const response = await axios.put(`${API_BASE_URL}/api/funcionarios/edit-funcionario/${funcionario._id}/${currentSetorId || ""}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: (updatedUser) => {
+            console.log(updatedUser)
             queryClient.invalidateQueries('funcionarios'); // Invalida cache para recarregar dados atualizados
+            addFuncionarios(updatedUser);
+            addFuncionariosPath(updatedUser);
             handleCloseModal(); // Fecha o modal (ou qualquer interface de edição)
             alert('Atualizado com sucesso!');
         },
@@ -453,7 +465,7 @@ function Step1Form({
                             onChange={(e) => {
                                 const file = e.target.files[0];
                                 // Atualize o estado com o arquivo selecionado ou faça o upload imediatamente
-                                setNewUser({ ...newUser, arquivo: file });
+                                setSendFile(file);
                             }}
                             style={{ display: 'none' }}
                         />

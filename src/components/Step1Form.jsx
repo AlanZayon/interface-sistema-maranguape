@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import { Row, Col, Form, Button, Modal, Spinner } from 'react-bootstrap';
@@ -22,7 +23,7 @@ function Step1Form({
     handleCloseModal,
 
 }) {
-
+    const { setorId, '*': subPath } = useParams();
     const [showModal, setShowModal] = useState(false);
     const [referenciasRegistradas, setReferenciasRegistradas] = useState([]); // Lista de referências
     const [filteredReferencias, setFilteredReferencias] = useState([]);
@@ -32,6 +33,7 @@ function Step1Form({
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({}); // Estado para armazenar erros de validação
     const { addFuncionarios } = useAuth(); // Usar o contexto de autenticação
+    const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
 
     // Regenera a pré-visualização ao montar ou ao mudar `newUser.foto`
     useEffect(() => {
@@ -158,7 +160,7 @@ function Step1Form({
             formData.append('observacoes', JSON.stringify(newUser.observacoes));
             formData.append('coordenadoria', coordenadoriaId);
 
-            const response = await axios.post(`${API_BASE_URL}/api/funcionarios`, formData, {
+            const response = await axios.post(`${API_BASE_URL}/api/funcionarios/${currentSetorId}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 }
@@ -166,6 +168,7 @@ function Step1Form({
             return response.data;
         },
         onSuccess: (data) => {
+            console.log(data);
             queryClient.invalidateQueries('funcionarios');
             addFuncionarios(data)
             handleCloseModal()

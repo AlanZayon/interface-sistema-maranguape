@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Row, Col, Form, Button, Modal } from 'react-bootstrap';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './AuthContext'; // Importa o contexto
 import { API_BASE_URL } from '../utils/apiConfig';
 
-// Função para fazer a requisição com axios
-const fetchSetoresData = async () => {
-    const response = await axios.get(`${API_BASE_URL}/api/setores/dados`);
-    return response.data;
-};
+
 
 function EditUsersForm({
     usuariosIds, // IDs dos usuários a serem editados
     handleCloseModal,
     setShowSelectionControlsEdit
 }) {
-
+    // Função para fazer a requisição com axios
+    const fetchSetoresData = async () => {
+        const response = await axios.get(`${API_BASE_URL}/api/setores/setoresOrganizados`);
+        return response.data;
+    };
+    const { setorId, '*': subPath } = useParams();
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['setores'],
         queryFn: fetchSetoresData
@@ -28,9 +30,14 @@ function EditUsersForm({
     const [subsetorSelecionado, setSubsetorSelecionado] = useState([]);
     const [coordenadoriaSelecionada, setCoordenadoriaSelecionada] = useState(null);
     const { addFuncionarios, addFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
+    const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
+
+
+
 
     useEffect(() => {
         if (data && data.setores) {
+            console.log(data.setores);
             setSetoresOrganizados(data.setores);
         }
     }, [data]);

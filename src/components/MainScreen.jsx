@@ -6,11 +6,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/apiConfig';
 
-const fetchSetoresData = async () => {
-  const response = await axios.get(`${API_BASE_URL}/api/setores/dados`);
-  return response.data;
-};
-
 function MainScreen() {
   const [setores, setSetores] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -19,15 +14,18 @@ function MainScreen() {
   const [editedName, setEditedName] = useState('');
   const queryClient = useQueryClient();
 
+  const fetchSetoresData = async () => {
+    const response = await axios.get(`${API_BASE_URL}/api/setores/setoresMain`);
+    return response.data;
+  };
+
   // Carrega os dados quando a resposta da API é recebida
   useEffect(() => {
     const fetchData = async () => {
       try {
         const data = await fetchSetoresData();
-        const setoresFiltrados = data.setores.map((setor) => ({
-          id: setor._id,
-          nome: setor.nome
-        }));
+        const setoresFiltrados = data.setores
+        console.log(data)
         setSetores(setoresFiltrados); // Armazena apenas `id` e `nome`
       } catch (error) {
         console.error('Erro ao buscar os dados:', error);
@@ -47,6 +45,10 @@ function MainScreen() {
   const updateSetor = async ({ id, nome }) => {
     const response = await axios.put(`${API_BASE_URL}/api/setores/rename/${id}`, { nome });
     return response.data;
+  };
+
+  const handleCardClick = (setor) => {
+    datasSetorUpdate(setor); // Atualiza o contexto com o setor selecionado
   };
 
   // Mutation para lidar com a criação do setor
@@ -91,15 +93,15 @@ function MainScreen() {
 
   const handleSaveRename = async (id) => {
 
-        // Validação para garantir que o nome não esteja vazio
-        if (!editedName.trim()) {
-          alert('O nome do setor não pode estar vazio!');
-          return;
-        }
+    // Validação para garantir que o nome não esteja vazio
+    if (!editedName.trim()) {
+      alert('O nome do setor não pode estar vazio!');
+      return;
+    }
     try {
       await updateMutation.mutateAsync({ id, nome: editedName });
       setSetores((prev) =>
-        prev.map((setor) => (setor.id === id ? { ...setor, nome: editedName } : setor))
+        prev.map((setor) => (setor._id === id ? { ...setor, nome: editedName } : setor))
       );
     } catch (error) {
       console.error('Erro ao salvar renomeação:', error);
@@ -123,9 +125,9 @@ function MainScreen() {
         </Card>
       </Row>
 
-      {setores.map((setor) => (
-        <Col md={4} key={setor.id}>
-          {editingSetorId !== setor.id ? (
+      {setores.map((setor, index) => (
+        <Col md={4} key={index}>
+          {editingSetorId !== setor._id ? (
             <Card className="custom-card text-center my-2">
               <Card.Header className="d-flex justify-content-between align-items-center">
                 <span>Setor</span>
@@ -133,14 +135,14 @@ function MainScreen() {
                   <Dropdown.Toggle
                     variant="link"
                     className="text-dark p-0 border-0 dropdown-toggle-split"
-                    id={`dropdown-${setor.id}`}
+                    id={`dropdown-${setor._id}`}
                   >
                     <i className="fas fa-ellipsis-v w-100"></i> {/* Ícone de três pontos */}
 
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
                     <Dropdown.Item
-                      onClick={() => handleRenameSetor(setor.id, setor.nome)}
+                      onClick={() => handleRenameSetor(setor._id, setor.nome)}
                     >
                       Renomear
                     </Dropdown.Item>
@@ -148,7 +150,7 @@ function MainScreen() {
                   </Dropdown.Menu>
                 </Dropdown>
               </Card.Header>
-              <Link to={`/setor/${setor.id}`} style={{ textDecoration: 'none' }}>
+              <Link to={`/${setor.nome}/${setor._id}`} style={{ textDecoration: 'none' }}>
                 <Card.Body>
                   <Card.Title>{setor.nome}</Card.Title>
                 </Card.Body>
@@ -165,7 +167,7 @@ function MainScreen() {
                   type="text"
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
-                  onBlur={() => handleSaveRename(setor.id)}
+                  onBlur={() => handleSaveRename(setor._id)}
                   autoFocus
                 />
               </Card.Body>

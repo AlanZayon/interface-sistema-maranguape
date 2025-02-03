@@ -223,7 +223,7 @@ function Header() {
               <i className="fas fa-plus"></i>
             </Button>
             <Button onClick={() => { navigate("/mainscreen") }} variant="outline-light" className="custom-height mx-1 mb-1">
-              <i className="fas fa-sync-alt"></i>
+              <i className="fas fa-home-alt"></i>
             </Button>
             <Button onClick={logoutUser} variant="outline-light" className="custom-height mx-1 mb-1">
               <i className="fas fa-sign-out-alt"></i>

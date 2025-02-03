@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Button, Form, Modal, Container } from 'react-bootstrap';
-import { FaEdit, FaTrash, FaFile } from 'react-icons/fa';
+import { FaTrash, FaFile, FaExchangeAlt   } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from './AuthContext'; // Importa o contexto
 import FilterModal from './FilterModal';
@@ -11,10 +11,7 @@ import UserEdit from './userEdit';
 import { API_BASE_URL } from '../utils/apiConfig';
 
 
-const fetchSetoresData = async () => {
-    const response = await axios.get(`${API_BASE_URL}/api/setores/dados`);
-    return response.data;
-};
+
 
 function FuncionairosList({
     coordenadoriaId,
@@ -50,6 +47,17 @@ function FuncionairosList({
     const [newObservation, setNewObservation] = useState("");
     const { role, funcionarios, setFuncionarios, funcionariosPath, setFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
 
+    const fetchSetoresData = async () => {
+        const response = await axios.get(`${API_BASE_URL}/api/setores/dados/${setorPathId}`);
+        return response.data;
+    };
+
+
+    const fetchFuncionariosData = async () => {
+        const response = await axios.get(`${API_BASE_URL}/api/funcionarios/buscarFuncionarios`);
+        return response.data;
+    };
+
 
     const handleCloseModal = () => {
         setShowModalEdit(false)
@@ -57,40 +65,40 @@ function FuncionairosList({
     const handleCloseModalSingleEdit = () => {
         setShowModalSingleEdit(false)
     }
-    const buildLookupMap = (setores) => {
-        const map = new Map();
+    // const buildLookupMap = (setores) => {
+    //     const map = new Map();
 
-        const addToMap = (setor) => {
-            map.set(setor._id, setor);
-            setor.subsetores.forEach(addToMap);
-            setor.coordenadorias.forEach(addToMap);
-        };
+    //     const addToMap = (setor) => {
+    //         map.set(setor._id, setor);
+    //         setor.subsetores.forEach(addToMap);
+    //         setor.coordenadorias.forEach(addToMap);
+    //     };
 
-        setores.forEach(addToMap);
-        return map;
-    };
+    //     setores.forEach(addToMap);
+    //     return map;
+    // };
 
-    function extrairFuncionariosDasCoordenadorias(funcionariosLookupMap) {
+    // function extrairFuncionariosDasCoordenadorias(funcionariosLookupMap) {
 
-        const setoresArray = Array.isArray(funcionariosLookupMap)
-            ? funcionariosLookupMap
-            : Array.from(funcionariosLookupMap.values());
+    //     const setoresArray = Array.isArray(funcionariosLookupMap)
+    //         ? funcionariosLookupMap
+    //         : Array.from(funcionariosLookupMap.values());
 
-        return setoresArray.flatMap(setor => {
-            // Coletar funcionários diretamente das coordenadorias do setor
-            const funcionariosColetados = [];
+    //     return setoresArray.flatMap(setor => {
+    //         // Coletar funcionários diretamente das coordenadorias do setor
+    //         const funcionariosColetados = [];
 
-            if (setor.coordenadorias) {
-                setor.coordenadorias.forEach(coordenadoria => {
-                    if (coordenadoria.funcionarios) {
-                        funcionariosColetados.push(...coordenadoria.funcionarios);
-                    }
-                });
-            }
+    //         if (setor.coordenadorias) {
+    //             setor.coordenadorias.forEach(coordenadoria => {
+    //                 if (coordenadoria.funcionarios) {
+    //                     funcionariosColetados.push(...coordenadoria.funcionarios);
+    //                 }
+    //             });
+    //         }
 
-            return funcionariosColetados;
-        });
-    }
+    //         return funcionariosColetados;
+    //     });
+    // }
 
 
     // Função de filtro para os funcionários com base nos filtros ativos
@@ -113,40 +121,49 @@ function FuncionairosList({
         });
     };
 
-
     useEffect(() => {
-        if (setorPathId) {
+        console.log(setorPathId)
+        if (setorPathId !== 'mainscreen' && setorPathId) {
+            
             const fetchData = async () => {
                 try {
                     const data = await fetchSetoresData();
-                    const lookupMap = buildLookupMap(data.setores);
-                    setSetoresLookupMap(lookupMap);
+                    const todosFuncionarios = data.coordenadoriasComFuncionarios.flatMap(coordenadoria => coordenadoria.funcionarios);
+                    setFuncionariosPath(todosFuncionarios);
                 } catch (error) {
                     console.error("Erro ao buscar os dados:");
                 }
             };
-
             fetchData();
-
+        } else if (setorPathId === 'mainscreen') {
+            const fetchFunData = async () => {
+                try {
+                    const data = await fetchFuncionariosData();
+                    setFuncionariosPath(data);
+                    console.log("funcionarios data",data) 
+                } catch (error) {
+                    console.error("Erro ao buscar os dados:");
+                }
+            };
+            fetchFunData();
         }
-
     }, [setorPathId]);
 
-    useEffect(() => {
-        if (setorPathId && setoresLookupMap.size > 0) {
-            let funcionariosDasCoordenadorias = [];
+    // useEffect(() => {
+    //     if (setorPathId && setoresLookupMap.size > 0) {
+    //         let funcionariosDasCoordenadorias = [];
 
-            if (setorPathId === 'mainscreen') {
-                funcionariosDasCoordenadorias = extrairFuncionariosDasCoordenadorias(setoresLookupMap);
-            } else if (setoresLookupMap.has(setorPathId)) {
-                const currentSetor = setoresLookupMap.get(setorPathId);
-                funcionariosDasCoordenadorias = (currentSetor.coordenadorias || [])
-                    .flatMap(coordenadoria => coordenadoria.funcionarios || []);
-            }
+    //         if (setorPathId === 'mainscreen') {
+    //             funcionariosDasCoordenadorias = extrairFuncionariosDasCoordenadorias(setoresLookupMap);
+    //         } else if (setoresLookupMap.has(setorPathId)) {
+    //             const currentSetor = setoresLookupMap.get(setorPathId);
+    //             funcionariosDasCoordenadorias = (currentSetor.coordenadorias || [])
+    //                 .flatMap(coordenadoria => coordenadoria.funcionarios || []);
+    //         }
 
-            setFuncionariosPath(funcionariosDasCoordenadorias);
-        }
-    }, [setorPathId, setoresLookupMap]);
+    //         setFuncionariosPath(funcionariosDasCoordenadorias);
+    //     }
+    // }, [setorPathId, setoresLookupMap]);
 
 
     const processarFuncionarios = (dados) => {
@@ -406,7 +423,7 @@ function FuncionairosList({
                                 : showSelectionControlsDelete
                                     ? "d-none"
                                     : "m-1"}>
-                            <FaEdit /> {/* Ícone de Editar */}
+                            <FaExchangeAlt  /> {/* Ícone de Editar */}
                         </Button>
 
                         <Button variant={showSelectionControlsDelete ? "danger" : "outline-danger"}

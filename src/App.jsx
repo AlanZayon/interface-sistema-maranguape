@@ -68,7 +68,7 @@ function App() {
                   <MainScreen />
                 </ProtectedRoute>
               } />
-              <Route path="/setor/:setorId/*" element={
+              <Route path="/:setorNome/:setorId/*" element={
                 <ProtectedRoute>
                   <SetorScreenWrapper />
                 </ProtectedRoute>

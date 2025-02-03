@@ -24,103 +24,39 @@ export const AuthProvider = ({ children }) => {
     const [username, setUsername] = useState(storedUsername || '');
     const [role, setRole] = useState(storedRole || '');
 
+
     const addFuncionarios = (newData) => {
         setFuncionarios((prevUsers) => {
-            if (Array.isArray(newData)) {
-                const updatedUsers = [...prevUsers];
+            const updatedUsers = Array.isArray(newData) ? newData : [newData]; // Garante que seja sempre um array
     
-                newData.forEach((newUser) => {
-                    const existingUserIndex = updatedUsers.findIndex(
-                        (user) => user._id === newUser._id
-                    );
+            const updatedList = prevUsers.map((user) => {
+                const updatedUser = updatedUsers.find((u) => u._id === user._id);
+                return updatedUser ? { ...user, ...updatedUser } : user;
+            });
     
-                    if (existingUserIndex !== -1) {
-                        // Usuário com o mesmo ID já existe
-                        const existingUser = updatedUsers[existingUserIndex];
-                        if (existingUser.coordenadoria !== newUser.coordenadoria) {
-                            // Atualizar se a coordenadoria for diferente
-                            updatedUsers[existingUserIndex] = { ...existingUser, ...newUser };
-                        }
-                    } else {
-                        // Adicionar novo usuário
-                        updatedUsers.push(newUser);
-                    }
-                });
+            // Adiciona novos usuários que não estavam na lista antes
+            const newUsers = updatedUsers.filter((u) => !prevUsers.some((user) => user._id === u._id));
     
-                return updatedUsers;
-            } else {
-                // Lógica para adicionar um único usuário
-                const existingUserIndex = prevUsers.findIndex(
-                    (user) => user._id === newData._id
-                );
-    
-                if (existingUserIndex !== -1) {
-                    const existingUser = prevUsers[existingUserIndex];
-                    if (existingUser.coordenadoria !== newData.coordenadoria) {
-                        // Atualizar se a coordenadoria for diferente
-                        return [
-                            ...prevUsers.slice(0, existingUserIndex),
-                            { ...existingUser, ...newData },
-                            ...prevUsers.slice(existingUserIndex + 1),
-                        ];
-                    }
-                    return prevUsers; // Não faz nada se a coordenadoria for igual
-                } else {
-                    return [...prevUsers, newData]; // Adicionar novo usuário
-                }
-            }
+            return [...updatedList, ...newUsers];
         });
     };
-    
     
     const addFuncionariosPath = (newData) => {
         setFuncionariosPath((prevUsers) => {
-            if (Array.isArray(newData)) {
-                const updatedUsers = [...prevUsers];
+            const updatedUsers = Array.isArray(newData) ? newData : [newData];
     
-                newData.forEach((newUser) => {
-                    const existingUserIndex = updatedUsers.findIndex(
-                        (user) => user._id === newUser._id
-                    );
+            const updatedList = prevUsers.map((user) => {
+                const updatedUser = updatedUsers.find((u) => u._id === user._id);
+                return updatedUser ? { ...user, ...updatedUser } : user;
+            });
     
-                    if (existingUserIndex !== -1) {
-                        // Usuário com o mesmo ID já existe
-                        const existingUser = updatedUsers[existingUserIndex];
-                        if (existingUser.coordenadoria !== newUser.coordenadoria) {
-                            // Atualizar se a coordenadoria for diferente
-                            updatedUsers[existingUserIndex] = { ...existingUser, ...newUser };
-                        }
-                    } else {
-                        // Adicionar novo usuário
-                        updatedUsers.push(newUser);
-                    }
-                });
+            const newUsers = updatedUsers.filter((u) => !prevUsers.some((user) => user._id === u._id));
     
-                return updatedUsers;
-            } else {
-                // Lógica para adicionar um único usuário
-                const existingUserIndex = prevUsers.findIndex(
-                    (user) => user._id === newData._id
-                );
-    
-                if (existingUserIndex !== -1) {
-                    const existingUser = prevUsers[existingUserIndex];
-                    if (existingUser.coordenadoria !== newData.coordenadoria) {
-                        // Atualizar se a coordenadoria for diferente
-                        return [
-                            ...prevUsers.slice(0, existingUserIndex),
-                            { ...existingUser, ...newData },
-                            ...prevUsers.slice(existingUserIndex + 1),
-                        ];
-                    }
-                    return prevUsers; // Não faz nada se a coordenadoria for igual
-                } else {
-                    return [...prevUsers, newData]; // Adicionar novo usuário
-                }
-            }
+            return [...updatedList, ...newUsers];
         });
     };
     
+
 
 
     // Função para verificar se o usuário está autenticado

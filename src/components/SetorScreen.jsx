@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Modal, Form, Collapse, Container, Dropdown } from 'react-bootstrap';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FaAngleDown, FaAngleUp, FaChevronLeft } from 'react-icons/fa';
 import axios from 'axios';
@@ -12,10 +13,7 @@ import ObservationHistoryButton from './ObservationHistoryButton';
 import ObservationHistoryModal from './ObservationHistoryModal';
 import { API_BASE_URL } from '../utils/apiConfig';
 
-const fetchSetoresData = async () => {
-  const response = await axios.get(`${API_BASE_URL}/api/setores/dados`);
-  return response.data;
-};
+
 
 function SetorScreen() {
   // Captura todos os segmentos da rota a partir do setor principal
@@ -51,14 +49,28 @@ function SetorScreen() {
   const [newCoordName, setNewCoordName] = useState('');
   const [openCoord, setOpenCoord] = useState({});
   const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
+  const location = useLocation(); // Captura o caminho completo da URL
   // const [funcionarios, setFuncionarios] = useState([])
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { funcionarios, setFuncionarios } = useAuth(); // Usar o contexto de autenticação
 
+  const fullPath = location.pathname; // Exemplo: "/financeiro/extra/path"
+  const setorSegment = `${fullPath.split('/')[1]}`; // Exemplo: "/financeiro/"
+  const setorNomeDecodificado = decodeURIComponent(setorSegment);
 
-  // Obtém o nome do último segmento da URL
-  const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
+
+
+    // Obtém o nome do último segmento da URL
+    const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
+
+  const fetchSetoresData = async () => {
+    const response = await axios.get(`${API_BASE_URL}/api/setores/dados/${currentSetorId}`);
+    return response.data;
+  };
+
+
+
 
   const handleCloseModal = () => {
     setNewUser({
@@ -80,27 +92,18 @@ function SetorScreen() {
     setShowModalCoordenadoria(false)
   }
 
-  const buildLookupMap = (setores) => {
-    const map = new Map();
-
-    const addToMap = (setor) => {
-      map.set(setor._id, setor);
-      setor.subsetores.forEach(addToMap);
-      setor.coordenadorias.forEach(addToMap);
-    };
-
-    setores.forEach(addToMap);
-    return map;
-  };
-
-
   useEffect(() => {
+    console.log(currentSetorId);
     const fetchData = async () => {
       try {
         const data = await fetchSetoresData();
-        const lookupMap = buildLookupMap(data.setores);
-        setSetoresLookupMap(lookupMap);
+        console.log(data)
+        setSubSetores(data.subsetores)
+        setCoordenadorias(data.coordenadoriasComFuncionarios)
+        const todosFuncionarios = data.coordenadoriasComFuncionarios.flatMap(coordenadoria => coordenadoria.funcionarios);
+        setFuncionarios(todosFuncionarios);
       } catch (error) {
+        console.log(error)
         console.error("Erro ao buscar os dados:");
       }
     };
@@ -268,12 +271,18 @@ function SetorScreen() {
             <FaChevronLeft size={20} />
           </Button>
         </Col>
-        {setoresLookupMap.has(currentSetorId)
-          ?
-          setoresLookupMap.get(currentSetorId).nome
-          :
-          ""}
-      </h2>
+        <span
+    style={{
+      fontSize: '1.5rem', 
+      fontWeight: 'bold', 
+      marginLeft: '15px', 
+      color: '#333', 
+      textTransform: 'capitalize', 
+    }}
+  >
+    {setorNomeDecodificado}
+  </span>
+        </h2>
       <Row className='mt-4'>
         {/* Botão para criar novo subsetor */}
         <Row className='m-2' xs={4} sm={4} md={6} >
@@ -317,7 +326,7 @@ function SetorScreen() {
                     </Dropdown.Menu>
                   </Dropdown>
                 </Card.Header>
-                <Link to={`/setor/${currentSetorId}/${subPath ? `${subPath}/${subSetor._id}` : subSetor._id}`} style={{ textDecoration: 'none' }}>
+                <Link to={`/${subSetor.nome}/${currentSetorId}/${subPath ? `${subPath}/${subSetor._id}` : subSetor._id}`} style={{ textDecoration: 'none' }}>
                   <Card.Body>
                     <Card.Title>{subSetor.nome}</Card.Title>
                   </Card.Body>
