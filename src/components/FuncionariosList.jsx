@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Button, Form, Modal, Container } from 'react-bootstrap';
-import { FaTrash, FaFile, FaExchangeAlt   } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { Row, Col, Button, Form, Modal, Container, FormControl, InputGroup, Overlay, Popover } from 'react-bootstrap';
+import { FaTrash, FaFile, FaExchangeAlt, FaFilter, FaSearch } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from './AuthContext'; // Importa o contexto
 import FilterModal from './FilterModal';
@@ -17,6 +17,8 @@ function FuncionairosList({
     coordenadoriaId,
     setorPathId
 }) {
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [showModalEdit, setShowModalEdit] = useState(false);
     const [showModalSingleEdit, setShowModalSingleEdit] = useState(false);
@@ -31,6 +33,7 @@ function FuncionairosList({
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [selectAll, setSelectAll] = useState(false);
     const [showSelectionControlsDelete, setShowSelectionControlsDelete] = useState(false);
+    const [showSelectionControlsReport, setShowSelectionControlsReport] = useState(false);
     const [showSelectionControlsEdit, setShowSelectionControlsEdit] = useState(false);
     const [expandedCards, setExpandedCards] = useState([]);
     const [observations, setObservations] = useState({});
@@ -41,11 +44,10 @@ function FuncionairosList({
     const [todosBairros, setTodosBairros] = useState([]);
     const [todasReferencias, setTodasReferencias] = useState([]);
     // const [funcionariosPath, setFuncionariosPath] = useState([]);
-    const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
     const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
     const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
-    const [newObservation, setNewObservation] = useState("");
     const { role, funcionarios, setFuncionarios, funcionariosPath, setFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
+    const searchRef = useRef(null);
 
     const fetchSetoresData = async () => {
         const response = await axios.get(`${API_BASE_URL}/api/setores/dados/${setorPathId}`);
@@ -65,41 +67,6 @@ function FuncionairosList({
     const handleCloseModalSingleEdit = () => {
         setShowModalSingleEdit(false)
     }
-    // const buildLookupMap = (setores) => {
-    //     const map = new Map();
-
-    //     const addToMap = (setor) => {
-    //         map.set(setor._id, setor);
-    //         setor.subsetores.forEach(addToMap);
-    //         setor.coordenadorias.forEach(addToMap);
-    //     };
-
-    //     setores.forEach(addToMap);
-    //     return map;
-    // };
-
-    // function extrairFuncionariosDasCoordenadorias(funcionariosLookupMap) {
-
-    //     const setoresArray = Array.isArray(funcionariosLookupMap)
-    //         ? funcionariosLookupMap
-    //         : Array.from(funcionariosLookupMap.values());
-
-    //     return setoresArray.flatMap(setor => {
-    //         // Coletar funcionários diretamente das coordenadorias do setor
-    //         const funcionariosColetados = [];
-
-    //         if (setor.coordenadorias) {
-    //             setor.coordenadorias.forEach(coordenadoria => {
-    //                 if (coordenadoria.funcionarios) {
-    //                     funcionariosColetados.push(...coordenadoria.funcionarios);
-    //                 }
-    //             });
-    //         }
-
-    //         return funcionariosColetados;
-    //     });
-    // }
-
 
     // Função de filtro para os funcionários com base nos filtros ativos
     const applyFilters = (funcionarios) => {
@@ -124,7 +91,7 @@ function FuncionairosList({
     useEffect(() => {
         console.log(setorPathId)
         if (setorPathId !== 'mainscreen' && setorPathId) {
-            
+
             const fetchData = async () => {
                 try {
                     const data = await fetchSetoresData();
@@ -140,7 +107,7 @@ function FuncionairosList({
                 try {
                     const data = await fetchFuncionariosData();
                     setFuncionariosPath(data);
-                    console.log("funcionarios data",data) 
+                    console.log("funcionarios data", data)
                 } catch (error) {
                     console.error("Erro ao buscar os dados:");
                 }
@@ -148,23 +115,6 @@ function FuncionairosList({
             fetchFunData();
         }
     }, [setorPathId]);
-
-    // useEffect(() => {
-    //     if (setorPathId && setoresLookupMap.size > 0) {
-    //         let funcionariosDasCoordenadorias = [];
-
-    //         if (setorPathId === 'mainscreen') {
-    //             funcionariosDasCoordenadorias = extrairFuncionariosDasCoordenadorias(setoresLookupMap);
-    //         } else if (setoresLookupMap.has(setorPathId)) {
-    //             const currentSetor = setoresLookupMap.get(setorPathId);
-    //             funcionariosDasCoordenadorias = (currentSetor.coordenadorias || [])
-    //                 .flatMap(coordenadoria => coordenadoria.funcionarios || []);
-    //         }
-
-    //         setFuncionariosPath(funcionariosDasCoordenadorias);
-    //     }
-    // }, [setorPathId, setoresLookupMap]);
-
 
     const processarFuncionarios = (dados) => {
         const observacoesPorFuncionario = dados.reduce((acc, item) => {
@@ -208,6 +158,14 @@ function FuncionairosList({
             setFilteredFuncionarios(applyFilters(funcionarios));
         }
     }, [setorPathId, funcionariosPath, funcionarios, activeFilters]);
+
+    useEffect(() => {
+        // Filtra funcionários pelo nome e aplica outros filtros
+        const filtered = (setorPathId ? funcionariosPath : funcionarios)
+            .filter(user => user.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        setFilteredFuncionarios(applyFilters(filtered));
+    }, [setorPathId, funcionariosPath, funcionarios, activeFilters, searchTerm]);
 
     const buscarFuncionario = (userId) => {
         let funcionario = funcionarios.find(func => func._id === userId);
@@ -364,6 +322,7 @@ function FuncionairosList({
 
     const toggleSelectionControlsDelete = () => {
         setShowSelectionControlsDelete(!showSelectionControlsDelete);
+        setShowSelectionControlsReport(false)
         setShowSelectionControlsEdit(false)
         setSelectedUsers([]); // Limpa qualquer seleção existente
         setSelectAll(false);   // Reseta a seleção global
@@ -371,7 +330,16 @@ function FuncionairosList({
 
     const toggleSelectionControlsEdit = () => {
         setShowSelectionControlsEdit(!showSelectionControlsEdit);
+        setShowSelectionControlsReport(false)
         setShowSelectionControlsDelete(false);
+        setSelectedUsers([]); // Limpa qualquer seleção existente
+        setSelectAll(false);   // Reseta a seleção global
+    };
+
+    const toggleSelectionControlsReport = () => {
+        setShowSelectionControlsReport(!showSelectionControlsReport)
+        setShowSelectionControlsDelete(false);
+        setShowSelectionControlsEdit(false)
         setSelectedUsers([]); // Limpa qualquer seleção existente
         setSelectAll(false);   // Reseta a seleção global
     };
@@ -412,38 +380,71 @@ function FuncionairosList({
             <div className="d-flex justify-content-between mx-3">
 
                 {role === "admin" ? (
-                    <div className="position-sticky m-2">
+                    <div className="position-sticky my-2">
                         <Button variant="primary" onClick={() => setShowModal(true)} className="m-2">
-                            <i className="fas fa-filter"></i>
+                            <FaFilter />
                         </Button>
                         <Button variant={showSelectionControlsEdit ? "secondary" : "outline-secondary"}
                             onClick={toggleSelectionControlsEdit}
                             className={showSelectionControlsEdit
-                                ? "secondary m-1"
-                                : showSelectionControlsDelete
+                                ? "active m-1"
+                                : showSelectionControlsDelete || showSelectionControlsReport
                                     ? "d-none"
                                     : "m-1"}>
-                            <FaExchangeAlt  /> {/* Ícone de Editar */}
+                            <FaExchangeAlt /> {/* Ícone de Editar */}
                         </Button>
 
                         <Button variant={showSelectionControlsDelete ? "danger" : "outline-danger"}
                             onClick={toggleSelectionControlsDelete}
                             className={showSelectionControlsDelete
                                 ? "active m-1"
-                                : showSelectionControlsEdit
+                                : showSelectionControlsEdit || showSelectionControlsReport
                                     ? "d-none"
                                     : "m-1"}>
-                            <FaTrash /> {/* Ícone de Apagar */}
+                            <FaTrash />
                         </Button>
 
-                        {/* <Button variant="outline-warning" className="m-1">
-                                          <FaFile /> 
-                                      </Button> */}
+                        <Button onClick={toggleSelectionControlsReport}
+                            variant={showSelectionControlsReport ? "warning" : "outline-warning"}
+                            className={showSelectionControlsReport
+                                ? "active m-1"
+                                : showSelectionControlsDelete || showSelectionControlsEdit
+                                    ? "d-none"
+                                    : "m-1"
+                            }>
+                            <FaFile />
+                        </Button>
+
+                        {/* Popover com Input de Pesquisa */}
+                        <Overlay target={searchRef.current} show={showSearch} placement="top">
+                            {(props) => (
+                                <Popover {...props}>
+                                    <Popover.Body>
+                                        <InputGroup>
+                                            <FormControl
+                                                type="text"
+                                                placeholder="Nome do Servidor..."
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                autoFocus
+                                            />
+                                        </InputGroup>
+                                    </Popover.Body>
+                                </Popover>
+                            )}
+                        </Overlay>
+
+                        <Button ref={searchRef}
+                            className="m-1 p-0 border-0 bg-transparent shadow-none text-black"
+                            onClick={() => setShowSearch(!showSearch)}>
+                            <FaSearch />
+                        </Button>
+
                     </div>
                 ) : (
                     <div className="position-sticky m-2">
                         <Button variant="primary" onClick={() => setShowModal(true)} className="m-2">
-                            <i className="fas fa-filter"></i>
+                            <FaFilter />
                         </Button>
                     </div>
                 )}
