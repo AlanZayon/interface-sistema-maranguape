@@ -4,9 +4,10 @@ import { Row, Col, Card, Button, Modal, Form, Collapse, Container, Dropdown } fr
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FaAngleDown, FaAngleUp, FaChevronLeft } from 'react-icons/fa';
+import { FaAngleDown, FaAngleUp, FaChevronLeft, FaPencilAlt, FaEdit, FaMinus } from 'react-icons/fa';
 import axios from 'axios';
-import { useAuth } from './AuthContext'; // Importa o contexto
+import { useAuth } from './AuthContext';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Step1Form from './Step1Form';
 import FuncionariosList from './FuncionariosList';
 import ObservationHistoryButton from './ObservationHistoryButton';
@@ -48,6 +49,8 @@ function SetorScreen() {
   const [newSubSetorName, setNewSubSetorName] = useState('');
   const [newCoordName, setNewCoordName] = useState('');
   const [openCoord, setOpenCoord] = useState({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [setorToDelete, setSetorToDelete] = useState(null);
   const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
   const location = useLocation(); // Captura o caminho completo da URL
   // const [funcionarios, setFuncionarios] = useState([])
@@ -61,16 +64,13 @@ function SetorScreen() {
 
 
 
-    // Obtém o nome do último segmento da URL
-    const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
+  // Obtém o nome do último segmento da URL
+  const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
 
   const fetchSetoresData = async () => {
     const response = await axios.get(`${API_BASE_URL}/api/setores/dados/${currentSetorId}`);
     return response.data;
   };
-
-
-
 
   const handleCloseModal = () => {
     setNewUser({
@@ -139,6 +139,44 @@ function SetorScreen() {
     return response.data;
   };
 
+  const deleteSetor = async (id) => {
+    const response = await axios.delete(`${API_BASE_URL}/api/setores/del/${id}`);
+    return response.data;
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteSetor,
+    onSuccess: () => {
+      setSubSetores((prevSubSetores) => prevSubSetores.filter((subsetor) => subsetor._id !== setorToDelete));
+      setCoordenadorias((prevCoordenadorias) => prevCoordenadorias.filter((coordenadoria) => coordenadoria._id !== setorToDelete));
+
+      queryClient.invalidateQueries('setores');
+    },
+    onError: (error) => {
+      console.error('Erro ao excluir setor:', error);
+    },
+  });
+
+  const handleDeleteSetor = (setorId) => {
+    setSetorToDelete(setorId);
+    setShowDeleteModal(true); // Exibe o modal de confirmação de exclusão
+  };
+
+  const handleConfirmDelete = async () => {
+    if (setorToDelete) {
+      try {
+        await deleteMutation.mutateAsync(setorToDelete);
+      } catch (error) {
+        console.error('Erro ao excluir setor:', error);
+      }
+    }
+    setShowDeleteModal(false);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setSetorToDelete(null); // Limpa o setor selecionado
+  };
   // Mutation para lidar com a criação do setor
   const mutation = useMutation({
     mutationFn: createSetor,
@@ -248,7 +286,7 @@ function SetorScreen() {
   };
 
   return (
-    <div>
+    <div className='mx-1'>
 
       <h2 className="mt-4 d-flex">
 
@@ -272,20 +310,20 @@ function SetorScreen() {
           </Button>
         </Col>
         <span
-    style={{
-      fontSize: '1.5rem', 
-      fontWeight: 'bold', 
-      marginLeft: '15px', 
-      color: '#333', 
-      textTransform: 'capitalize', 
-    }}
-  >
-    {setorNomeDecodificado}
-  </span>
-        </h2>
+          style={{
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
+            marginLeft: '15px',
+            color: '#333',
+            textTransform: 'capitalize',
+          }}
+        >
+          {setorNomeDecodificado}
+        </span>
+      </h2>
       <Row className='mt-4'>
         {/* Botão para criar novo subsetor */}
-        <Row className='m-2' xs={4} sm={4} md={6} >
+        <Row className='m-2' xs={3} sm={3} md={6} >
           <Card
             className="create-sector-card text-center"
             style={{ cursor: 'pointer' }}
@@ -302,7 +340,7 @@ function SetorScreen() {
 
         {/* Exibição de subsetores */}
         {Array.isArray(subSetores) && subSetores.map((subSetor, index) => (
-          <Col md={4} key={index}>
+          <Col md={3} key={index}>
             {editingSetorId !== subSetor._id ? (
               <Card className="custom-card text-center my-2">
                 <Card.Header className="d-flex justify-content-between align-items-center">
@@ -322,7 +360,7 @@ function SetorScreen() {
                       >
                         Renomear
                       </Dropdown.Item>
-                      <Dropdown.Item>Outra Ação</Dropdown.Item>
+                      <Dropdown.Item style={{ color: 'red' }} onClick={() => handleDeleteSetor(subSetor._id)}>Deletar</Dropdown.Item>
                     </Dropdown.Menu>
                   </Dropdown>
                 </Card.Header>
@@ -352,6 +390,12 @@ function SetorScreen() {
         ))}
 
       </Row>
+
+      <ConfirmDeleteModal
+        showModal={showDeleteModal}
+        handleClose={handleCloseDeleteModal}
+        handleConfirmDelete={handleConfirmDelete}
+      />
 
       {/* Modal para criar novo subsetor */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
@@ -400,38 +444,52 @@ function SetorScreen() {
 
 
       {/* Exibição de coordenadorias com collapses */}
-      <Container className="mt-4">
-        <h4>Cargo
-        <Button
-          variant="outline-primary"
-          className="m-2 custom-outline-button"
-          onClick={() => setShowCoordModal(true)}
-        >
-          Criar Cargo
-        </Button>
+      <div className="mt-4">
+        <h4 className='mx-2'>Cargo:
+          <Button
+            variant="outline-primary"
+            className="m-2 custom-outline-button"
+            onClick={() => setShowCoordModal(true)}
+          >
+            Criar Cargo
+          </Button>
 
-        <Button
-          onClick={toggleSelectionControlsEdit}
-          variant="outline-primary"
-          className="m-2 custom-outline-button"
-        >
-          Editar Cargo
-        </Button>
+          <Button
+            onClick={toggleSelectionControlsEdit}
+            variant="outline-primary"
+            className="m-2 custom-outline-button"
+          >
+            <FaPencilAlt />
+          </Button>
         </h4>
 
 
         {Array.isArray(coordenadorias) && coordenadorias.map((coord, index) => (
           <Card key={index} className="m-3">
             {showSelectionControlsEdit && (
-              <Button
-                onClick={() => handleRenameCoord(coord._id, coord.nome)}
-                variant='outline-dark'
-                className="user-checkbox btn-sm rounded-circle"
-              >
-                <i className="fas fa-edit"></i>
+              <>
+                <div className="d-flex gap-2">
+                  {/* Botão para editar */}
+                  <Button
+                    onClick={() => handleRenameCoord(coord._id, coord.nome)}
+                    variant='outline-dark'
+                    className="user-checkbox btn-sm rounded-circle"
+                  >
+                    <FaEdit />
+                  </Button>
 
-              </Button>
+                  {/* Botão para deletar */}
+                  <Button
+                    onClick={() => handleDeleteSetor(coord._id)}
+                    variant="outline-danger"
+                    className="user-checkbox-2 btn-sm rounded-circle"
+                  >
+                    <FaMinus /> {/* Ícone de menos */}
+                  </Button>
+                </div>
+              </>
             )}
+
 
 
             <Card.Header
@@ -441,15 +499,15 @@ function SetorScreen() {
               style={{ cursor: 'pointer' }}
             >
               {editingCoordenadoriaId !== coord._id ? (
-              <span>{coord.nome}</span>
-              ): (
+                <span>{coord.nome}</span>
+              ) : (
                 <Form.Control
-                type="text"
-                value={editedNameCoordenadoria}
-                onChange={(e) => setEditedNameCoordenadoria(e.target.value)}
-                onBlur={() => handleSaveRenameCoord(coord._id)}
-                autoFocus
-              />
+                  type="text"
+                  value={editedNameCoordenadoria}
+                  onChange={(e) => setEditedNameCoordenadoria(e.target.value)}
+                  onBlur={() => handleSaveRenameCoord(coord._id)}
+                  autoFocus
+                />
               )}
 
               {openCoord[coord.nome] ? <FaAngleUp /> : <FaAngleDown />}
@@ -472,7 +530,7 @@ function SetorScreen() {
           </Card>
         ))}
 
-      </Container>
+      </div>
 
       {/* Modal para criar nova coordenadoria */}
       <Modal show={showCoordModal} onHide={() => setShowCoordModal(false)}>

@@ -156,7 +156,7 @@ function Header() {
 
   return (
     <>
-      <header className="d-flex justify-content-between align-items-center bg-dark text-white p-3 header">
+      <header className="w-100 d-flex justify-content-between align-items-center bg-dark text-white p-3 header">
         <h1 style={{ fontSize: '1.2rem' }}>
           {role === "admin" ? (
             <Dropdown align="end">

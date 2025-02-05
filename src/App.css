@@ -10,7 +10,6 @@
     gap: 5px;
 }
 
-/* mainscreen/setorscreen */
 .custom-card {
     border: 1px solid #ddd;
     border-radius: 10px;
@@ -186,8 +185,16 @@
 
 .user-checkbox {
     position: absolute;
-    top: -10px;
+    top: -15px;
     right: -10px;
+    z-index: 1;
+    /* Garante que o checkbox fique acima de outros conteúdos do card */
+}
+
+.user-checkbox-2 {
+    position: absolute;
+    top: -15px;
+    right: 30px;
     z-index: 1;
     /* Garante que o checkbox fique acima de outros conteúdos do card */
 }

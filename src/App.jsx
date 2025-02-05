@@ -38,7 +38,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Container fluid>
+      <div className='w-100'>
         {/* Renderiza o Header se não estiver na rota de login */}
         {location.pathname !== '/' && <Header handleShowFilter={handleShowFilter} />}
 
@@ -76,7 +76,7 @@ function App() {
             </Routes>
           </>
         )}
-      </Container>
+      </div>
     </QueryClientProvider>
   );
 
