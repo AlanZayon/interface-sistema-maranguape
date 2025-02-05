@@ -89,7 +89,6 @@ function FuncionairosList({
     };
 
     useEffect(() => {
-        console.log(setorPathId)
         if (setorPathId !== 'mainscreen' && setorPathId) {
 
             const fetchData = async () => {
@@ -107,7 +106,6 @@ function FuncionairosList({
                 try {
                     const data = await fetchFuncionariosData();
                     setFuncionariosPath(data);
-                    console.log("funcionarios data", data)
                 } catch (error) {
                     console.error("Erro ao buscar os dados:");
                 }

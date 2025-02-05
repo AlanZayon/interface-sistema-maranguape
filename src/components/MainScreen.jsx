@@ -29,7 +29,6 @@ function MainScreen() {
         const data = await fetchSetoresData();
         const setoresFiltrados = data.setores
         setSetores(setoresFiltrados); // Armazena apenas `id` e `nome`
-        console.log(setores);
       } catch (error) {
         console.error('Erro ao buscar os dados:', error);
       }

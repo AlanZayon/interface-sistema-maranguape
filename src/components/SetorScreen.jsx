@@ -93,17 +93,14 @@ function SetorScreen() {
   }
 
   useEffect(() => {
-    console.log(currentSetorId);
     const fetchData = async () => {
       try {
         const data = await fetchSetoresData();
-        console.log(data)
         setSubSetores(data.subsetores)
         setCoordenadorias(data.coordenadoriasComFuncionarios)
         const todosFuncionarios = data.coordenadoriasComFuncionarios.flatMap(coordenadoria => coordenadoria.funcionarios);
         setFuncionarios(todosFuncionarios);
       } catch (error) {
-        console.log(error)
         console.error("Erro ao buscar os dados:");
       }
     };
@@ -218,7 +215,6 @@ function SetorScreen() {
   });
 
   const handleRenameSetor = (id, nome) => {
-    console.log(id, nome)
     setEditingSetorId(id);
     setEditedName(nome);
   };
