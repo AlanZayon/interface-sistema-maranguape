@@ -424,7 +424,6 @@ function FuncionairosList({
                                                 placeholder="Nome do Servidor..."
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                                autoFocus
                                             />
                                         </InputGroup>
                                     </Popover.Body>
@@ -583,8 +582,8 @@ function FuncionairosList({
                             <ObservationHistoryModal
                                 show={showObservationModal}
                                 onHide={() => setShowObservationModal(false)}
-                                onAddObservation={handleAddObservation}
-                                observacoes={observations[currentUserId] || []}
+                                userId={user._id}
+                                initialObservations ={observations[currentUserId] || []}
                             />
 
 
