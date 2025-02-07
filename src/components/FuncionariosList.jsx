@@ -11,8 +11,6 @@ import UserEdit from './userEdit';
 import { API_BASE_URL } from '../utils/apiConfig';
 
 
-
-
 function FuncionairosList({
     coordenadoriaId,
     setorPathId
@@ -317,6 +315,28 @@ function FuncionairosList({
 
     };
 
+    const handleReportSelected = async () => {
+
+        try {
+            // Envia os IDs dos usuários selecionados para o backend
+            const response = await axios.post(`${API_BASE_URL}/api/funcionarios/relatorio-funcionarios/gerar`,
+                { ids: selectedUsers},
+                { responseType: "blob" }
+            );
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "relatorio.pdf";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (error) {
+            console.error("Erro ao gerar o relatório:", error);
+        }
+
+    };
+
 
     const toggleSelectionControlsDelete = () => {
         setShowSelectionControlsDelete(!showSelectionControlsDelete);
@@ -450,7 +470,7 @@ function FuncionairosList({
 
 
                 {/* Checkbox Global e Botão "Apagar Selecionados" */}
-                {(showSelectionControlsDelete && !showSelectionControlsEdit) && (
+                {(showSelectionControlsDelete && !showSelectionControlsEdit && !showSelectionControlsReport) && (
                     <div className="d-flex align-items-center">
                         <Form.Check
                             type="checkbox"
@@ -465,8 +485,8 @@ function FuncionairosList({
                     </div>
                 )}
 
-                {/* Checkbox Global e Botão "Apagar Selecionados" */}
-                {(showSelectionControlsEdit && !showSelectionControlsDelete) && (
+                {/* Checkbox Global e Botão "editar Selecionados" */}
+                {(showSelectionControlsEdit && !showSelectionControlsDelete && !showSelectionControlsReport) && (
                     <div className="d-flex align-items-center">
                         <Form.Check
                             type="checkbox"
@@ -477,6 +497,21 @@ function FuncionairosList({
                         />
                         <Button className='m-1' variant="secondary" onClick={() => setShowModalEdit(true)} disabled={selectedUsers.length === 0}>
                             Editar
+                        </Button>
+                    </div>
+                )}
+
+                {(showSelectionControlsReport && !showSelectionControlsEdit && !showSelectionControlsDelete) && (
+                    <div className="d-flex align-items-center">
+                        <Form.Check
+                            type="checkbox"
+                            label="Todos"
+                            checked={selectAll}
+                            onChange={handleSelectAll}
+                            className="me-2 checkbox-container"
+                        />
+                        <Button className='m-1' variant="warning" onClick={handleReportSelected} disabled={selectedUsers.length === 0}>
+                            Gerar
                         </Button>
                     </div>
                 )}
@@ -524,7 +559,7 @@ function FuncionairosList({
 
                             {/* Header do card */}
                             <div className="card-header d-flex justify-content-between align-items-center">
-                                {(showSelectionControlsDelete || showSelectionControlsEdit) && (
+                                {(showSelectionControlsDelete || showSelectionControlsEdit || showSelectionControlsReport) && (
                                     <Form.Check
                                         type="checkbox"
                                         checked={selectedUsers.includes(user._id)}
@@ -583,7 +618,7 @@ function FuncionairosList({
                                 show={showObservationModal}
                                 onHide={() => setShowObservationModal(false)}
                                 userId={user._id}
-                                initialObservations ={observations[currentUserId] || []}
+                                initialObservations={observations[currentUserId] || []}
                             />
 
 
@@ -635,14 +670,14 @@ function FuncionairosList({
 
                                         {/* Informações Financeiras */}
                                         <div className="info-card financial-info my-2">
-                                            <h3>Informações Financeiras</h3>
+                                            <h3>Financeiro</h3>
                                             <p><strong>Sal. Bruto:</strong> {user.salarioBruto}</p>
                                             <p><strong>Sal. Líquido:</strong> {user.salarioLiquido}</p>
                                         </div>
 
                                         {/* Informações Pessoais */}
                                         <div className="info-card personal-info my-2">
-                                            <h3>Informações Pessoais</h3>
+                                            <h3>Localidade</h3>
                                             <p><strong>Endereço:</strong> {user.endereco}</p>
                                             <p><strong>Bairro:</strong> {user.bairro}</p>
                                             <p><strong>Telefone:</strong> {user.telefone}</p>
