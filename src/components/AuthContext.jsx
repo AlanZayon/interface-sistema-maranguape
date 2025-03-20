@@ -27,30 +27,58 @@ export const AuthProvider = ({ children }) => {
 
     const addFuncionarios = (newData) => {
         setFuncionarios((prevUsers) => {
-            const updatedUsers = Array.isArray(newData) ? newData : [newData]; // Garante que seja sempre um array
     
-            const updatedList = prevUsers.map((user) => {
-                const updatedUser = updatedUsers.find((u) => u._id === user._id);
-                return updatedUser ? { ...user, ...updatedUser } : user;
+            if (!prevUsers || typeof prevUsers !== "object") return prevUsers;
+    
+            const prevUsersObject = { ...prevUsers };
+    
+            // Garantindo que newData seja um array
+            const updatedUsersArray = Array.isArray(newData) ? newData : [newData];
+    
+            updatedUsersArray.forEach((user) => {
+                const coordenadoriaId = user.coordenadoria;
+    
+                if (!coordenadoriaId) return; 
+    
+                if (!prevUsersObject[coordenadoriaId]) {
+                    prevUsersObject[coordenadoriaId] = [];
+                }
+    
+                const existingIndex = prevUsersObject[coordenadoriaId].findIndex(
+                    (u) => u._id === user._id
+                );
+    
+                if (existingIndex !== -1) {
+                    prevUsersObject[coordenadoriaId][existingIndex] = {
+                        ...prevUsersObject[coordenadoriaId][existingIndex],
+                        ...user,
+                    };
+                } else {
+                    prevUsersObject[coordenadoriaId].push(user);
+                }
             });
     
-            // Adiciona novos usuários que não estavam na lista antes
-            const newUsers = updatedUsers.filter((u) => !prevUsers.some((user) => user._id === u._id));
-    
-            return [...updatedList, ...newUsers];
+            return prevUsersObject;
         });
     };
     
+    
+    
     const addFuncionariosPath = (newData) => {
         setFuncionariosPath((prevUsers) => {
+    
+            if (!prevUsers || typeof prevUsers !== "object") return prevUsers;
+    
+            const prevUsersArray = Array.isArray(prevUsers) ? prevUsers : Object.values(prevUsers);
+    
             const updatedUsers = Array.isArray(newData) ? newData : [newData];
     
-            const updatedList = prevUsers.map((user) => {
+            const updatedList = prevUsersArray.map((user) => {
                 const updatedUser = updatedUsers.find((u) => u._id === user._id);
                 return updatedUser ? { ...user, ...updatedUser } : user;
             });
     
-            const newUsers = updatedUsers.filter((u) => !prevUsers.some((user) => user._id === u._id));
+            const newUsers = updatedUsers.filter((u) => !prevUsersArray.some((user) => user._id === u._id));
     
             return [...updatedList, ...newUsers];
         });

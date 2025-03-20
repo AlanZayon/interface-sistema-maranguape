@@ -1,288 +1,229 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Row, Col, Form, Button, Modal, Card, Spinner } from 'react-bootstrap';
-import axios from 'axios';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from './AuthContext'; // Importa o contexto
-import { API_BASE_URL } from '../utils/apiConfig';
-import { FaSyncAlt, FaSave, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import { Row, Col, Form, Button, Modal, Spinner } from "react-bootstrap";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import { API_BASE_URL } from "../utils/apiConfig";
+import { useAuth } from "./AuthContext"; // Importa o contexto
+import ObservationHistoryButton from "./ObservationHistoryButton";
+import ObservationHistoryModal from "./ObservationHistoryModal";
 
 function Step2Form({
-    newUser = { coordenadoria: [] },
-    previousStep,
-    handleCloseModal
+  newUser,
+  setNewUser,
+  previousStep,
+  nextStep,
+  coordenadoriaId,
+  secretaria,
+  handleCloseModal,
 }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { addFuncionarios, addFuncionariosPath } = useAuth();
+  const [showModalObs, setShowModalObs] = useState(false);
+  const queryClient = useQueryClient();
 
-    // Função para fazer a requisição com axios
-    const fetchSetoresData = async () => {
-        const response = await axios.get(`${API_BASE_URL}/api/setores/setoresOrganizados`);
-        return response.data;
-    };
+  const { mutate: submitUserData } = useMutation({
+    mutationFn: async () => {
+      newUser.redesSociais = newUser.redesSociais.filter(
+        (item) => item.link && item.nome
+      );
 
-    const { data, isError, error } = useQuery({
-        queryKey: ['setores'],
-        queryFn: fetchSetoresData
-    });
+      const formData = new FormData();
+      formData.append("nome", newUser.nome);
+      if (newUser.foto) {
+        formData.append("foto", newUser.foto);
+      }
+      formData.append("secretaria", secretaria);
+      formData.append("natureza", newUser.natureza);
+      formData.append("referencia", newUser.referencia);
+      formData.append("salarioBruto", newUser.salarioBruto || 0);
+      formData.append("salarioLiquido", Number(newUser.salarioLiquido || 0));
+      formData.append("funcao", newUser.cargo);
+      formData.append("tipo", newUser.tipo);
+      formData.append('observacoes', JSON.stringify(newUser.observacoes) || []);
+      formData.append("coordenadoria", coordenadoriaId);
+      formData.append("endereco", newUser.endereco);
+      formData.append("bairro", newUser.bairro);
+      formData.append("telefone", newUser.telefone);
+      if (newUser.arquivo) {
+        formData.append("arquivo", newUser.arquivo);
+      }
+      formData.append("redesSociais", JSON.stringify(newUser.redesSociais));
 
-    const { setorId, '*': subPath } = useParams();
-    const [setoresOrganizados, setSetoresOrganizados] = useState([]);
-    const [setorSelecionado, setSetorSelecionado] = useState(null);
-    const [subsetorSelecionado, setSubsetorSelecionado] = useState([]);
-    const [coordenadoriaSelecionada, setCoordenadoriaSelecionada] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const { addFuncionarios, addFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
-    const currentSetorId = subPath ? subPath.split('/').pop() : setorId;
-
-
-    // Carrega os dados quando a resposta da API é recebida
-    useEffect(() => {
-        if (data && data.setores) {
-            setSetoresOrganizados(data.setores);
+      const response = await axios.post(
+        `${API_BASE_URL}/api/funcionarios/`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
-    }, [data]);
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries("funcionarios");
+      addFuncionarios(data);
+      addFuncionariosPath(data);
+      handleCloseModal();
+      alert("Cadastrado");
+    },
+    onError: (error) => {
+      console.error("Erro ao enviar os dados:", error);
+    },
+    onSettled: () => {
+      setIsLoading(false);
+    },
+  });
 
-    const refreshAll = () => {
-        setSetorSelecionado(null);
-        setSubsetorSelecionado([]);  // Limpa o subsetor selecionado anterior
-        setCoordenadoriaSelecionada(null);  // Limpa a coordenadoria selecionada anterior
-        newUser.coordenadoria = "";
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setIsLoading(true);
+    
+    // Verifica se coordenadoriaId está presente
+    if (coordenadoriaId) {
+      submitUserData();
+    } else {
+      nextStep(); // Chama a função nextStep caso não tenha coordenadoriaId
     }
+  };
 
-    // Função para tratar a seleção do setor
-    const handleSetorSelect = (setorId) => {
-        const setor = setoresOrganizados.find((s) => s._id === setorId);
-        setSetorSelecionado(setor);
-        setSubsetorSelecionado([]);  // Limpa o subsetor selecionado anterior
-        setCoordenadoriaSelecionada(null);  // Limpa a coordenadoria selecionada anterior
-        newUser.coordenadoria = "";
+  return (
+    <Form onSubmit={handleSubmit}>
+      <Row>
+        <Col md={6}>
+          <Form.Group controlId="formEndereco">
+            <Form.Label>Endereço</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Digite o endereço"
+              value={newUser.endereco}
+              onChange={(e) =>
+                setNewUser({ ...newUser, endereco: e.target.value })
+              }
+            />
+          </Form.Group>
+        </Col>
 
-    };
+        <Col md={6}>
+          <Form.Group controlId="formBairro">
+            <Form.Label>Bairro</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Digite o bairro"
+              value={newUser.bairro}
+              onChange={(e) =>
+                setNewUser({ ...newUser, bairro: e.target.value })
+              }
+            />
+          </Form.Group>
+        </Col>
 
-    // Função recursiva para buscar um subsetor em qualquer nível de profundidade
-    const findSubsetorById = (subsetores, subsetorId) => {
-        for (let subsetor of subsetores) {
-            if (subsetor._id === subsetorId) {
-                return subsetor;
-            } else if (subsetor.subsetores && subsetor.subsetores.length > 0) {
-                const found = findSubsetorById(subsetor.subsetores, subsetorId);
-                if (found) return found;
-            }
-        }
-        return null;
-    };
+        <Col md={6}>
+          <Form.Group controlId="formTelefone">
+            <Form.Label>Telefone</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Digite o telefone"
+              value={newUser.telefone}
+              onChange={(e) =>
+                setNewUser({ ...newUser, telefone: e.target.value })
+              }
+            />
+          </Form.Group>
+        </Col>
 
-    // Função para tratar a seleção do subsetor
-    const handleSubsetorSelect = (subsetorId) => {
-        const subsetor = findSubsetorById(setorSelecionado.subsetores, subsetorId);
-        if (subsetor) {
-            // Atualiza o subsetor selecionado e limpa a coordenadoria do setor principal
-            setSubsetorSelecionado([subsetor]); // mantém apenas o subsetor selecionado atual
-            newUser.coordenadoria = "";
-        }
-
-
-    };
-
-    // Função para atualizar o newUser com o ID da coordenadoria selecionada
-    const handleCoordenadoriaSelect = (coordenadoriaId) => {
-        let coordenadoria;
-
-        if (subsetorSelecionado.length > 0) {
-            // Pega a última coordenadoria do último subsetor selecionado
-            const ultimoSubsetor = subsetorSelecionado[subsetorSelecionado.length - 1];
-            coordenadoria = ultimoSubsetor.coordenadorias.find((coord) => coord._id === coordenadoriaId);
-        } else if (setorSelecionado && setorSelecionado.coordenadorias) {
-            // Se não há subsetor selecionado, busca a coordenadoria diretamente no setor
-            coordenadoria = setorSelecionado.coordenadorias.find((coord) => coord._id === coordenadoriaId);
-        }
-
-        // Define a coordenadoria selecionada e atualiza o usuário
-        setCoordenadoriaSelecionada(coordenadoria);
-        newUser.coordenadoria = coordenadoriaId;
-
-    };
-
-
-
-    const handleSubmit2 = async () => {
-        setIsLoading(true);
-        // Filtra as redes sociais
-        newUser.redesSociais = newUser.redesSociais.filter(item => item.link && item.nome);
-
-        const formData = new FormData();
-        formData.append('nome', newUser.nome);
-        formData.append('foto', newUser.foto || null);
-        formData.append('secretaria', newUser.secretaria);
-        formData.append('funcao', newUser.funcao);
-        formData.append('natureza', newUser.natureza);
-        formData.append('referencia', newUser.referencia);
-        formData.append('redesSociais', JSON.stringify(newUser.redesSociais) || '');
-        formData.append('salarioBruto', newUser.salarioBruto);
-        formData.append('salarioLiquido', newUser.salarioLiquido);
-        formData.append('endereco', newUser.endereco);
-        formData.append('bairro', newUser.bairro);
-        formData.append('telefone', newUser.telefone);
-        formData.append('arquivo', newUser.arquivo || null);
-        formData.append('observacoes', JSON.stringify(newUser.observacoes));
-        formData.append('coordenadoria', newUser.coordenadoria);
-
-        try {
-            // Realiza a requisição para a API
-            const response = await axios.post(`${API_BASE_URL}/api/funcionarios/${currentSetorId}`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
+        <Col md={6}>
+          <Form.Group controlId="formArquivo">
+            <Form.Label>Upload de Arquivo (PDF)</Form.Label>
+            <Form.Control
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  setNewUser({ ...newUser, arquivo: file });
                 }
-            });
+              }}
+            />
+          </Form.Group>
+        </Col>
 
-            // Exibe a resposta da API
-            addFuncionarios(response.data)
-            addFuncionariosPath(response.data)
-            handleCloseModal()
-            alert("cadastrado")
-        } catch (error) {
-            console.error('Erro ao cadastrar funcionário:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        <Col md={6}>
+            <ObservationHistoryButton onClick={() => setShowModalObs(true)}/>
+        </Col>
 
-    // Renderiza o formulário
-    return (
-        <Form>
-            <Card className="mb-3">
-                <Card.Body>
-                    <Button onClick={refreshAll} variant="outline-secondary" className="mb-3">
-                        <FaSyncAlt /> Recarregar
-                    </Button>
+        <ObservationHistoryModal
+                    show={showModalObs}
+                    onHide={() => setShowModalObs(false)}
+                    observacoesregister={newUser?.observacoes}
+                />
 
-                    <Row>
-                        <Col md={12}>
-                            <Form.Group controlId="formSetor">
-                                <Form.Label>Setores:</Form.Label>
-                                <div className="d-flex flex-wrap">
-                                    {setoresOrganizados.map((setor) => (
-                                        <Button
-                                            key={setor._id}
-                                            variant={setorSelecionado?._id === setor._id ? "primary" : "outline-primary"}
-                                            className="me-2 mb-2"
-                                            onClick={() => handleSetorSelect(setor._id)}
-                                        >
-                                            {setor.nome}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </Form.Group>
-                        </Col>
-                    </Row>
+        <Col md={6}>
+          <Form.Group controlId="formRedesSociais">
+            <Form.Label>Redes Sociais</Form.Label>
+            {newUser.redesSociais.map((social, index) => (
+              <div key={index} className="mb-3">
+                <Form.Control
+                  type="text"
+                  placeholder="Nome da Rede Social"
+                  value={social.nome}
+                  onChange={(e) => {
+                    const redesSociais = [...newUser.redesSociais];
+                    redesSociais[index].nome = e.target.value;
+                    setNewUser({ ...newUser, redesSociais });
+                  }}
+                />
+                <Form.Control
+                  type="text"
+                  placeholder="Link da Rede Social"
+                  value={social.link}
+                  onChange={(e) => {
+                    const redesSociais = [...newUser.redesSociais];
+                    redesSociais[index].link = e.target.value;
+                    setNewUser({ ...newUser, redesSociais });
+                  }}
+                  className="mt-2"
+                />
+              </div>
+            ))}
+            <Button
+              variant="link"
+              onClick={() =>
+                setNewUser({
+                  ...newUser,
+                  redesSociais: [
+                    ...newUser.redesSociais,
+                    { nome: "", link: "" },
+                  ],
+                })
+              }
+            >
+              Adicionar Rede Social
+            </Button>
+          </Form.Group>
+        </Col>
+      </Row>
 
-                    {setorSelecionado && setorSelecionado.subsetores && (
-                        <Row>
-                            <Col md={12}>
-                                {subsetorSelecionado.map((subsetor, index) => (
-                                    <Form.Group key={index} controlId={`formSubsetor${index}`}>
-                                        <Form.Label>Subsetores - {subsetor.nome}</Form.Label>
-                                        <div className="d-flex flex-wrap">
-                                            {subsetor.subsetores.map((sub) => (
-                                                <Button
-                                                    key={sub._id}
-                                                    variant={subsetorSelecionado.some(sel => sel._id === sub._id) ? "primary" : "outline-primary"}
-                                                    className="me-2 mb-2"
-                                                    onClick={() => handleSubsetorSelect(sub._id)}
-                                                >
-                                                    {sub.nome}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </Form.Group>
-                                ))}
-                                {subsetorSelecionado.length === 0 && setorSelecionado.subsetores.map((sub) => (
-                                    <Button
-                                        key={sub._id}
-                                        variant={subsetorSelecionado.some(sel => sel._id === sub._id) ? "primary" : "outline-primary"}
-                                        className="me-2 mb-2"
-                                        onClick={() => handleSubsetorSelect(sub._id)}
-                                    >
-                                        {sub.nome}
-                                    </Button>
-                                ))}
-                            </Col>
-                        </Row>
-                    )}
-
-                    {subsetorSelecionado.map((subsetor, index) => (
-                        subsetor.coordenadorias && subsetor.coordenadorias.length > 0 && (
-                            <Row key={`coordenadoria-${index}`}>
-                                <Col md={12}>
-                                    <Form.Group controlId={`formCoordenadoria_${index}`}>
-                                        <Form.Label>Cargos: {subsetor.nome}</Form.Label>
-                                        <div className="d-flex flex-wrap">
-                                            {subsetor.coordenadorias.map((coordenadoria) => (
-                                                <Button
-                                                    key={coordenadoria._id}
-                                                    variant={coordenadoriaSelecionada?._id === coordenadoria._id ? "primary" : "outline-primary"}
-                                                    className="me-2 mb-2"
-                                                    onClick={() => handleCoordenadoriaSelect(coordenadoria._id)}
-                                                >
-                                                    {coordenadoria.nome}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </Form.Group>
-                                </Col>
-                            </Row>
-                        )
-                    ))}
-
-                    {(setorSelecionado && subsetorSelecionado.length === 0 && setorSelecionado.coordenadorias && setorSelecionado.coordenadorias.length > 0) && (
-                        <Row>
-                            <Col md={12}>
-                                <Form.Group controlId="formCoordenadoriaInicial">
-                                    <Form.Label>Cargos: {setorSelecionado.nome}</Form.Label>
-                                    <div className="d-flex flex-wrap">
-                                        {setorSelecionado.coordenadorias.map((coordenadoria) => (
-                                            <Button
-                                                key={coordenadoria._id}
-                                                variant={coordenadoriaSelecionada?._id === coordenadoria._id ? "primary" : "outline-primary"}
-                                                className="me-2 mb-2"
-                                                onClick={() => handleCoordenadoriaSelect(coordenadoria._id)}
-                                            >
-                                                {coordenadoria.nome}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                </Form.Group>
-                            </Col>
-                        </Row>
-                    )}
-                </Card.Body>
-            </Card>
-
-            <Modal.Footer>
-
-
-                {isLoading ? (
-                    <div className="loading-screen">
-                        <Spinner animation="border" role="status">
-                            <span className="visually-hidden">Carregando...</span>
-                        </Spinner>
-                    </div>
-                ) : (
-                    <div>
-                        <Button className='mx-1' variant="secondary" onClick={previousStep}>
-                            <FaTimes /> Voltar
-                        </Button>
-                        <Button
-                            variant="primary"
-                            onClick={handleSubmit2}
-                            disabled={!coordenadoriaSelecionada}
-                        >
-                            <FaSave /> Salvar
-                        </Button>
-                    </div>
-                )}
-            </Modal.Footer>
-        </Form>
-    );
+      <Modal.Footer>
+        {isLoading ? (
+          <div className="loading-screen">
+            <Spinner animation="border" role="status">
+              <span className="visually-hidden">Carregando...</span>
+            </Spinner>
+          </div>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={previousStep}>
+              Voltar
+            </Button>
+            <Button variant="primary" type="submit">
+              Avançar
+            </Button>
+          </>
+        )}
+      </Modal.Footer>
+    </Form>
+  );
 }
 
 export default Step2Form;

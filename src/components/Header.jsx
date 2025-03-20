@@ -8,6 +8,7 @@ import ObservationHistoryButton from './ObservationHistoryButton';
 import ObservationHistoryModal from './ObservationHistoryModal';
 import Step1Form from './Step1Form';
 import Step2Form from './Step2Form';
+import Step3Form from './Step3Form';
 import { useAuth } from './AuthContext'; // Importa o contexto
 import { API_BASE_URL } from '../utils/apiConfig';
 
@@ -243,8 +244,6 @@ function Header() {
               nextStep={nextStep}
               newUser={newUser}
               setNewUser={setNewUser}
-              ObservationHistoryButton={ObservationHistoryButton}
-              ObservationHistoryModal={ObservationHistoryModal}
               handleCloseModal={handleCloseModal}
             />
 
@@ -253,12 +252,21 @@ function Header() {
           {currentStep === 2 && (
             <Step2Form
               newUser={newUser}
+              setNewUser={setNewUser}
+              nextStep={nextStep}
               previousStep={prevStep}
               handleCloseModal={handleCloseModal}
-            // Outros props necessários para o Step2Form
             />
 
 
+          ) }
+          {/* Passo 3: Informações adicionais */}
+          {currentStep === 3 && (
+            <Step3Form
+              newUser={newUser}
+              previousStep={prevStep}
+              handleCloseModal={handleCloseModal}
+            />
           )}
         </Modal.Body>
       </Modal>
