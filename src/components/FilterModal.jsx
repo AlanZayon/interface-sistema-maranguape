@@ -1,5 +1,5 @@
 // FilterModal.js
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Modal, Form, DropdownButton, Dropdown, Button } from "react-bootstrap";
 
 function FilterModal({
@@ -10,6 +10,8 @@ function FilterModal({
   todasFuncoes,
   todosBairros,
   todasReferencias,
+  todosSalariosBrutos,
+  todosSalariosLiquidos,
   toggleNatureza,
   toggleFuncao,
   toggleBairro,
@@ -17,6 +19,31 @@ function FilterModal({
   handleSalarioBrutoChange,
   handleSalarioLiquidoChange,
 }) {
+  const [salariosBrutos, setSalariosBrutos] = useState([]);
+  const [salariosLiquidos, setSalariosLiquidos] = useState([]);
+
+  // Simulação de dados de salários (substitua pelos seus dados reais)
+  useEffect(() => {
+    // Exemplo de dados de salários brutos e líquidos
+    const salariosBrutosExemplo = todosSalariosBrutos;
+    const salariosLiquidosExemplo = todosSalariosLiquidos;
+
+    setSalariosBrutos(salariosBrutosExemplo);
+    setSalariosLiquidos(salariosLiquidosExemplo);
+
+    // Definir valores mínimos e máximos ao abrir o modal
+    if (show) {
+      handleSalarioBrutoChange({
+        min: Math.min(...salariosBrutosExemplo),
+        max: Math.max(...salariosBrutosExemplo),
+      });
+      handleSalarioLiquidoChange({
+        min: Math.min(...salariosLiquidosExemplo),
+        max: Math.max(...salariosLiquidosExemplo),
+      });
+    }
+  }, [show]);
+
   return (
     <Modal show={show} onHide={onHide} centered>
       <Modal.Header closeButton>
@@ -100,59 +127,95 @@ function FilterModal({
 
         {/* Seção Salário Bruto */}
         <h5>Salário Bruto</h5>
-        <Form.Group className="d-flex">
-          <Form.Control
-            value={activeFilters.salarioBruto.min}
-            type="number"
-            placeholder="Mínimo"
-            onChange={(e) =>
-              handleSalarioBrutoChange({
-                ...activeFilters.salarioBruto,
-                min: e.target.value,
-              })
-            }
-            className="me-2"
-          />
-          <Form.Control
-            value={activeFilters.salarioBruto.max}
-            type="number"
-            placeholder="Máximo"
-            onChange={(e) =>
-              handleSalarioBrutoChange({
-                ...activeFilters.salarioBruto,
-                max: e.target.value,
-              })
-            }
-          />
-        </Form.Group>
+        <div className="d-flex gap-2 mb-3">
+          <DropdownButton
+            id="dropdown-salario-bruto-min"
+            title={`Mínimo: ${activeFilters.salarioBruto.min}`}
+            variant="outline-primary"
+          >
+            {salariosBrutos.map((salario) => (
+              <Dropdown.Item
+                key={`bruto-min-${salario}`}
+                onClick={() =>
+                  handleSalarioBrutoChange({
+                    ...activeFilters.salarioBruto,
+                    min: salario,
+                  })
+                }
+                active={activeFilters.salarioBruto.min === salario}
+              >
+                {salario}
+              </Dropdown.Item>
+            ))}
+          </DropdownButton>
+
+          <DropdownButton
+            id="dropdown-salario-bruto-max"
+            title={`Máximo: ${activeFilters.salarioBruto.max}`}
+            variant="outline-primary"
+          >
+            {salariosBrutos.map((salario) => (
+              <Dropdown.Item
+                key={`bruto-max-${salario}`}
+                onClick={() =>
+                  handleSalarioBrutoChange({
+                    ...activeFilters.salarioBruto,
+                    max: salario,
+                  })
+                }
+                active={activeFilters.salarioBruto.max === salario}
+              >
+                {salario}
+              </Dropdown.Item>
+            ))}
+          </DropdownButton>
+        </div>
 
         {/* Seção Salário Líquido */}
         <h5>Salário Líquido</h5>
-        <Form.Group className="d-flex">
-          <Form.Control
-            value={activeFilters.salarioLiquido.min}
-            type="number"
-            placeholder="Mínimo"
-            onChange={(e) =>
-              handleSalarioLiquidoChange({
-                ...activeFilters.salarioLiquido,
-                min: e.target.value,
-              })
-            }
-            className="me-2"
-          />
-          <Form.Control
-            value={activeFilters.salarioLiquido.max}
-            type="number"
-            placeholder="Máximo"
-            onChange={(e) =>
-              handleSalarioLiquidoChange({
-                ...activeFilters.salarioLiquido,
-                max: e.target.value,
-              })
-            }
-          />
-        </Form.Group>
+        <div className="d-flex gap-2 mb-3">
+          <DropdownButton
+            id="dropdown-salario-liquido-min"
+            title={`Mínimo: ${activeFilters.salarioLiquido.min}`}
+            variant="outline-primary"
+          >
+            {salariosLiquidos.map((salario) => (
+              <Dropdown.Item
+                key={`liquido-min-${salario}`}
+                onClick={() =>
+                  handleSalarioLiquidoChange({
+                    ...activeFilters.salarioLiquido,
+                    min: salario,
+                  })
+                }
+                active={activeFilters.salarioLiquido.min === salario}
+              >
+                {salario}
+              </Dropdown.Item>
+            ))}
+          </DropdownButton>
+
+          <DropdownButton
+            id="dropdown-salario-liquido-max"
+            title={`Máximo: ${activeFilters.salarioLiquido.max}`}
+            variant="outline-primary"
+          >
+            {salariosLiquidos.map((salario) => (
+              <Dropdown.Item
+                key={`liquido-max-${salario}`}
+                onClick={() =>
+                  handleSalarioLiquidoChange({
+                    ...activeFilters.salarioLiquido,
+                    max: salario,
+                  })
+                }
+                active={activeFilters.salarioLiquido.max === salario}
+              >
+                {salario}
+              </Dropdown.Item>
+            ))}
+          </DropdownButton>
+        </div>
 
         {/* Seção Bairro */}
         <h5>Bairro</h5>
@@ -187,9 +250,6 @@ function FilterModal({
         <Button variant="secondary" onClick={onHide}>
           Fechar
         </Button>
-        {/* <Button variant="primary" onClick={onHide}>
-                    Aplicar Filtros
-                </Button> */}
       </Modal.Footer>
     </Modal>
   );

@@ -63,6 +63,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
   const [todasFuncoes, setTodasFuncoes] = useState([]);
   const [todosBairros, setTodosBairros] = useState([]);
   const [todasReferencias, setTodasReferencias] = useState([]);
+  const [todosSalariosBrutos, setTodosSalariosBrutos] = useState([]);
+  const [todosSalariosLiquidos, setTodosSalariosLiquidos] = useState([]);
   // const [funcionariosPath, setFuncionariosPath] = useState([]);
   const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
   const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
@@ -173,6 +175,12 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
     const uniqueReferencias = [
       ...new Set(dados.map((item) => item.referencia)),
     ];
+    const uniqueSalariosBrutos = [
+      ...new Set(dados.map((item) => item.salarioBruto)),
+    ];
+    const uniqueSalariosLiquidos = [
+      ...new Set(dados.map((item) => item.salarioLiquido)),
+    ];
 
     return {
       observacoes: observacoesPorFuncionario,
@@ -180,6 +188,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
       funcoes: uniqueFuncoes,
       bairros: uniqueBairros,
       referencias: uniqueReferencias,
+      salarioBruto: uniqueSalariosBrutos,
+      salarioLiquido: uniqueSalariosLiquidos,
     };
   };
 
@@ -187,7 +197,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
     const dados = funcionarios[coordenadoriaId] || funcionariosPath;
 
     if (dados && dados.length > 0) {
-      const { observacoes, naturezas, funcoes, bairros, referencias } =
+      const { observacoes, naturezas, funcoes, bairros, referencias, salarioBruto, salarioLiquido } =
         processarFuncionarios(dados);
 
       setNaturezas(naturezas);
@@ -195,6 +205,9 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
       setTodosBairros(bairros);
       setTodasReferencias(referencias);
       setObservations(observacoes);
+      setTodosSalariosBrutos(salarioBruto);
+      setTodosSalariosLiquidos(salarioLiquido);
+      
     }
   }, [funcionarios, funcionariosPath]);
 
@@ -438,6 +451,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
         todasFuncoes={todasFuncoes}
         todosBairros={todosBairros}
         todasReferencias={todasReferencias}
+        todosSalariosBrutos={todosSalariosBrutos}
+        todosSalariosLiquidos={todosSalariosLiquidos}
         toggleNatureza={toggleNatureza}
         toggleFuncao={toggleFuncao}
         toggleBairro={toggleBairro}
