@@ -81,21 +81,20 @@ function SetorScreen() {
   let setorNomeDecodificado;
   let setorNomeDecodificadoLink;
   let setorSegment;
-  const fullPath = location.pathname; // Exemplo: "/financeiro/extra/path"
+  const fullPath = location.pathname;
 
   
-  const subSetorSegment = `${fullPath.split("/")[2]}`; // Exemplo: "/financeiro/"
+  const subSetorSegment = `${fullPath.split("/")[2]}`;
   if (fullPath.split("/").length === 3) {
     setorSegment = `${fullPath.split("/")[1]}`; 
     setorNomeDecodificado = decodeURIComponent(setorSegment);
   }else{
-    setorSegment = `${fullPath.split("/")[1]}`; // Exemplo: "/financeiro/"
+    setorSegment = `${fullPath.split("/")[1]}`;
     setorNomeDecodificadoLink = decodeURIComponent(setorSegment);
   }
 
   const subSetorNomeDecodificado = decodeURIComponent(subSetorSegment);
 
-  // Obtém o nome do último segmento da URL
   const currentSetorId = subPath ? subPath.split("/").pop() : setorId;
 
   const fetchSetoresData = async () => {
@@ -361,15 +360,15 @@ function SetorScreen() {
             variant="link"
             onClick={() => navigate(-1)}
             style={{
-              backgroundColor: "rgba(0, 0, 0, 0.7)", // Preto com transparência
-              color: "white", // Ícone branco
-              borderRadius: "50%", // Tornar o botão redondo
-              padding: "10px", // Ajustando o padding para um tamanho agradável
-              display: "flex", // Usando flexbox para centralizar o ícone
+              backgroundColor: "rgba(0, 0, 0, 0.7)", 
+              color: "white",
+              borderRadius: "50%",
+              padding: "10px", 
+              display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "40px", // Ajustando o tamanho do botão
-              height: "40px", // Ajustando o tamanho do botão
+              width: "40px",
+              height: "40px",
             }}
           >
             <FaChevronLeft size={20} />

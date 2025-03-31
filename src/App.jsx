@@ -13,6 +13,7 @@ import FilterOffcanvas from './components/FilterOffcanvas';
 import Login from './components/LoginScreen'
 import FunList from "./components/FuncionariosList"
 import ProtectedRoute from './components/ProtectedRoutes';
+import IndicadoresPage from "./components/IndicadoresPage";
 import "./App.css"
 
 const queryClient = new QueryClient();
@@ -21,17 +22,24 @@ function App() {
   const [showFilter, setShowFilter] = useState(false);
   const [showFuncionarios, setShowFuncionarios] = useState(false);
   const [setorPathId, setSetorPathId] = useState('');
+  const [departmentName, setDepartmentName] = useState('');
   const location = useLocation();
 
-  // Atualiza o estado do setorId sempre que a URL mudar
   useEffect(() => {
-    const pathParts = location.pathname.split('/'); // Divide a URL em partes
-    if (location.pathname === '/mainscreen') {
-      setSetorPathId('mainscreen'); // Se for a página mainscreen, usa "mainscreen"
+    const pathParts = location.pathname.split('/');
+  
+    if (pathParts.length > 3) {
+      const departmentName = decodeURIComponent(pathParts[2]);
+      setDepartmentName(departmentName);
+      setSetorPathId(pathParts[pathParts.length - 1]);
+    } else if (pathParts.length > 1) {
+      setDepartmentName(pathParts[1]); 
+      setSetorPathId(pathParts[pathParts.length - 1]);
     } else {
-      setSetorPathId(pathParts[pathParts.length - 1]); // Caso contrário, pega o último setorId da URL
+      setDepartmentName(''); // Caso não haja nome de departamento
+      setSetorPathId('mainscreen'); // Caso padrão
     }
-  }, [location.pathname]); // Executa sempre que a URL mudar
+  }, [location.pathname]);
 
   const handleCloseFilter = () => setShowFilter(false);
   const handleShowFilter = () => setShowFilter(true);
@@ -44,7 +52,7 @@ function App() {
 
 
         {/* Checkbox para Mostrar Funcionários */}
-        {location.pathname !== '/' && (
+        {location.pathname !== '/' && location.pathname !== '/indicadores' && (
           <div className='m-2 checkbox-container' style={{ top: 10, left: 10, zIndex: 1000 }}>
             <Form.Check
               type="checkbox"
@@ -57,12 +65,13 @@ function App() {
 
         {/* Exibir Componente Funcionarios Condicionalmente */}
         {showFuncionarios ? (
-          <FunList setorPathId={setorPathId} />
+          <FunList setorPathId={setorPathId} departmentName={departmentName}/>
         ) : (
           <>
             {/* Conteúdo de Rota */}
             <Routes>
               <Route path="/" element={<Login />} />
+              <Route path="/indicadores" element={<IndicadoresPage />} />
               <Route path="/mainscreen" element={
                 <ProtectedRoute>
                   <MainScreen />

@@ -1,11 +1,8 @@
 // components/Header.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
-import { useMutation } from "@tanstack/react-query";
 import { Button, Col, Form, InputGroup, Modal, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import ObservationHistoryButton from './ObservationHistoryButton';
-import ObservationHistoryModal from './ObservationHistoryModal';
 import Step1Form from './Step1Form';
 import Step2Form from './Step2Form';
 import Step3Form from './Step3Form';
@@ -34,10 +31,7 @@ function Header() {
 
   const [showModal, setShowModal] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [setores, setSetores] = useState([]); // Listar todos os setores disponíveis
-  const [showModalReferencia, setShowModalReferencia] = useState(false); // Controle do modal
-  const [name, setName] = useState(""); // Estado para o nome
-  const { logout, username, role } = useAuth(); // Usar o contexto de autenticação
+  const { logout, username, role } = useAuth(); 
   const navigate = useNavigate();
 
 
@@ -65,12 +59,6 @@ function Header() {
     setShowModal(false);
   }
 
-  const handleOpenModalReferencia = () => setShowModalReferencia(true);
-  const handleCloseModalReferencia = () => {
-    setShowModalReferencia(false);
-    setName(""); // Limpa o nome ao fechar
-  };
-
 
   // Função para passar para o próximo passo
   const nextStep = () => {
@@ -81,42 +69,6 @@ function Header() {
   const prevStep = () => {
     setCurrentStep(currentStep - 1);
   };
-
-  // Exemplo de dados hierárquicos de setores e coordenadorias
-  const allSetores = [
-    {
-      id: 1,
-      nome: 'Setor 1',
-      subsetores: [
-        {
-          id: '1.1',
-          nome: 'Subsetor 1.1',
-          coordenadorias: ['Coordenadoria 1.1.1', 'Coordenadoria 1.1.2']
-        },
-        {
-          id: '1.2',
-          nome: 'Subsetor 1.2',
-          coordenadorias: ['Coordenadoria 1.2.1']
-        }
-      ]
-    },
-    {
-      id: 2,
-      nome: 'Setor 2',
-      subsetores: [
-        {
-          id: '2.1',
-          nome: 'Subsetor 2.1',
-          coordenadorias: ['Coordenadoria 2.1.1']
-        }
-      ]
-    }
-  ];
-
-
-  useEffect(() => {
-    setSetores(allSetores);  // Definindo os setores iniciais
-  }, []);
 
 
   // Função para fazer o logout
@@ -133,28 +85,6 @@ function Header() {
     }
   };
 
-  // Mutação para registrar referência
-  const mutation = useMutation({
-    mutationFn: (newReference) =>
-      axios.post(`${API_BASE_URL}/api/referencias/register-reference`, newReference),
-    onSuccess: () => {
-      alert("Referência registrada com sucesso!");
-      handleCloseModalReferencia(); // Fecha o modal
-    },
-    onError: (error) => {
-      alert(error.response?.data?.message || "Erro ao registrar a referência!");
-    },
-  });
-
-  // Envia o nome ao backend usando a mutação
-  const handleRegister = () => {
-    if (!name.trim()) {
-      alert("O nome não pode estar vazio!");
-      return;
-    }
-    mutation.mutate({ name });
-  };
-
   return (
     <>
       <header className="w-100 d-flex justify-content-between align-items-center bg-dark text-white p-3 header">
@@ -165,8 +95,8 @@ function Header() {
                 {username}
               </Dropdown.Toggle>
               <Dropdown.Menu>
-                <Dropdown.Item onClick={handleOpenModalReferencia}>
-                  Registrar Referência
+                <Dropdown.Item onClick={() => { navigate("/indicadores") }}>
+                  Painel de Referências
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -175,36 +105,7 @@ function Header() {
             <span>{username || "Usuário"}</span>
           )}
         </h1>
-        <Modal show={showModalReferencia} onHide={handleCloseModalReferencia}>
-            <Modal.Header closeButton>
-              <Modal.Title>Registrar Referência</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <Form>
-                <Form.Group controlId="referenceName">
-                  <Form.Label>Nome da Pessoa</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Digite o nome"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </Form.Group>
-              </Form>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={handleCloseModalReferencia}>
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleRegister}
-                disabled={mutation.isLoading} // Desativa enquanto carrega
-              >
-                {mutation.isLoading ? "Registrando..." : "Registrar"}
-              </Button>
-            </Modal.Footer>
-          </Modal>
+
         <div className="d-flex">
           <InputGroup className="search-bar">
             {/* <Form.Control placeholder="Search..." className="search-input" /> */}

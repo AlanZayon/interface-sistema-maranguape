@@ -27,7 +27,7 @@ import CoordEdit from "./CoordEdit";
 import UserEdit from "./userEdit";
 import { API_BASE_URL } from "../utils/apiConfig";
 
-function FuncionairosList({ coordenadoriaId, setorPathId }) {
+function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
   const [showSearch, setShowSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -79,7 +79,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
 
   const fetchSetoresData = async () => {
     const response = await axios.get(
-      `${API_BASE_URL}/api/setores/dados/${setorPathId}`
+      `${API_BASE_URL}/api/funcionarios/setores/${setorPathId}/funcionarios`
     );
     return response.data;
   };
@@ -141,10 +141,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
       const fetchData = async () => {
         try {
           const data = await fetchSetoresData();
-          const todosFuncionarios = data.coordenadoriasComFuncionarios.flatMap(
-            (coordenadoria) => coordenadoria.funcionarios
-          );
-          setFuncionariosPath(todosFuncionarios);
+          setFuncionariosPath(data);
         } catch (error) {
           console.error("Erro ao buscar os dados:");
         }
@@ -442,6 +439,26 @@ function FuncionairosList({ coordenadoriaId, setorPathId }) {
 
   return (
     <Container style={{ maxHeight: "540px", overflowY: "auto" }}>
+
+{setorPathId && (
+  <h2 className="mt-4 d-flex">
+    <Col xs="auto">
+
+    </Col>
+    <span
+      style={{
+        fontSize: "1.5rem",
+        fontWeight: "bold",
+        marginLeft: "15px",
+        color: "#333",
+        textTransform: "capitalize",
+      }}
+    >
+      {departmentName === 'mainscreen' ? 'TODOS OS FUNCIONÁRIOS' : departmentName}
+    </span>
+  </h2>
+)}
+
       {/* Modal de Filtros */}
       <FilterModal
         show={showModal}
