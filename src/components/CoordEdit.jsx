@@ -9,7 +9,8 @@ import { FaSyncAlt, FaSave, FaTimes } from 'react-icons/fa';
 function EditUsersForm({
     usuariosIds, 
     handleCloseModal,
-    setShowSelectionControlsEdit
+    setShowSelectionControlsEdit,
+    setActivateModified
 }) {
     const fetchSetoresData = async () => {
         const response = await axios.get(`${API_BASE_URL}/api/setores/setoresOrganizados`);
@@ -102,9 +103,9 @@ function EditUsersForm({
                 usuariosIds: usuariosIds,
                 coordenadoriaId: coordenadoriaSelecionada._id
             });
-
             addFuncionarios(response.data);
             addFuncionariosPath(response.data);
+            setActivateModified(true);
             handleCloseModal();
             setShowSelectionControlsEdit(false);
             alert("Usuários atualizados com sucesso!");

@@ -25,64 +25,90 @@ export const AuthProvider = ({ children }) => {
     const [role, setRole] = useState(storedRole || '');
 
 
-    const addFuncionarios = (newData) => {
-        setFuncionarios((prevUsers) => {
+const addFuncionarios = (newData) => {
+  setFuncionarios((prevUsers) => {
+    if (!prevUsers || typeof prevUsers !== "object") return prevUsers;
+
+    const prevUsersObject = { ...prevUsers };
+    const updatedUsersArray = Array.isArray(newData) ? newData : [newData];
+
+    updatedUsersArray.forEach((user) => {
+      const coordenadoriaId = user.coordenadoria;
+      if (!coordenadoriaId) return;
+
+      // Verificar se o usuário já existe em alguma coordenadoria
+      let foundCoordenadoria = null;
+
+      for (const coordId in prevUsersObject) {
+        const exists = prevUsersObject[coordId].some((u) => u._id === user._id);
+        if (exists) {
+          foundCoordenadoria = coordId;
+          break;
+        }
+      }
+
+      if (foundCoordenadoria) {
+        // Atualiza o funcionário na coordenadoria onde já existe
+        const index = prevUsersObject[foundCoordenadoria].findIndex((u) => u._id === user._id);
+        if (index !== -1) {
+          prevUsersObject[foundCoordenadoria][index] = {
+            ...prevUsersObject[foundCoordenadoria][index],
+            ...user,
+          };
+        }
+      } else {
+        // Se não existe em nenhuma coordenadoria, adiciona na coordenadoria atual
+        if (!prevUsersObject[coordenadoriaId]) {
+          prevUsersObject[coordenadoriaId] = [];
+        }
+        prevUsersObject[coordenadoriaId].push(user);
+      }
+    });
+
+    return prevUsersObject;
+  });
+};
+
     
-            if (!prevUsers || typeof prevUsers !== "object") return prevUsers;
-    
-            const prevUsersObject = { ...prevUsers };
-    
-            // Garantindo que newData seja um array
-            const updatedUsersArray = Array.isArray(newData) ? newData : [newData];
-    
-            updatedUsersArray.forEach((user) => {
-                const coordenadoriaId = user.coordenadoria;
-    
-                if (!coordenadoriaId) return; 
-    
-                if (!prevUsersObject[coordenadoriaId]) {
-                    prevUsersObject[coordenadoriaId] = [];
-                }
-    
-                const existingIndex = prevUsersObject[coordenadoriaId].findIndex(
-                    (u) => u._id === user._id
-                );
-    
-                if (existingIndex !== -1) {
-                    prevUsersObject[coordenadoriaId][existingIndex] = {
-                        ...prevUsersObject[coordenadoriaId][existingIndex],
-                        ...user,
-                    };
-                } else {
-                    prevUsersObject[coordenadoriaId].push(user);
-                }
-            });
-    
-            return prevUsersObject;
-        });
-    };
     
     
-    
-    const addFuncionariosPath = (newData) => {
-        setFuncionariosPath((prevUsers) => {
-    
-            if (!prevUsers || typeof prevUsers !== "object") return prevUsers;
-    
-            const prevUsersArray = Array.isArray(prevUsers) ? prevUsers : Object.values(prevUsers);
-    
-            const updatedUsers = Array.isArray(newData) ? newData : [newData];
-    
-            const updatedList = prevUsersArray.map((user) => {
-                const updatedUser = updatedUsers.find((u) => u._id === user._id);
-                return updatedUser ? { ...user, ...updatedUser } : user;
-            });
-    
-            const newUsers = updatedUsers.filter((u) => !prevUsersArray.some((user) => user._id === u._id));
-    
-            return [...updatedList, ...newUsers];
-        });
-    };
+const addFuncionariosPath = (newData) => {
+  setFuncionariosPath((prevUsers) => {
+    if (!prevUsers || typeof prevUsers !== "object") return [];
+
+    const prevUsersObject = {};
+    for (const key in prevUsers) {
+      prevUsersObject[key] = Array.isArray(prevUsers[key]) ? [...prevUsers[key]] : [];
+    }
+
+    const updatedUsers = Array.isArray(newData) ? newData : [newData];
+
+    updatedUsers.forEach((user) => {
+      const coordenadoriaId = user.coordenadoria;
+      if (!coordenadoriaId) return;
+
+      // Remove o usuário de qualquer coordenadoria em que ele já exista
+      for (const coordId in prevUsersObject) {
+        prevUsersObject[coordId] = prevUsersObject[coordId].filter(
+          (u) => u._id !== user._id
+        );
+      }
+
+      // Adiciona o usuário à coordenadoria correta
+      if (!prevUsersObject[coordenadoriaId]) {
+        prevUsersObject[coordenadoriaId] = [];
+      }
+
+      prevUsersObject[coordenadoriaId].push(user);
+    });
+
+    const allUsersArray = Object.values(prevUsersObject).flat();
+
+    return allUsersArray;
+  });
+};
+
+
     
 
 

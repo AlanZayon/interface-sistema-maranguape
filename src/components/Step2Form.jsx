@@ -36,11 +36,11 @@ function Step2Form({
       formData.append("natureza", newUser.natureza);
       formData.append("referencia", newUser.referencia);
       formData.append("salarioBruto", newUser.salarioBruto || 0);
-      formData.append("salarioLiquido", Number(newUser.salarioLiquido || 0));
-      formData.append("funcao", newUser.cargo);
+      formData.append("funcao", newUser.funcao);
       formData.append("tipo", newUser.tipo);
       formData.append('observacoes', JSON.stringify(newUser.observacoes) || []);
       formData.append("coordenadoria", coordenadoriaId);
+      formData.append("cidade", newUser.cidade);
       formData.append("endereco", newUser.endereco);
       formData.append("bairro", newUser.bairro);
       formData.append("telefone", newUser.telefone);
@@ -90,6 +90,20 @@ function Step2Form({
   return (
     <Form onSubmit={handleSubmit}>
       <Row>
+      <Col md={6}>
+          <Form.Group controlId="formEndereco">
+            <Form.Label>Cidade</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Digite o endereço"
+              value={newUser.cidade}
+              onChange={(e) =>
+                setNewUser({ ...newUser, cidade: e.target.value })
+              }
+            />
+          </Form.Group>
+        </Col>
+
         <Col md={6}>
           <Form.Group controlId="formEndereco">
             <Form.Label>Endereço</Form.Label>

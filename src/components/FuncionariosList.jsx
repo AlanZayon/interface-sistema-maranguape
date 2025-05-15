@@ -33,15 +33,12 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
   const [showModal, setShowModal] = useState(false);
   const [showModalEdit, setShowModalEdit] = useState(false);
   const [showModalSingleEdit, setShowModalSingleEdit] = useState(false);
+  const [activateModified, setActivateModified] = useState(false);
   const [activeFilters, setActiveFilters] = useState({
     natureza: [],
     funcao: [],
     referencia: [],
     salarioBruto: {
-      min: Number.MIN_SAFE_INTEGER,
-      max: Number.MAX_SAFE_INTEGER,
-    },
-    salarioLiquido: {
       min: Number.MIN_SAFE_INTEGER,
       max: Number.MAX_SAFE_INTEGER,
     },
@@ -64,7 +61,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
   const [todosBairros, setTodosBairros] = useState([]);
   const [todasReferencias, setTodasReferencias] = useState([]);
   const [todosSalariosBrutos, setTodosSalariosBrutos] = useState([]);
-  const [todosSalariosLiquidos, setTodosSalariosLiquidos] = useState([]);
   // const [funcionariosPath, setFuncionariosPath] = useState([]);
   const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
   const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
@@ -99,42 +95,39 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
   };
 
   // Função de filtro para os funcionários com base nos filtros ativos
-  const applyFilters = (funcionarios) => {
-    return (funcionarios || []).filter((funcionario) => {
-      const salarioBrutoMin = validateBounds(
-        activeFilters.salarioBruto.min,
-        Number.MIN_SAFE_INTEGER
-      );
-      const salarioBrutoMax = validateBounds(
-        activeFilters.salarioBruto.max,
-        Number.MAX_SAFE_INTEGER
-      );
-      const salarioLiquidoMin = validateBounds(
-        activeFilters.salarioLiquido.min,
-        Number.MIN_SAFE_INTEGER
-      );
-      const salarioLiquidoMax = validateBounds(
-        activeFilters.salarioLiquido.max,
-        Number.MAX_SAFE_INTEGER
-      );
+const applyFilters = (funcionarios) => {
 
-      return (
-        (activeFilters.natureza.length === 0 ||
-          activeFilters.natureza.includes(funcionario.natureza)) &&
-        (activeFilters.funcao.length === 0 ||
-          activeFilters.funcao.includes(funcionario.funcao)) &&
-        (activeFilters.referencia.length === 0 ||
-          activeFilters.referencia.includes(funcionario.referencia)) &&
-        funcionario.salarioBruto >= salarioBrutoMin &&
-        funcionario.salarioBruto <= salarioBrutoMax &&
-        funcionario.salarioLiquido >= salarioLiquidoMin &&
-        funcionario.salarioLiquido <= salarioLiquidoMax &&
-        (activeFilters.bairro.length === 0 ||
-          activeFilters.bairro.includes(funcionario.bairro)) &&
-        (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId)
-      );
-    });
-  };
+  // Normaliza os dados: se for objeto, converte para array
+  const allFuncionarios = Array.isArray(funcionarios)
+    ? funcionarios
+    : Object.values(funcionarios || {}).flat();
+
+  return allFuncionarios.filter((funcionario) => {
+    const salarioBrutoMin = validateBounds(
+      activeFilters.salarioBruto.min,
+      Number.MIN_SAFE_INTEGER
+    );
+    const salarioBrutoMax = validateBounds(
+      activeFilters.salarioBruto.max,
+      Number.MAX_SAFE_INTEGER
+    );
+
+    return (
+      (activeFilters.natureza.length === 0 ||
+        activeFilters.natureza.includes(funcionario.natureza)) &&
+      (activeFilters.funcao.length === 0 ||
+        activeFilters.funcao.includes(funcionario.funcao)) &&
+      (activeFilters.referencia.length === 0 ||
+        activeFilters.referencia.includes(funcionario.referencia)) &&
+      funcionario.salarioBruto >= salarioBrutoMin &&
+      funcionario.salarioBruto <= salarioBrutoMax &&
+      (activeFilters.bairro.length === 0 ||
+        activeFilters.bairro.includes(funcionario.bairro)) &&
+      (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId)
+    );
+  });
+};
+
 
   useEffect(() => {
     if (setorPathId !== "mainscreen" && setorPathId) {
@@ -158,7 +151,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
       };
       fetchFunData();
     }
-  }, [setorPathId]);
+    setActivateModified(false);
+  }, [setorPathId, activateModified]);
 
   const processarFuncionarios = (dados) => {
     const observacoesPorFuncionario = dados.reduce((acc, item) => {
@@ -175,9 +169,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
     const uniqueSalariosBrutos = [
       ...new Set(dados.map((item) => item.salarioBruto)),
     ];
-    const uniqueSalariosLiquidos = [
-      ...new Set(dados.map((item) => item.salarioLiquido)),
-    ];
 
     return {
       observacoes: observacoesPorFuncionario,
@@ -186,7 +177,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
       bairros: uniqueBairros,
       referencias: uniqueReferencias,
       salarioBruto: uniqueSalariosBrutos,
-      salarioLiquido: uniqueSalariosLiquidos,
     };
   };
 
@@ -194,7 +184,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
     const dados = funcionarios[coordenadoriaId] || funcionariosPath;
 
     if (dados && dados.length > 0) {
-      const { observacoes, naturezas, funcoes, bairros, referencias, salarioBruto, salarioLiquido } =
+      const { observacoes, naturezas, funcoes, bairros, referencias, salarioBruto } =
         processarFuncionarios(dados);
 
       setNaturezas(naturezas);
@@ -203,7 +193,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
       setTodasReferencias(referencias);
       setObservations(observacoes);
       setTodosSalariosBrutos(salarioBruto);
-      setTodosSalariosLiquidos(salarioLiquido);
       
     }
   }, [funcionarios, funcionariosPath]);
@@ -220,7 +209,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
   useEffect(() => {
     // Filtra funcionários pelo nome e aplica outros filtros
     const filtered = (
-      setorPathId ? funcionariosPath : funcionarios[coordenadoriaId] || []
+      (setorPathId ? funcionariosPath : funcionarios[coordenadoriaId]) || []
     ).filter((user) =>
       user.nome.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -229,17 +218,20 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
   }, [setorPathId, funcionariosPath, funcionarios, activeFilters, searchTerm]);
 
   const buscarFuncionario = (userId) => {
-    let funcionario = funcionarios.find((func) => func._id === userId);
-    if (!funcionario) {
-      funcionario = funcionariosPath.find((func) => func._id === userId);
-    }
+    console.log("funcionarios", funcionarios);
+  
+    const funcionario = funcionarios[coordenadoriaId]?.find((func) => func._id === userId) 
+                     || funcionariosPath.find((func) => func._id === userId) 
+                     || null;
+  
     return funcionario;
   };
+  
 
   // Evento que é chamado quando o botão é clicado
   const handleClick = (id) => {
     const funcionario = buscarFuncionario(id);
-    setFuncionarioEncontrado(funcionario); // Atualiza o estado com os dados encontrados
+    setFuncionarioEncontrado(funcionario); 
     setShowModalSingleEdit(true);
   };
 
@@ -292,10 +284,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
 
   const handleSalarioBrutoChange = (salarioBruto) => {
     setActiveFilters((prev) => ({ ...prev, salarioBruto }));
-  };
-
-  const handleSalarioLiquidoChange = (salarioLiquido) => {
-    setActiveFilters((prev) => ({ ...prev, salarioLiquido }));
   };
 
   const validateBounds = (value, fallback) => {
@@ -469,13 +457,11 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
         todosBairros={todosBairros}
         todasReferencias={todasReferencias}
         todosSalariosBrutos={todosSalariosBrutos}
-        todosSalariosLiquidos={todosSalariosLiquidos}
         toggleNatureza={toggleNatureza}
         toggleFuncao={toggleFuncao}
         toggleBairro={toggleBairro}
         toggleReferencia={toggleReferencia}
         handleSalarioBrutoChange={handleSalarioBrutoChange}
-        handleSalarioLiquidoChange={handleSalarioLiquidoChange}
       />
 
       {/* Botões de Filtros, Editar, Apagar */}
@@ -656,6 +642,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
               usuariosIds={selectedUsers}
               handleCloseModal={handleCloseModal}
               setShowSelectionControlsEdit={setShowSelectionControlsEdit}
+              setActivateModified={setActivateModified}
             />
           </Modal.Body>
         </Modal>
@@ -818,14 +805,14 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
                       <p>
                         <strong>Sal. Bruto:</strong> {user.salarioBruto}
                       </p>
-                      <p>
-                        <strong>Sal. Líquido:</strong> {user.salarioLiquido}
-                      </p>
                     </div>
 
                     {/* Informações Pessoais */}
                     <div className="info-card personal-info my-2">
                       <h3>Localidade</h3>
+                      <p>
+                        <strong>Cidade:</strong> {user.cidade}
+                      </p>
                       <p>
                         <strong>Endereço:</strong> {user.endereco}
                       </p>

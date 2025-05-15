@@ -32,7 +32,7 @@ const IndicadorList = ({ indicadores, setIndicadores }) => {
         <tbody>
           {indicadores.map((indicador) => (
             <tr key={indicador._id}>
-    <td>{`${indicador.name} ${indicador.sobrenome}`.trim()}</td>
+    <td>{`${indicador.name}`.trim()}</td>
               <td>{indicador.cargo}</td>
               <td>{indicador.telefone}</td>
               <td>

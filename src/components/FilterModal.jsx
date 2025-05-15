@@ -17,7 +17,6 @@ function FilterModal({
   toggleBairro,
   toggleReferencia,
   handleSalarioBrutoChange,
-  handleSalarioLiquidoChange,
 }) {
   const [salariosBrutos, setSalariosBrutos] = useState([]);
   const [salariosLiquidos, setSalariosLiquidos] = useState([]);
@@ -36,10 +35,6 @@ function FilterModal({
       handleSalarioBrutoChange({
         min: Math.min(...salariosBrutosExemplo),
         max: Math.max(...salariosBrutosExemplo),
-      });
-      handleSalarioLiquidoChange({
-        min: Math.min(...salariosLiquidosExemplo),
-        max: Math.max(...salariosLiquidosExemplo),
       });
     }
   }, [show]);
@@ -172,50 +167,6 @@ function FilterModal({
         </div>
 
         {/* Seção Salário Líquido */}
-        <h5>Salário Líquido</h5>
-        <div className="d-flex gap-2 mb-3">
-          <DropdownButton
-            id="dropdown-salario-liquido-min"
-            title={`Mínimo: ${activeFilters.salarioLiquido.min}`}
-            variant="outline-primary"
-          >
-            {salariosLiquidos.map((salario) => (
-              <Dropdown.Item
-                key={`liquido-min-${salario}`}
-                onClick={() =>
-                  handleSalarioLiquidoChange({
-                    ...activeFilters.salarioLiquido,
-                    min: salario,
-                  })
-                }
-                active={activeFilters.salarioLiquido.min === salario}
-              >
-                {salario}
-              </Dropdown.Item>
-            ))}
-          </DropdownButton>
-
-          <DropdownButton
-            id="dropdown-salario-liquido-max"
-            title={`Máximo: ${activeFilters.salarioLiquido.max}`}
-            variant="outline-primary"
-          >
-            {salariosLiquidos.map((salario) => (
-              <Dropdown.Item
-                key={`liquido-max-${salario}`}
-                onClick={() =>
-                  handleSalarioLiquidoChange({
-                    ...activeFilters.salarioLiquido,
-                    max: salario,
-                  })
-                }
-                active={activeFilters.salarioLiquido.max === salario}
-              >
-                {salario}
-              </Dropdown.Item>
-            ))}
-          </DropdownButton>
-        </div>
 
         {/* Seção Bairro */}
         <h5>Bairro</h5>

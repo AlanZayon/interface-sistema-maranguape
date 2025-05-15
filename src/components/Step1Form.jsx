@@ -120,19 +120,19 @@ function Step1Form({
   }, [newUser.salarioBruto, cargosComissionados]);
 
   useEffect(() => {
-    if (newUser.cargo) {
+    if (newUser.funcao) {
       const selectedCargo = cargos.find(
-        (cargo) => cargo.cargo === newUser.cargo
+        (cargo) => cargo.cargo === newUser.funcao
       );
       if (selectedCargo) {
         setNewUser((prevState) => ({ ...prevState, tipo: selectedCargo.tipo }));
       }
     }
-  }, [newUser.cargo, cargos]);
+  }, [newUser.funcao, cargos]);
 
   useEffect(() => {
     // Resetar o cargo quando o salário for alterado
-    setNewUser((prev) => ({ ...prev, cargo: "" }));
+    setNewUser((prev) => ({ ...prev, funcao: "" }));
   }, [newUser.salarioBruto]);
 
   useEffect(() => {
@@ -141,8 +141,7 @@ function Step1Form({
     setNewUser((prev) => ({
       ...prev,
       salarioBruto: "",
-      salarioLiquido: "",
-      cargo: "",
+      funcao: "",
     }));
   }, [newUser.natureza]);
 
@@ -164,11 +163,7 @@ function Step1Form({
       }
       if (!newUser.salarioBruto)
         newErrors.salarioBruto = "O campo Salário é obrigatório";
-      if (!newUser.cargo) newErrors.cargo = "O campo Cargo é obrigatório";
-    }
-
-    if (isNaN(newUser.salarioLiquido)) {
-      newErrors.salarioLiquido = "O Salário Líquido deve ser um número válido";
+      if (!newUser.funcao) newErrors.cargo = "O campo Cargo é obrigatório";
     }
 
     setErrors(newErrors);
@@ -386,24 +381,6 @@ function Step1Form({
                 </Dropdown>
               </Form.Group>
             </Col>
-            {/* Campo de Salário Líquido */}
-            <Col md={6}>
-              <Form.Group controlId="formSalarioLiquido">
-                <Form.Label>Salário Líquido</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Digite o salário líquido"
-                  value={newUser?.salarioLiquido}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, salarioLiquido: e.target.value })
-                  }
-                  isInvalid={!!errors.salarioLiquido}
-                />
-                <Form.Control.Feedback type="invalid">
-                  {errors.salarioLiquido}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
 
             {newUser.salarioBruto && (
               <Col md={6}>
@@ -433,7 +410,7 @@ function Step1Form({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {newUser.cargo || "Selecione o cargo"}
+                        {newUser.funcao || "Selecione o cargo"}
                       </span>
                     </Dropdown.Toggle>
 
@@ -462,7 +439,7 @@ function Step1Form({
                           }}
                           onClick={() => {
                             if (cargo.limite > 0) {
-                              setNewUser({ ...newUser, cargo: cargo.cargo });
+                              setNewUser({ ...newUser, funcao: cargo.cargo });
                               setShowCargoDropdown(false);
                             }
                           }}

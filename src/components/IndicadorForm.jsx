@@ -30,15 +30,15 @@ const IndicadorForm = ({ onIndicadorCriado }) => {
         // Caso o erro seja do tipo de validação (e.g., nome ou sobrenome ausentes)
         if (error.response.status === 400) {
           if (error.response.data.message.includes("Todos os campos são obrigatórios")) {
-            setErro("Nome e Sobrenome são obrigatórios.");
+            setErro("Nome é obrigatório.");
           } else if (error.response.data.message.includes("Já existe uma referência com este nome e sobrenome")) {
             setErro("Já existe uma referência com este nome e sobrenome.");
           } else {
-            setErro("Erro ao cadastrar indicador. Tente novamente.");
+            setErro("Erro ao cadastrar referência. Tente novamente.");
           }
         }
       } else {
-        setErro("Erro ao cadastrar indicador. Tente novamente.");
+        setErro("Erro ao cadastrar referência. Tente novamente.");
       }
 
       console.error("Erro ao cadastrar indicador:", error);
@@ -60,19 +60,6 @@ const IndicadorForm = ({ onIndicadorCriado }) => {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="Digite o nome"
-                required
-              />
-            </Form.Group>
-          </Col>
-          <Col>
-            <Form.Group>
-              <Form.Label>Sobrenome</Form.Label>
-              <Form.Control
-                type="text"
-                name="sobrenome"
-                value={formData.sobrenome}
-                onChange={handleChange}
-                placeholder="Digite o sobrenome"
                 required
               />
             </Form.Group>
