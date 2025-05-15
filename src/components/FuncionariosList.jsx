@@ -96,6 +96,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
 
   // Função de filtro para os funcionários com base nos filtros ativos
 const applyFilters = (funcionarios) => {
+  console.log("funcionarios", funcionarios);
 
   // Normaliza os dados: se for objeto, converte para array
   const allFuncionarios = Array.isArray(funcionarios)
@@ -218,7 +219,6 @@ const applyFilters = (funcionarios) => {
   }, [setorPathId, funcionariosPath, funcionarios, activeFilters, searchTerm]);
 
   const buscarFuncionario = (userId) => {
-    console.log("funcionarios", funcionarios);
   
     const funcionario = funcionarios[coordenadoriaId]?.find((func) => func._id === userId) 
                      || funcionariosPath.find((func) => func._id === userId) 

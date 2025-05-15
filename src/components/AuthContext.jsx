@@ -36,31 +36,26 @@ const addFuncionarios = (newData) => {
       const coordenadoriaId = user.coordenadoria;
       if (!coordenadoriaId) return;
 
-      // Verificar se o usuário já existe em alguma coordenadoria
-      let foundCoordenadoria = null;
-
+      // Remove o funcionário de outras coordenadorias, se existir
       for (const coordId in prevUsersObject) {
-        const exists = prevUsersObject[coordId].some((u) => u._id === user._id);
-        if (exists) {
-          foundCoordenadoria = coordId;
-          break;
-        }
+        prevUsersObject[coordId] = prevUsersObject[coordId].filter(u => u._id !== user._id);
       }
 
-      if (foundCoordenadoria) {
-        // Atualiza o funcionário na coordenadoria onde já existe
-        const index = prevUsersObject[foundCoordenadoria].findIndex((u) => u._id === user._id);
-        if (index !== -1) {
-          prevUsersObject[foundCoordenadoria][index] = {
-            ...prevUsersObject[foundCoordenadoria][index],
-            ...user,
-          };
-        }
+      // Agora adiciona ou atualiza o funcionário na coordenadoria correta
+      if (!prevUsersObject[coordenadoriaId]) {
+        prevUsersObject[coordenadoriaId] = [];
+      }
+
+      const index = prevUsersObject[coordenadoriaId].findIndex(u => u._id === user._id);
+
+      if (index !== -1) {
+        // Atualiza funcionário existente
+        prevUsersObject[coordenadoriaId][index] = {
+          ...prevUsersObject[coordenadoriaId][index],
+          ...user,
+        };
       } else {
-        // Se não existe em nenhuma coordenadoria, adiciona na coordenadoria atual
-        if (!prevUsersObject[coordenadoriaId]) {
-          prevUsersObject[coordenadoriaId] = [];
-        }
+        // Adiciona novo funcionário
         prevUsersObject[coordenadoriaId].push(user);
       }
     });
@@ -68,9 +63,6 @@ const addFuncionarios = (newData) => {
     return prevUsersObject;
   });
 };
-
-    
-    
     
 const addFuncionariosPath = (newData) => {
   setFuncionariosPath((prevUsers) => {
