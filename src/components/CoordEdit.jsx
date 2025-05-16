@@ -181,12 +181,12 @@ function EditUsersForm({
                             <Row key={`coordenadoria-${index}`}>
                                 <Col md={12}>
                                     <Form.Group controlId={`formCoordenadoria_${index}`}>
-                                        <Form.Label>Cargos: {subsetor.nome}</Form.Label>
+                                        <Form.Label>Divisoões: {subsetor.nome}</Form.Label>
                                         <div className="d-flex flex-wrap">
                                             {subsetor.coordenadorias.map((coordenadoria) => (
                                                 <Button
                                                     key={coordenadoria._id}
-                                                    variant={coordenadoriaSelecionada?._id === coordenadoria._id ? "primary" : "outline-primary"}
+                                                    variant={coordenadoriaSelecionada?._id === coordenadoria._id ? "warning" : "outline-warning"}
                                                     className="me-2 mb-2"
                                                     onClick={() => handleCoordenadoriaSelect(coordenadoria._id)}
                                                 >

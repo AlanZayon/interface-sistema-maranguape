@@ -128,7 +128,7 @@ function SetorScreen() {
       redesSociais: [{ link: "", nome: "" }],
       salarioBruto: 0,
       salarioLiquido: 0,
-      cargo: "",
+      cidade: "",
       endereco: "",
       bairro: "",
       telefone: "",
