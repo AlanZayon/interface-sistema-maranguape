@@ -10,11 +10,12 @@ import { API_BASE_URL } from '../utils/apiConfig';
 function MainScreen() {
   const [setores, setSetores] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // Novo estado para o modal de exclusão
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [newSetorName, setNewSetorName] = useState('');
   const [editingSetorId, setEditingSetorId] = useState(null);
   const [editedName, setEditedName] = useState('');
-  const [setorToDelete, setSetorToDelete] = useState(null); // Estado para armazenar o setor a ser deletado
+  const [setorToDelete, setSetorToDelete] = useState(null);
+  const [isCreating, setIsCreating] = useState(false); // Novo estado para controlar o carregamento
   const queryClient = useQueryClient();
 
   const fetchSetoresData = async () => {
@@ -22,23 +23,20 @@ function MainScreen() {
     return response.data;
   };
 
-  // Carrega os dados quando a resposta da API é recebida
   useEffect(() => {
     const fetchData = async () => {
       try {
         const data = await fetchSetoresData();
-        const setoresFiltrados = data.setores
-        setSetores(setoresFiltrados); // Armazena apenas `id` e `nome`
+        const setoresFiltrados = data.setores;
+        setSetores(setoresFiltrados);
       } catch (error) {
         console.error('Erro ao buscar os dados:', error);
       }
     };
 
-    fetchData(); // Chama a função assíncrona
-
+    fetchData();
   }, []);
 
-  // Função para criar o setor
   const createSetor = async (data) => {
     const response = await axios.post(`${API_BASE_URL}/api/setores`, data);
     return response.data;
@@ -67,7 +65,7 @@ function MainScreen() {
 
   const handleDeleteSetor = (setorId) => {
     setSetorToDelete(setorId);
-    setShowDeleteModal(true); // Exibe o modal de confirmação de exclusão
+    setShowDeleteModal(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -83,27 +81,26 @@ function MainScreen() {
 
   const handleCloseDeleteModal = () => {
     setShowDeleteModal(false);
-    setSetorToDelete(null); // Limpa o setor selecionado
+    setSetorToDelete(null);
   };
 
-  // Mutation para lidar com a criação do setor
   const mutation = useMutation({
     mutationFn: createSetor,
     onSuccess: (data) => {
-      // Atualiza a lista de setores com o novo setor, mantendo a estrutura completa
       setSetores((prevSetores) => [
         ...prevSetores, 
-        { ...data } // Espalha todos os campos de data diretamente no novo objeto
+        { ...data }
       ]);
-  
-      // Invalida as queries de setores para garantir que a próxima consulta traga os dados atualizados
       queryClient.invalidateQueries('setores');
+      setIsCreating(false); // Desativa o estado de carregamento após sucesso
+      setShowModal(false);
+      setNewSetorName('');
     },
     onError: (error) => {
       console.error('Erro ao criar setor:', error);
+      setIsCreating(false); // Desativa o estado de carregamento em caso de erro
     }
   });
-  
 
   const updateMutation = useMutation({
     mutationFn: updateSetor,
@@ -117,14 +114,17 @@ function MainScreen() {
   });
 
   const handleCreateSetor = async () => {
-    try {
-      await mutation.mutateAsync({ nome: newSetorName, tipo: 'Setor' }); // Envia dados para a API
-      setNewSetorName('');
-      setShowModal(false);
-    } catch (error) {
-
+    if (!newSetorName.trim()) {
+      alert('O nome do setor não pode estar vazio!');
+      return;
     }
-
+    
+    setIsCreating(true); // Ativa o estado de carregamento
+    try {
+      await mutation.mutateAsync({ nome: newSetorName, tipo: 'Setor' });
+    } catch (error) {
+      // O erro já é tratado no onError da mutation
+    }
   };
 
   const handleRenameSetor = (id, nome) => {
@@ -133,8 +133,6 @@ function MainScreen() {
   };
 
   const handleSaveRename = async (id) => {
-
-    // Validação para garantir que o nome não esteja vazio
     if (!editedName.trim()) {
       alert('O nome do setor não pode estar vazio!');
       return;
@@ -178,8 +176,7 @@ function MainScreen() {
                     className="text-dark p-0 border-0 dropdown-toggle-split"
                     id={`dropdown-${setor._id}`}
                   >
-                    <i className="fas fa-ellipsis-v w-100"></i> {/* Ícone de três pontos */}
-
+                    <i className="fas fa-ellipsis-v w-100"></i>
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
                     <Dropdown.Item
@@ -187,7 +184,7 @@ function MainScreen() {
                     >
                       Renomear
                     </Dropdown.Item>
-                    <Dropdown.Item   style={{ color: 'red' }} onClick={() => handleDeleteSetor(setor._id)}>Deletar</Dropdown.Item>
+                    <Dropdown.Item style={{ color: 'red' }} onClick={() => handleDeleteSetor(setor._id)}>Deletar</Dropdown.Item>
                   </Dropdown.Menu>
                 </Dropdown>
               </Card.Header>
@@ -197,7 +194,6 @@ function MainScreen() {
                 </Card.Body>
               </Link>
             </Card>
-
           ) : (
             <Card className="custom-card text-center my-2">
               <Card.Header>
@@ -215,8 +211,7 @@ function MainScreen() {
             </Card>
           )}
         </Col>
-      ))
-      }
+      ))}
 
       <ConfirmDeleteModal
         showModal={showDeleteModal}
@@ -225,7 +220,7 @@ function MainScreen() {
       />
 
       {/* Modal para criar um novo setor */}
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+      <Modal show={showModal} onHide={() => !isCreating && setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Criar Novo Setor</Modal.Title>
         </Modal.Header>
@@ -237,20 +232,29 @@ function MainScreen() {
                 type="text"
                 value={newSetorName}
                 onChange={(e) => setNewSetorName(e.target.value)}
+                disabled={isCreating} // Desabilita o input durante o carregamento
               />
             </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowModal(false)}
+            disabled={isCreating} // Desabilita o botão durante o carregamento
+          >
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleCreateSetor}>
-            Criar
+          <Button 
+            variant="primary" 
+            onClick={handleCreateSetor}
+            disabled={isCreating} // Desabilita o botão durante o carregamento
+          >
+            {isCreating ? 'Criando...' : 'Criar'}
           </Button>
         </Modal.Footer>
       </Modal>
-    </Row >
+    </Row>
   );
 }
 

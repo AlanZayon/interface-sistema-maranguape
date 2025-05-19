@@ -72,14 +72,14 @@ function Step2Form({
   };
 
   // Função para tratar a seleção do subsetor
-  const handleSubsetorSelect = (subsetorId) => {
-    const subsetor = findSubsetorById(setorSelecionado.subsetores, subsetorId);
-    if (subsetor) {
-      // Atualiza o subsetor selecionado e limpa a coordenadoria do setor principal
-      setSubsetorSelecionado([subsetor]); // mantém apenas o subsetor selecionado atual
-      newUser.coordenadoria = "";
-    }
-  };
+const handleSubsetorSelect = (subsetorId) => {
+  const subsetor = findSubsetorById(setorSelecionado.subsetores, subsetorId);
+  if (subsetor) {
+    setSubsetorSelecionado([subsetor]);
+    setCoordenadoriaSelecionada(null);  // **limpa aqui também**
+    newUser.coordenadoria = "";
+  }
+};
 
   // Função para atualizar o newUser com o ID da coordenadoria selecionada
   const handleCoordenadoriaSelect = (coordenadoriaId) => {

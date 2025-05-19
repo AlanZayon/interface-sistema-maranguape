@@ -71,6 +71,8 @@ function SetorScreen() {
   const [setorToDelete, setSetorToDelete] = useState(null);
   const [step, setStep] = useState(1); // Controla a fase atual
   const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
+    const [isCreatingSubSetor, setIsCreatingSubSetor] = useState(false); // Novo estado para subsetor
+  const [isCreatingCoord, setIsCreatingCoord] = useState(false);
   const location = useLocation(); // Captura o caminho completo da URL
   // const [funcionarios, setFuncionarios] = useState([])
   const queryClient = useQueryClient();
@@ -254,15 +256,25 @@ function SetorScreen() {
 
   // Função para criar um novo subsetor
   const handleCreateSubSetor = async () => {
+    if (!newSubSetorName.trim()) {
+      alert("O nome do subsetor não pode estar vazio!");
+      return;
+    }
+    
+    setIsCreatingSubSetor(true);
     try {
       await mutation.mutateAsync({
         nome: newSubSetorName,
         tipo: "Subsetor",
         parent: currentSetorId,
-      }); // Envia dados para a API
+      });
       setNewSubSetorName("");
       setShowModal(false);
-    } catch (error) {}
+    } catch (error) {
+      console.error("Erro ao criar subsetor:", error);
+    } finally {
+      setIsCreatingSubSetor(false);
+    }
   };
 
   const updateMutation = useMutation({
@@ -327,16 +339,26 @@ function SetorScreen() {
 
   // Função para criar uma nova coordenadoria
   const handleCreateCoordenadoria = async () => {
+    if (!newCoordName.trim()) {
+      alert("O nome da divisão não pode estar vazio!");
+      return;
+    }
+    
+    setIsCreatingCoord(true);
     try {
       await mutation.mutateAsync({
         nome: newCoordName,
         tipo: "Coordenadoria",
         parent: currentSetorId,
-      }); // Envia dados para a API
-      setOpenCoord({ ...openCoord, [newCoordName]: false }); // Inicializa o estado de colapso
+      });
+      setOpenCoord({ ...openCoord, [newCoordName]: false });
       setNewCoordName("");
       setShowCoordModal(false);
-    } catch (error) {}
+    } catch (error) {
+      console.error("Erro ao criar coordenadoria:", error);
+    } finally {
+      setIsCreatingCoord(false);
+    }
   };
 
   // Função para alternar o estado de um colapso de coordenadoria
@@ -474,8 +496,8 @@ function SetorScreen() {
         handleConfirmDelete={handleConfirmDelete}
       />
 
-      {/* Modal para criar novo subsetor */}
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+   {/* Modal para criar novo subsetor (modificado) */}
+      <Modal show={showModal} onHide={() => !isCreatingSubSetor && setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Criar Novo Subsetor</Modal.Title>
         </Modal.Header>
@@ -487,16 +509,25 @@ function SetorScreen() {
                 type="text"
                 value={newSubSetorName}
                 onChange={(e) => setNewSubSetorName(e.target.value)}
+                disabled={isCreatingSubSetor}
               />
             </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowModal(false)}
+            disabled={isCreatingSubSetor}
+          >
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleCreateSubSetor}>
-            Criar
+          <Button 
+            variant="primary" 
+            onClick={handleCreateSubSetor}
+            disabled={isCreatingSubSetor}
+          >
+            {isCreatingSubSetor ? 'Criando...' : 'Criar'}
           </Button>
         </Modal.Footer>
       </Modal>
@@ -622,8 +653,8 @@ function SetorScreen() {
           ))}
       </div>
 
-      {/* Modal para criar nova coordenadoria */}
-      <Modal show={showCoordModal} onHide={() => setShowCoordModal(false)}>
+  {/* Modal para criar nova coordenadoria (modificado) */}
+      <Modal show={showCoordModal} onHide={() => !isCreatingCoord && setShowCoordModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Criar Novo Cargo</Modal.Title>
         </Modal.Header>
@@ -635,16 +666,25 @@ function SetorScreen() {
                 type="text"
                 value={newCoordName}
                 onChange={(e) => setNewCoordName(e.target.value)}
+                disabled={isCreatingCoord}
               />
             </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowCoordModal(false)}>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowCoordModal(false)}
+            disabled={isCreatingCoord}
+          >
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleCreateCoordenadoria}>
-            Criar
+          <Button 
+            variant="primary" 
+            onClick={handleCreateCoordenadoria}
+            disabled={isCreatingCoord}
+          >
+            {isCreatingCoord ? 'Criando...' : 'Criar'}
           </Button>
         </Modal.Footer>
       </Modal>

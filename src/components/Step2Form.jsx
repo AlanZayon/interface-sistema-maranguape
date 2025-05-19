@@ -96,7 +96,7 @@ function Step2Form({
             <Form.Control
               type="text"
               placeholder="Digite o endereço"
-              value={newUser.cidade}
+              value={newUser.cidade || ""}
               onChange={(e) =>
                 setNewUser({ ...newUser, cidade: e.target.value })
               }
@@ -110,7 +110,7 @@ function Step2Form({
             <Form.Control
               type="text"
               placeholder="Digite o endereço"
-              value={newUser.endereco}
+              value={newUser.endereco || ""}
               onChange={(e) =>
                 setNewUser({ ...newUser, endereco: e.target.value })
               }
@@ -124,7 +124,7 @@ function Step2Form({
             <Form.Control
               type="text"
               placeholder="Digite o bairro"
-              value={newUser.bairro}
+              value={newUser.bairro || ""}
               onChange={(e) =>
                 setNewUser({ ...newUser, bairro: e.target.value })
               }
@@ -138,7 +138,7 @@ function Step2Form({
             <Form.Control
               type="text"
               placeholder="Digite o telefone"
-              value={newUser.telefone}
+              value={newUser.telefone || ""}
               onChange={(e) =>
                 setNewUser({ ...newUser, telefone: e.target.value })
               }
@@ -180,7 +180,7 @@ function Step2Form({
                 <Form.Control
                   type="text"
                   placeholder="Nome da Rede Social"
-                  value={social.nome}
+                  value={social.nome || ""}
                   onChange={(e) => {
                     const redesSociais = [...newUser.redesSociais];
                     redesSociais[index].nome = e.target.value;
@@ -190,7 +190,7 @@ function Step2Form({
                 <Form.Control
                   type="text"
                   placeholder="Link da Rede Social"
-                  value={social.link}
+                  value={social.link || ""}
                   onChange={(e) => {
                     const redesSociais = [...newUser.redesSociais];
                     redesSociais[index].link = e.target.value;

@@ -19,6 +19,7 @@ function Login() {
     const [id, setId] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false); // Novo estado para controlar o carregamento
     const { login, isAuthenticated } = useAuth(); // Usar o contexto de autenticação
 
     useEffect(() => {
@@ -36,8 +37,9 @@ function Login() {
             navigate('/mainscreen')
         },
         onError: (error) => {
-            console.error(error.response.data.message);
-            setError(error.response.data.message);
+            console.error(error.response?.data?.message);
+            setError(error.response?.data?.message || 'Erro ao fazer login');
+            setIsSubmitting(false); // Desativa o estado de carregamento em caso de erro
         }
     });
 
@@ -49,6 +51,8 @@ function Login() {
             setError('Por favor, preencha todos os campos.');
             return;
         }
+        
+        setIsSubmitting(true); // Ativa o estado de carregamento
         mutate({ id, password });
     };
 
@@ -79,8 +83,13 @@ function Login() {
                             />
                         </Form.Group>
 
-                        <Button variant="primary" type="submit" className="w-100">
-                            Entrar
+                        <Button 
+                            variant="primary" 
+                            type="submit" 
+                            className="w-100"
+                            disabled={isSubmitting} // Desabilita o botão durante o carregamento
+                        >
+                            {isSubmitting ? 'Carregando...' : 'Entrar'}
                         </Button>
                         <p> id: 94236</p>
                         <p> senha: Pref@2024</p>
