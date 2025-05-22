@@ -19,6 +19,8 @@ import {
   FaSearch,
 } from "react-icons/fa";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom"; // Importe o hook
 import { useAuth } from "./AuthContext"; // Importa o contexto
 import FilterModal from "./FilterModal";
 import ObservationHistoryButton from "./ObservationHistoryButton";
@@ -27,7 +29,10 @@ import CoordEdit from "./CoordEdit";
 import UserEdit from "./userEdit";
 import { API_BASE_URL } from "../utils/apiConfig";
 
-function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
+function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchTermFromURL, setSearchTermFromURL] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -95,41 +100,52 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName}) {
   };
 
   // Função de filtro para os funcionários com base nos filtros ativos
-const applyFilters = (funcionarios) => {
-  // Normaliza os dados: se for objeto, converte para array
-  const allFuncionarios = Array.isArray(funcionarios)
-    ? funcionarios
-    : Object.values(funcionarios || {}).flat();
+  const applyFilters = (funcionarios) => {
+    // Normaliza os dados: se for objeto, converte para array
+    const allFuncionarios = Array.isArray(funcionarios)
+      ? funcionarios
+      : Object.values(funcionarios || {}).flat();
 
-  return allFuncionarios.filter((funcionario) => {
-    const salarioBrutoMin = validateBounds(
-      activeFilters.salarioBruto.min,
-      Number.MIN_SAFE_INTEGER
-    );
-    const salarioBrutoMax = validateBounds(
-      activeFilters.salarioBruto.max,
-      Number.MAX_SAFE_INTEGER
-    );
+    return allFuncionarios.filter((funcionario) => {
+      const salarioBrutoMin = validateBounds(
+        activeFilters.salarioBruto.min,
+        Number.MIN_SAFE_INTEGER
+      );
+      const salarioBrutoMax = validateBounds(
+        activeFilters.salarioBruto.max,
+        Number.MAX_SAFE_INTEGER
+      );
 
-    return (
-      (activeFilters.natureza.length === 0 ||
-        activeFilters.natureza.includes(funcionario.natureza)) &&
-      (activeFilters.funcao.length === 0 ||
-        activeFilters.funcao.includes(funcionario.funcao)) &&
-      (activeFilters.referencia.length === 0 ||
-        activeFilters.referencia.includes(funcionario.referencia)) &&
-      funcionario.salarioBruto >= salarioBrutoMin &&
-      funcionario.salarioBruto <= salarioBrutoMax &&
-      (activeFilters.bairro.length === 0 ||
-        activeFilters.bairro.includes(funcionario.bairro)) &&
-      (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId)
-    );
-  });
-};
-
+      return (
+        (activeFilters.natureza.length === 0 ||
+          activeFilters.natureza.includes(funcionario.natureza)) &&
+        (activeFilters.funcao.length === 0 ||
+          activeFilters.funcao.includes(funcionario.funcao)) &&
+        (activeFilters.referencia.length === 0 ||
+          activeFilters.referencia.includes(funcionario.referencia)) &&
+        funcionario.salarioBruto >= salarioBrutoMin &&
+        funcionario.salarioBruto <= salarioBrutoMax &&
+        (activeFilters.bairro.length === 0 ||
+          activeFilters.bairro.includes(funcionario.bairro)) &&
+        (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId)
+      );
+    });
+  };
 
   useEffect(() => {
-    if (setorPathId !== "mainscreen" && setorPathId) {
+    // Detecta se veio de uma pesquisa pela URL
+    if (location.pathname.startsWith("/search/")) {
+      const term = location.pathname.split("/search/")[1];
+      setSearchTermFromURL(term);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (
+      setorPathId !== "mainscreen" &&
+      setorPathId !== "search" &&
+      setorPathId
+    ) {
       const fetchData = async () => {
         try {
           const data = await fetchSetoresData();
@@ -183,8 +199,14 @@ const applyFilters = (funcionarios) => {
     const dados = funcionarios[coordenadoriaId] || funcionariosPath;
 
     if (dados && dados.length > 0) {
-      const { observacoes, naturezas, funcoes, bairros, referencias, salarioBruto } =
-        processarFuncionarios(dados);
+      const {
+        observacoes,
+        naturezas,
+        funcoes,
+        bairros,
+        referencias,
+        salarioBruto,
+      } = processarFuncionarios(dados);
 
       setNaturezas(naturezas);
       setTodasFuncoes(funcoes);
@@ -192,7 +214,6 @@ const applyFilters = (funcionarios) => {
       setTodasReferencias(referencias);
       setObservations(observacoes);
       setTodosSalariosBrutos(salarioBruto);
-      
     }
   }, [funcionarios, funcionariosPath]);
 
@@ -216,20 +237,20 @@ const applyFilters = (funcionarios) => {
     setFilteredFuncionarios(applyFilters(filtered));
   }, [setorPathId, funcionariosPath, funcionarios, activeFilters, searchTerm]);
 
+
   const buscarFuncionario = (userId) => {
-  
-    const funcionario = funcionarios[coordenadoriaId]?.find((func) => func._id === userId) 
-                     || funcionariosPath.find((func) => func._id === userId) 
-                     || null;
-  
+    const funcionario =
+      funcionarios[coordenadoriaId]?.find((func) => func._id === userId) ||
+      funcionariosPath.find((func) => func._id === userId) ||
+      null;
+
     return funcionario;
   };
-  
 
   // Evento que é chamado quando o botão é clicado
   const handleClick = (id) => {
     const funcionario = buscarFuncionario(id);
-    setFuncionarioEncontrado(funcionario); 
+    setFuncionarioEncontrado(funcionario);
     setShowModalSingleEdit(true);
   };
 
@@ -328,7 +349,6 @@ const applyFilters = (funcionarios) => {
       );
 
       if (response.status === 200) {
-
         const remainingUsers = filteredFuncionarios.filter(
           (user) => !idsToDelete.includes(user._id)
         );
@@ -425,25 +445,26 @@ const applyFilters = (funcionarios) => {
 
   return (
     <Container style={{ maxHeight: "540px", overflowY: "auto" }}>
-
-{setorPathId && (
-  <h2 className="mt-4 d-flex">
-    <Col xs="auto">
-
-    </Col>
-    <span
-      style={{
-        fontSize: "1.5rem",
-        fontWeight: "bold",
-        marginLeft: "15px",
-        color: "#333",
-        textTransform: "capitalize",
-      }}
-    >
-      {departmentName === 'mainscreen' ? 'TODOS OS FUNCIONÁRIOS' : departmentName}
-    </span>
-  </h2>
-)}
+      {setorPathId && (
+        <h2 className="mt-4 d-flex">
+          <Col xs="auto"></Col>
+          <span
+            style={{
+              fontSize: "1.5rem",
+              fontWeight: "bold",
+              marginLeft: "15px",
+              color: "#333",
+              textTransform: "capitalize",
+            }}
+          >
+            {departmentName === "mainscreen"
+              ? "TODOS OS FUNCIONÁRIOS"
+              : !departmentName
+              ? decodeURIComponent(searchTermFromURL)
+              : departmentName}
+          </span>
+        </h2>
+      )}
 
       {/* Modal de Filtros */}
       <FilterModal
