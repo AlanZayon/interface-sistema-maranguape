@@ -1,5 +1,5 @@
 // components/SetorScreen.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Row,
   Col,
@@ -33,7 +33,6 @@ import ObservationHistoryModal from "./ObservationHistoryModal";
 import { API_BASE_URL } from "../utils/apiConfig";
 
 function SetorScreen() {
-  // Captura todos os segmentos da rota a partir do setor principal
   const { setorId, "*": subPath } = useParams();
   const [newUser, setNewUser] = useState({
     nome: "",
@@ -58,8 +57,7 @@ function SetorScreen() {
   const [editedName, setEditedName] = useState("");
   const [editingCoordenadoriaId, setEditingCoordenadoriaId] = useState(null);
   const [editedNameCoordenadoria, setEditedNameCoordenadoria] = useState("");
-  const [showSelectionControlsEdit, setShowSelectionControlsEdit] =
-    useState(false);
+  const [showSelectionControlsEdit, setShowSelectionControlsEdit] = useState(false);
   const [coordenadorias, setCoordenadorias] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showModalCoordenadoria, setShowModalCoordenadoria] = useState(false);
@@ -69,34 +67,40 @@ function SetorScreen() {
   const [openCoord, setOpenCoord] = useState({});
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [setorToDelete, setSetorToDelete] = useState(null);
-  const [step, setStep] = useState(1); // Controla a fase atual
+  const [step, setStep] = useState(1);
   const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
-    const [isCreatingSubSetor, setIsCreatingSubSetor] = useState(false); // Novo estado para subsetor
+  const [isCreatingSubSetor, setIsCreatingSubSetor] = useState(false);
   const [isCreatingCoord, setIsCreatingCoord] = useState(false);
-  const location = useLocation(); // Captura o caminho completo da URL
-  // const [funcionarios, setFuncionarios] = useState([])
+  const location = useLocation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { funcionarios, setFuncionarios } = useAuth(); // Usar o contexto de autenticação
+  const { funcionarios, setFuncionarios } = useAuth();
 
   let setorNomeDecodificado;
   let setorNomeDecodificadoLink;
   let setorSegment;
   const fullPath = location.pathname;
 
-  
   const subSetorSegment = `${fullPath.split("/")[2]}`;
   if (fullPath.split("/").length === 3) {
     setorSegment = `${fullPath.split("/")[1]}`; 
     setorNomeDecodificado = decodeURIComponent(setorSegment);
-  }else{
+  } else {
     setorSegment = `${fullPath.split("/")[1]}`;
     setorNomeDecodificadoLink = decodeURIComponent(setorSegment);
   }
 
   const subSetorNomeDecodificado = decodeURIComponent(subSetorSegment);
-
   const currentSetorId = subPath ? subPath.split("/").pop() : setorId;
+
+  // Arrays ordenados
+  const sortedSubSetores = useMemo(() => {
+    return [...subSetores].sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [subSetores]);
+
+  const sortedCoordenadorias = useMemo(() => {
+    return [...coordenadorias].sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [coordenadorias]);
 
   const fetchSetoresData = async () => {
     const response = await axios.get(
@@ -145,33 +149,33 @@ function SetorScreen() {
     const fetchData = async () => {
       try {
         const data = await fetchSetoresData();
-        const coordenadorias = data.subsetores.filter(
-          (subsetor) => subsetor.tipo === "Coordenadoria"
-        );
-        const subsetores = data.subsetores.filter(
-          (subsetor) => subsetor.tipo === "Subsetor"
-        );
+        const coordenadorias = data.subsetores
+          .filter((subsetor) => subsetor.tipo === "Coordenadoria")
+          .sort((a, b) => a.nome.localeCompare(b.nome));
+        
+        const subsetores = data.subsetores
+          .filter((subsetor) => subsetor.tipo === "Subsetor")
+          .sort((a, b) => a.nome.localeCompare(b.nome));
+        
         setCoordenadorias(coordenadorias);
         setSubSetores(subsetores);
       } catch (error) {
-        console.error("Erro ao buscar os dados:");
+        console.error("Erro ao buscar os dados:", error);
       }
     };
 
     fetchData();
-  }, []);
+  }, [currentSetorId]);
 
   useEffect(() => {
- 
     Object.keys(openCoord).forEach((coordNome) => {
       const coordId = coordenadorias.find(c => c.nome === coordNome)?._id;
       if (openCoord[coordNome] && coordId && !funcionarios[coordId]) {
         fetchFuncionarios(coordId);
       }
     });
-  }, [openCoord]);
+  }, [openCoord, coordenadorias]);
 
-  // Função para criar o setor
   const createSetor = async (data) => {
     const response = await axios.post(`${API_BASE_URL}/api/setores`, data);
     return response.data;
@@ -203,7 +207,6 @@ function SetorScreen() {
           (coordenadoria) => coordenadoria._id !== setorToDelete
         )
       );
-
       queryClient.invalidateQueries("setores");
     },
     onError: (error) => {
@@ -213,7 +216,7 @@ function SetorScreen() {
 
   const handleDeleteSetor = (setorId) => {
     setSetorToDelete(setorId);
-    setShowDeleteModal(true); // Exibe o modal de confirmação de exclusão
+    setShowDeleteModal(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -229,32 +232,58 @@ function SetorScreen() {
 
   const handleCloseDeleteModal = () => {
     setShowDeleteModal(false);
-    setSetorToDelete(null); // Limpa o setor selecionado
+    setSetorToDelete(null);
   };
-  // Mutation para lidar com a criação do setor
+
   const mutation = useMutation({
     mutationFn: createSetor,
     onSuccess: (data) => {
-      // Atualiza a lista de setores com o novo setor
       if (data.tipo === "Subsetor") {
-        setSubSetores((prevSubsetores) => [
-          ...prevSubsetores,
-          { _id: data._id, nome: data.nome },
-        ]);
+        setSubSetores(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
       } else if (data.tipo === "Coordenadoria") {
-        setCoordenadorias((prevCoordenadorias) => [
-          ...prevCoordenadorias,
-          { _id: data._id, nome: data.nome },
-        ]);
+        setCoordenadorias(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
       }
       queryClient.invalidateQueries("setores");
+      if (data.tipo === "Subsetor") {
+        setIsCreatingSubSetor(false);
+        setShowModal(false);
+        setNewSubSetorName("");
+      } else {
+        setIsCreatingCoord(false);
+        setShowCoordModal(false);
+        setNewCoordName("");
+      }
     },
     onError: (error) => {
       console.error("Erro ao criar setor:", error);
+      setIsCreatingSubSetor(false);
+      setIsCreatingCoord(false);
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: updateSetor,
+    onSuccess: (data, variables) => {
+      if (subSetores.some(s => s._id === variables.id)) {
+        setSubSetores(prev => 
+          prev.map(s => s._id === variables.id ? {...s, nome: variables.nome} : s)
+            .sort((a, b) => a.nome.localeCompare(b.nome))
+        );
+      } else {
+        setCoordenadorias(prev => 
+          prev.map(c => c._id === variables.id ? {...c, nome: variables.nome} : c)
+            .sort((a, b) => a.nome.localeCompare(b.nome))
+        );
+      }
+      setEditingSetorId(null);
+      setEditingCoordenadoriaId(null);
+      queryClient.invalidateQueries("setores");
+    },
+    onError: (error) => {
+      console.error("Erro ao renomear setor:", error);
     },
   });
 
-  // Função para criar um novo subsetor
   const handleCreateSubSetor = async () => {
     if (!newSubSetorName.trim()) {
       alert("O nome do subsetor não pode estar vazio!");
@@ -268,26 +297,10 @@ function SetorScreen() {
         tipo: "Subsetor",
         parent: currentSetorId,
       });
-      setNewSubSetorName("");
-      setShowModal(false);
     } catch (error) {
       console.error("Erro ao criar subsetor:", error);
-    } finally {
-      setIsCreatingSubSetor(false);
     }
   };
-
-  const updateMutation = useMutation({
-    mutationFn: updateSetor,
-    onSuccess: () => {
-      setEditingSetorId(null);
-      setEditingCoordenadoriaId(null);
-      queryClient.invalidateQueries("setores");
-    },
-    onError: (error) => {
-      console.error("Erro ao renomear setor:", error);
-    },
-  });
 
   const handleRenameSetor = (id, nome) => {
     setEditingSetorId(id);
@@ -300,44 +313,29 @@ function SetorScreen() {
   };
 
   const handleSaveRename = async (id) => {
-    // Validação para garantir que o nome não esteja vazio
     if (!editedName.trim()) {
       alert("O nome do setor não pode estar vazio!");
       return;
     }
     try {
       await updateMutation.mutateAsync({ id, nome: editedName });
-      setSubSetores((prev) =>
-        prev.map((subSetor) =>
-          subSetor._id === id ? { ...subSetor, nome: editedName } : subSetor
-        )
-      );
     } catch (error) {
       console.error("Erro ao salvar renomeação:", error);
     }
   };
 
   const handleSaveRenameCoord = async (id) => {
-    // Validação para garantir que o nome não esteja vazio
     if (!editedNameCoordenadoria.trim()) {
       alert("O nome do setor não pode estar vazio!");
       return;
     }
     try {
       await updateMutation.mutateAsync({ id, nome: editedNameCoordenadoria });
-      setCoordenadorias((prev) =>
-        prev.map((coordenadorias) =>
-          coordenadorias._id === id
-            ? { ...coordenadorias, nome: editedNameCoordenadoria }
-            : coordenadorias
-        )
-      );
     } catch (error) {
       console.error("Erro ao salvar renomeação:", error);
     }
   };
 
-  // Função para criar uma nova coordenadoria
   const handleCreateCoordenadoria = async () => {
     if (!newCoordName.trim()) {
       alert("O nome da divisão não pode estar vazio!");
@@ -352,16 +350,11 @@ function SetorScreen() {
         parent: currentSetorId,
       });
       setOpenCoord({ ...openCoord, [newCoordName]: false });
-      setNewCoordName("");
-      setShowCoordModal(false);
     } catch (error) {
       console.error("Erro ao criar coordenadoria:", error);
-    } finally {
-      setIsCreatingCoord(false);
     }
   };
 
-  // Função para alternar o estado de um colapso de coordenadoria
   const toggleCoordCollapse = (name) => {
     setOpenCoord((prev) => ({
       ...prev,
@@ -404,7 +397,7 @@ function SetorScreen() {
             textTransform: "capitalize",
           }}
         >
-          {setorNomeDecodificado || subSetorNomeDecodificado  }
+          {setorNomeDecodificado || subSetorNomeDecodificado}
         </span>
       </h2>
       <Row className="mt-4">
@@ -423,71 +416,69 @@ function SetorScreen() {
           </Card>
         </Row>
 
-        {/* Exibição de subsetores */}
-        {Array.isArray(subSetores) &&
-          subSetores.map((subSetor, index) => (
-            <Col md={3} key={index}>
-              {editingSetorId !== subSetor._id ? (
-                <Card className="custom-card text-center my-2">
-                  <Card.Header className="d-flex justify-content-between align-items-center">
-                    <span>Subsetor</span>
-                    <Dropdown onClick={(e) => e.stopPropagation()}>
-                      <Dropdown.Toggle
-                        variant="link"
-                        className="text-dark p-0 border-0 dropdown-toggle-split"
-                        id={`dropdown-${subSetor._id}`}
+        {/* Exibição de subsetores ORDENADOS */}
+        {sortedSubSetores.map((subSetor) => (
+          <Col md={3} key={subSetor._id}>
+            {editingSetorId !== subSetor._id ? (
+              <Card className="custom-card text-center my-2">
+                <Card.Header className="d-flex justify-content-between align-items-center">
+                  <span>Subsetor</span>
+                  <Dropdown onClick={(e) => e.stopPropagation()}>
+                    <Dropdown.Toggle
+                      variant="link"
+                      className="text-dark p-0 border-0 dropdown-toggle-split"
+                      id={`dropdown-${subSetor._id}`}
+                    >
+                      <i className="fas fa-ellipsis-v w-100"></i>
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu style={{ zIndex: 5 }}>
+                      <Dropdown.Item
+                        onClick={() =>
+                          handleRenameSetor(subSetor._id, subSetor.nome)
+                        }
                       >
-                        <i className="fas fa-ellipsis-v w-100"></i>{" "}
-                        {/* Ícone de três pontos */}
-                      </Dropdown.Toggle>
-                      <Dropdown.Menu style={{ zIndex: 5 }}>
-                        <Dropdown.Item
-                          onClick={() =>
-                            handleRenameSetor(subSetor._id, subSetor.nome)
-                          }
-                        >
-                          Renomear
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          style={{ color: "red" }}
-                          onClick={() => handleDeleteSetor(subSetor._id)}
-                        >
-                          Deletar
-                        </Dropdown.Item>
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  </Card.Header>
-                  <Link
-                    to={`/${setorNomeDecodificado || setorNomeDecodificadoLink}/${
-                      subSetor.nome
-                    }/${currentSetorId}/${
-                      subPath ? `${subPath}/${subSetor._id}` : subSetor._id
-                    }`}
-                    style={{ textDecoration: "none" }}
-                  >
-                    <Card.Body>
-                      <Card.Title>{subSetor.nome}</Card.Title>
-                    </Card.Body>
-                  </Link>
-                </Card>
-              ) : (
-                <Card className="custom-card text-center my-2">
-                  <Card.Header>
-                    <span>Subsetor</span>
-                  </Card.Header>
+                        Renomear
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        style={{ color: "red" }}
+                        onClick={() => handleDeleteSetor(subSetor._id)}
+                      >
+                        Deletar
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </Card.Header>
+                <Link
+                  to={`/${setorNomeDecodificado || setorNomeDecodificadoLink}/${
+                    subSetor.nome
+                  }/${currentSetorId}/${
+                    subPath ? `${subPath}/${subSetor._id}` : subSetor._id
+                  }`}
+                  style={{ textDecoration: "none" }}
+                >
                   <Card.Body>
-                    <Form.Control
-                      type="text"
-                      value={editedName}
-                      onChange={(e) => setEditedName(e.target.value)}
-                      onBlur={() => handleSaveRename(subSetor._id)}
-                      autoFocus
-                    />
+                    <Card.Title>{subSetor.nome}</Card.Title>
                   </Card.Body>
-                </Card>
-              )}
-            </Col>
-          ))}
+                </Link>
+              </Card>
+            ) : (
+              <Card className="custom-card text-center my-2">
+                <Card.Header>
+                  <span>Subsetor</span>
+                </Card.Header>
+                <Card.Body>
+                  <Form.Control
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onBlur={() => handleSaveRename(subSetor._id)}
+                    autoFocus
+                  />
+                </Card.Body>
+              </Card>
+            )}
+          </Col>
+        ))}
       </Row>
 
       <ConfirmDeleteModal
@@ -496,7 +487,6 @@ function SetorScreen() {
         handleConfirmDelete={handleConfirmDelete}
       />
 
-   {/* Modal para criar novo subsetor (modificado) */}
       <Modal show={showModal} onHide={() => !isCreatingSubSetor && setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Criar Novo Subsetor</Modal.Title>
@@ -532,7 +522,6 @@ function SetorScreen() {
         </Modal.Footer>
       </Modal>
 
-      {/* Modal para registrar novo funcionário */}
       <Modal show={showModalCoordenadoria} onHide={handleCloseModal}>
         <Modal.Header closeButton>
           <Modal.Title>Registrar Novo Funcionário</Modal.Title>
@@ -540,7 +529,6 @@ function SetorScreen() {
         <Modal.Body>
           {step === 1 && (
             <Step1Form
-              
               newUser={newUser}
               setNewUser={setNewUser}
               ObservationHistoryButton={ObservationHistoryButton}
@@ -557,13 +545,11 @@ function SetorScreen() {
               coordenadoriaId={coordenadoriaId}
               secretaria={setorNomeDecodificado || setorNomeDecodificadoLink}
               handleCloseModal={handleCloseModal}
-              // Finaliza o cadastro
             />
           )}
         </Modal.Body>
       </Modal>
 
-      {/* Exibição de coordenadorias com collapses */}
       <div className="mt-4">
         <h4 className="mx-2">
           Criar Divisão:
@@ -583,77 +569,73 @@ function SetorScreen() {
           </Button>
         </h4>
 
-        {Array.isArray(coordenadorias) &&
-          coordenadorias.map((coord, index) => (
-            <Card key={index} className="m-3">
-              {showSelectionControlsEdit && (
-                <>
-                  <div className="d-flex gap-2">
-                    {/* Botão para editar */}
-                    <Button
-                      onClick={() => handleRenameCoord(coord._id, coord.nome)}
-                      variant="outline-dark"
-                      className="user-checkbox btn-sm rounded-circle"
-                    >
-                      <FaEdit />
-                    </Button>
+        {sortedCoordenadorias.map((coord) => (
+          <Card key={coord._id} className="m-3">
+            {showSelectionControlsEdit && (
+              <>
+                <div className="d-flex gap-2">
+                  <Button
+                    onClick={() => handleRenameCoord(coord._id, coord.nome)}
+                    variant="outline-dark"
+                    className="user-checkbox btn-sm rounded-circle"
+                  >
+                    <FaEdit />
+                  </Button>
 
-                    {/* Botão para deletar */}
-                    <Button
-                      onClick={() => handleDeleteSetor(coord._id)}
-                      variant="outline-danger"
-                      className="user-checkbox-2 btn-sm rounded-circle"
-                    >
-                      <FaMinus /> {/* Ícone de menos */}
-                    </Button>
-                  </div>
-                </>
+                  <Button
+                    onClick={() => handleDeleteSetor(coord._id)}
+                    variant="outline-danger"
+                    className="user-checkbox-2 btn-sm rounded-circle"
+                  >
+                    <FaMinus />
+                  </Button>
+                </div>
+              </>
+            )}
+
+            <Card.Header
+              variant="link"
+              onClick={() => toggleCoordCollapse(coord.nome)}
+              aria-expanded={openCoord[coord.nome]}
+              style={{ cursor: "pointer" }}
+            >
+              {editingCoordenadoriaId !== coord._id ? (
+                <span>{coord.nome}</span>
+              ) : (
+                <Form.Control
+                  type="text"
+                  value={editedNameCoordenadoria}
+                  onChange={(e) => setEditedNameCoordenadoria(e.target.value)}
+                  onBlur={() => handleSaveRenameCoord(coord._id)}
+                  autoFocus
+                />
               )}
 
-              <Card.Header
-                variant="link"
-                onClick={() => toggleCoordCollapse(coord.nome)}
-                aria-expanded={openCoord[coord.nome]}
-                style={{ cursor: "pointer" }}
-              >
-                {editingCoordenadoriaId !== coord._id ? (
-                  <span>{coord.nome}</span>
-                ) : (
-                  <Form.Control
-                    type="text"
-                    value={editedNameCoordenadoria}
-                    onChange={(e) => setEditedNameCoordenadoria(e.target.value)}
-                    onBlur={() => handleSaveRenameCoord(coord._id)}
-                    autoFocus
+              {openCoord[coord.nome] ? <FaAngleUp /> : <FaAngleDown />}
+            </Card.Header>
+            <Collapse in={openCoord[coord.nome]}>
+              <div className="mt-2">
+                <Button
+                  className="m-2 coord-register-btn"
+                  variant="primary"
+                  onClick={() => {
+                    setCoordenadoriaId(coord._id);
+                    setShowModalCoordenadoria(true);
+                  }}
+                >
+                  <i className="fas fa-id-card"></i>
+                </Button>
+                {openCoord[coord.nome] && (
+                  <FuncionariosList
+                    coordenadoriaId={coord._id}
                   />
                 )}
-
-                {openCoord[coord.nome] ? <FaAngleUp /> : <FaAngleDown />}
-              </Card.Header>
-              <Collapse in={openCoord[coord.nome]}>
-                <div className="mt-2">
-                  <Button
-                    className="m-2 coord-register-btn"
-                    variant="primary"
-                    onClick={() => {
-                      setCoordenadoriaId(coord._id);
-                      setShowModalCoordenadoria(true);
-                    }}
-                  >
-                    <i className="fas fa-id-card"></i>
-                  </Button>
-                  {openCoord[coord.nome] && (
-                    <FuncionariosList
-                      coordenadoriaId={coord._id}
-                    />
-                  )}
-                </div>
-              </Collapse>
-            </Card>
-          ))}
+              </div>
+            </Collapse>
+          </Card>
+        ))}
       </div>
 
-  {/* Modal para criar nova coordenadoria (modificado) */}
       <Modal show={showCoordModal} onHide={() => !isCreatingCoord && setShowCoordModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Criar Novo Cargo</Modal.Title>

@@ -112,7 +112,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
 
   // Carrega os cargos comissionados quando a natureza é alterada
   useEffect(() => {
-    if (newUser.natureza === "comissionado") {
+    if (newUser.natureza === "COMISSIONADO") {
       fetchCargosComissionados().then((data) => {
         setCargosComissionados(data);
         const uniqueSalarios = [
@@ -177,7 +177,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
       }
     }
 
-    if (newUser.natureza === "comissionado") {
+    if (newUser.natureza === "COMISSIONADO") {
       if (!newUser.salarioBruto)
         newErrors.salarioBruto = "O campo Salário é obrigatório";
       if (!newUser.funcao) newErrors.cargo = "O campo Cargo é obrigatório";
@@ -411,14 +411,14 @@ function UserEdit({ funcionario, handleCloseModal }) {
                   : "Selecione a natureza"}
               </Dropdown.Toggle>
               <Dropdown.Menu className="w-100">
-                {["Comissionado", "Temporário", "Efetivo"].map(
+                {["COMISSIONADO", "TEMPORARIO", "EFETIVO"].map(
                   (natureza, index) => (
                     <Dropdown.Item
                       key={index}
                       onClick={() => {
                         setNewUser({
                           ...newUser,
-                          natureza: natureza.toLowerCase(),
+                          natureza: natureza.toUpperCase(),
                         });
                         setShowNaturezaDropdown(false);
                       }}
@@ -436,7 +436,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
         </Col>
       </Row>
 
-      {newUser.natureza === "comissionado" && (
+      {newUser.natureza === "COMISSIONADO" && (
         <>
           <Row>
             <Col md={6}>

@@ -19,18 +19,30 @@ function FilterModal({
   handleSalarioBrutoChange,
 }) {
   const [salariosBrutos, setSalariosBrutos] = useState([]);
-  const [salariosLiquidos, setSalariosLiquidos] = useState([]);
+  const [funcaoSearch, setFuncaoSearch] = useState("");
+  const [referenciaSearch, setReferenciaSearch] = useState("");
+  const [bairroSearch, setBairroSearch] = useState("");
 
-  // Simulação de dados de salários (substitua pelos seus dados reais)
+  // Filtrar funções baseadas no termo de pesquisa
+  const funcoesFiltradas = todasFuncoes.filter(funcao =>
+    funcao.toLowerCase().includes(funcaoSearch.toLowerCase())
+  );
+
+  // Filtrar referências baseadas no termo de pesquisa
+  const referenciasFiltradas = todasReferencias.filter(referencia =>
+    referencia.toLowerCase().includes(referenciaSearch.toLowerCase())
+  );
+
+  // Filtrar bairros baseados no termo de pesquisa
+  const bairrosFiltrados = todosBairros.filter(bairro =>
+    bairro.toLowerCase().includes(bairroSearch.toLowerCase())
+  );
+
   useEffect(() => {
-    // Exemplo de dados de salários brutos e líquidos
     const salariosBrutosExemplo = todosSalariosBrutos;
-    const salariosLiquidosExemplo = todosSalariosLiquidos;
 
     setSalariosBrutos(salariosBrutosExemplo);
-    setSalariosLiquidos(salariosLiquidosExemplo);
 
-    // Definir valores mínimos e máximos ao abrir o modal
     if (show) {
       handleSalarioBrutoChange({
         min: Math.min(...salariosBrutosExemplo),
@@ -74,9 +86,11 @@ function FilterModal({
               type="text"
               placeholder="Pesquisar função..."
               className="mx-3 my-2"
+              value={funcaoSearch}
+              onChange={(e) => setFuncaoSearch(e.target.value)}
             />
 
-            {todasFuncoes.map((funcao) => (
+            {funcoesFiltradas.map((funcao) => (
               <Dropdown.Item
                 key={funcao}
                 onClick={() => toggleFuncao(funcao)}
@@ -103,9 +117,11 @@ function FilterModal({
               type="text"
               placeholder="Pesquisar referência..."
               className="mx-3 my-2"
+              value={referenciaSearch}
+              onChange={(e) => setReferenciaSearch(e.target.value)}
             />
 
-            {todasReferencias.map((referencia) => (
+            {referenciasFiltradas.map((referencia) => (
               <Dropdown.Item
                 key={referencia}
                 onClick={() => toggleReferencia(referencia)}
@@ -166,8 +182,6 @@ function FilterModal({
           </DropdownButton>
         </div>
 
-        {/* Seção Salário Líquido */}
-
         {/* Seção Bairro */}
         <h5>Bairro</h5>
         <DropdownButton
@@ -182,9 +196,11 @@ function FilterModal({
               type="text"
               placeholder="Pesquisar bairro..."
               className="mx-3 my-2"
+              value={bairroSearch}
+              onChange={(e) => setBairroSearch(e.target.value)}
             />
 
-            {todosBairros.map((bairro) => (
+            {bairrosFiltrados.map((bairro) => (
               <Dropdown.Item
                 key={bairro}
                 onClick={() => toggleBairro(bairro)}

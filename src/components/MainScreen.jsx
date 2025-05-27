@@ -1,5 +1,5 @@
 // components/MainScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Card, Button, Modal, Form, Dropdown } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import ConfirmDeleteModal from './ConfirmDeleteModal'; 
@@ -15,8 +15,13 @@ function MainScreen() {
   const [editingSetorId, setEditingSetorId] = useState(null);
   const [editedName, setEditedName] = useState('');
   const [setorToDelete, setSetorToDelete] = useState(null);
-  const [isCreating, setIsCreating] = useState(false); // Novo estado para controlar o carregamento
+  const [isCreating, setIsCreating] = useState(false);
   const queryClient = useQueryClient();
+
+  // Função para ordenar os setores por nome
+  const sortedSetores = useMemo(() => {
+    return [...setores].sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [setores]);
 
   const fetchSetoresData = async () => {
     const response = await axios.get(`${API_BASE_URL}/api/setores/setoresMain`);
@@ -27,8 +32,9 @@ function MainScreen() {
     const fetchData = async () => {
       try {
         const data = await fetchSetoresData();
-        const setoresFiltrados = data.setores;
-        setSetores(setoresFiltrados);
+        // Ordena os setores alfabeticamente ao receber os dados
+        const setoresOrdenados = data.setores.sort((a, b) => a.nome.localeCompare(b.nome));
+        setSetores(setoresOrdenados);
       } catch (error) {
         console.error('Erro ao buscar os dados:', error);
       }
@@ -87,18 +93,15 @@ function MainScreen() {
   const mutation = useMutation({
     mutationFn: createSetor,
     onSuccess: (data) => {
-      setSetores((prevSetores) => [
-        ...prevSetores, 
-        { ...data }
-      ]);
+      setSetores((prevSetores) => [...prevSetores, { ...data }]);
       queryClient.invalidateQueries('setores');
-      setIsCreating(false); // Desativa o estado de carregamento após sucesso
+      setIsCreating(false);
       setShowModal(false);
       setNewSetorName('');
     },
     onError: (error) => {
       console.error('Erro ao criar setor:', error);
-      setIsCreating(false); // Desativa o estado de carregamento em caso de erro
+      setIsCreating(false);
     }
   });
 
@@ -119,11 +122,11 @@ function MainScreen() {
       return;
     }
     
-    setIsCreating(true); // Ativa o estado de carregamento
+    setIsCreating(true);
     try {
       await mutation.mutateAsync({ nome: newSetorName, tipo: 'Setor' });
     } catch (error) {
-      // O erro já é tratado no onError da mutation
+      console.error('Erro ao criar setor:', error);
     }
   };
 
@@ -164,10 +167,10 @@ function MainScreen() {
         </Card>
       </Row>
 
-      {setores.map((setor, index) => (
-        <Col md={3} key={index}>
+      {sortedSetores.map((setor) => (
+        <Col md={3} key={setor._id}>
           {editingSetorId !== setor._id ? (
-            <Card className="custom-card text-center my-2 ">
+            <Card className="custom-card text-center my-2">
               <Card.Header className="d-flex justify-content-between align-items-center">
                 <span>Setor</span>
                 <Dropdown onClick={(e) => e.stopPropagation()}>
@@ -184,7 +187,9 @@ function MainScreen() {
                     >
                       Renomear
                     </Dropdown.Item>
-                    <Dropdown.Item style={{ color: 'red' }} onClick={() => handleDeleteSetor(setor._id)}>Deletar</Dropdown.Item>
+                    <Dropdown.Item style={{ color: 'red' }} onClick={() => handleDeleteSetor(setor._id)}>
+                      Deletar
+                    </Dropdown.Item>
                   </Dropdown.Menu>
                 </Dropdown>
               </Card.Header>
@@ -205,6 +210,7 @@ function MainScreen() {
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
                   onBlur={() => handleSaveRename(setor._id)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSaveRename(setor._id)}
                   autoFocus
                 />
               </Card.Body>
@@ -219,7 +225,6 @@ function MainScreen() {
         handleConfirmDelete={handleConfirmDelete}
       />
 
-      {/* Modal para criar um novo setor */}
       <Modal show={showModal} onHide={() => !isCreating && setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Criar Novo Setor</Modal.Title>
@@ -232,7 +237,8 @@ function MainScreen() {
                 type="text"
                 value={newSetorName}
                 onChange={(e) => setNewSetorName(e.target.value)}
-                disabled={isCreating} // Desabilita o input durante o carregamento
+                disabled={isCreating}
+                onKeyPress={(e) => e.key === 'Enter' && handleCreateSetor()}
               />
             </Form.Group>
           </Form>
@@ -241,14 +247,14 @@ function MainScreen() {
           <Button 
             variant="secondary" 
             onClick={() => setShowModal(false)}
-            disabled={isCreating} // Desabilita o botão durante o carregamento
+            disabled={isCreating}
           >
             Cancelar
           </Button>
           <Button 
             variant="primary" 
             onClick={handleCreateSetor}
-            disabled={isCreating} // Desabilita o botão durante o carregamento
+            disabled={isCreating}
           >
             {isCreating ? 'Criando...' : 'Criar'}
           </Button>

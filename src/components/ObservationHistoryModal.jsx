@@ -23,7 +23,6 @@ function ObservationHistoryModal({
   const [newObservation, setNewObservation] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const currentSetorId = subPath ? subPath.split("/").pop() : setorId;
 
   useEffect(() => {
     setObservacoes(Array.isArray(initialObservations) ? initialObservations : []);
@@ -33,7 +32,7 @@ function ObservationHistoryModal({
     try {
       setLoading(true);
       const response = await fetch(
-        `${API_BASE_URL}/api/funcionarios/observacoes/${userId}/${currentSetorId}`,
+        `${API_BASE_URL}/api/funcionarios/observacoes/${userId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

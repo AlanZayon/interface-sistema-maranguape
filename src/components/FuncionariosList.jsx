@@ -99,14 +99,27 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     setShowModalSingleEdit(false);
   };
 
-  // Função de filtro para os funcionários com base nos filtros ativos
+    const sortFuncionariosAlphabetically = (funcionarios) => {
+    return [...funcionarios].sort((a, b) => {
+      const nomeA = a.nome.toUpperCase();
+      const nomeB = b.nome.toUpperCase();
+      if (nomeA < nomeB) {
+        return -1;
+      }
+      if (nomeA > nomeB) {
+        return 1;
+      }
+      return 0;
+    });
+  };
+
+
   const applyFilters = (funcionarios) => {
-    // Normaliza os dados: se for objeto, converte para array
     const allFuncionarios = Array.isArray(funcionarios)
       ? funcionarios
       : Object.values(funcionarios || {}).flat();
 
-    return allFuncionarios.filter((funcionario) => {
+    const filtered = allFuncionarios.filter((funcionario) => {
       const salarioBrutoMin = validateBounds(
         activeFilters.salarioBruto.min,
         Number.MIN_SAFE_INTEGER
@@ -130,6 +143,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
         (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId)
       );
     });
+
+    return sortFuncionariosAlphabetically(filtered);
   };
 
   useEffect(() => {

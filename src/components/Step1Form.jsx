@@ -99,7 +99,7 @@ function Step1Form({
   }, [newUser.referencia, referenciasRegistradas]);
 
   useEffect(() => {
-    if (newUser.natureza === "comissionado") {
+    if (newUser.natureza === "COMISSIONADO") {
       fetchCargosComissionados().then((data) => {
         setCargosComissionados(data);
         const uniqueSalarios = [
@@ -320,14 +320,14 @@ function Step1Form({
                   newUser.natureza.slice(1) || "Selecione a natureza"}
               </Dropdown.Toggle>
               <Dropdown.Menu className="w-100">
-                {["Comissionado", "Temporário", "Efetivo"].map(
+                {["COMISSIONADO", "TEMPORARIO", "EFETIVO"].map(
                   (natureza, index) => (
                     <Dropdown.Item
                       key={index}
                       onClick={() => {
                         setNewUser({
                           ...newUser,
-                          natureza: natureza.toLowerCase(),
+                          natureza: natureza.toUpperCase(),
                         });
                         setShowNaturezaDropdown(false);
                       }}
@@ -341,7 +341,7 @@ function Step1Form({
           </Form.Group>
         </Col>
 
-        {newUser.natureza === "comissionado" && (
+        {newUser.natureza === "COMISSIONADO" && (
           <>
             <Col md={6}>
               <Form.Group controlId="formSalario">

@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../utils/apiConfig';
 const IndicadorForm = ({ onIndicadorCriado }) => {
   const [formData, setFormData] = useState({ name: "", sobrenome: "", cargo: "", telefone: "" });
   const [erro, setErro] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Estado para controlar o carregamento
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -14,6 +15,7 @@ const IndicadorForm = ({ onIndicadorCriado }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro("");  // Limpa qualquer erro anterior
+    setIsLoading(true); // Ativa o estado de carregamento
 
     try {
       // Envia os dados do formulário para o servidor
@@ -42,6 +44,8 @@ const IndicadorForm = ({ onIndicadorCriado }) => {
       }
 
       console.error("Erro ao cadastrar indicador:", error);
+    } finally {
+      setIsLoading(false); // Desativa o estado de carregamento independente do resultado
     }
   };
 
@@ -85,7 +89,13 @@ const IndicadorForm = ({ onIndicadorCriado }) => {
             placeholder="Digite o telefone do indicador"
           />
         </Form.Group>
-        <Button variant="primary" type="submit">Cadastrar</Button>
+        <Button 
+          variant="primary" 
+          type="submit"
+          disabled={isLoading} // Desabilita o botão durante o carregamento
+        >
+          {isLoading ? 'Cadastrando...' : 'Cadastrar'} {/* Altera o texto durante o carregamento */}
+        </Button>
       </Form>
     </div>
   );
