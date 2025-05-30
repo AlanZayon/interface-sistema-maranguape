@@ -9,7 +9,7 @@ import { API_BASE_URL } from '../utils/apiConfig';
 const loginUser = async ({ id, password }) => {
     const response = await axios.post(`${API_BASE_URL}/api/usuarios/login`,
          { id: id, password: password },  {
-            withCredentials: true // Permite o envio de cookies
+            withCredentials: true
           });
     return response.data; // Supondo que a API retorna { token, role }
 };

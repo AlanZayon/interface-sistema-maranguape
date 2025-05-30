@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import debounce from 'lodash/debounce';
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import {
@@ -58,6 +59,11 @@ function Step1Form({
   const [showSalarioDropdown, setShowSalarioDropdown] = useState(false);
   const [showCargoDropdown, setShowCargoDropdown] = useState(false);
   const [showNaturezaDropdown, setShowNaturezaDropdown] = useState(false);
+    const [nameValidation, setNameValidation] = useState({
+    isValid: null,
+    message: "",
+  });
+
 
   useEffect(() => {
     if (newUser?.foto) {
@@ -136,7 +142,6 @@ function Step1Form({
   }, [newUser.salarioBruto]);
 
   useEffect(() => {
-    
     // Resetar salário e cargo ao mudar a natureza do cargo
     setNewUser((prev) => ({
       ...prev,
@@ -144,6 +149,53 @@ function Step1Form({
       funcao: "",
     }));
   }, [newUser.natureza]);
+
+    useEffect(() => {
+    return () => {
+      setNameValidation({
+        isValid: null,
+        message: "",
+      });
+    };
+  }, []);
+
+   const checkNameAvailability = useCallback(
+    debounce(async (name) => {
+      if (!name || name.length < 3) {
+        setNameValidation({
+          isValid: null,
+          message: "",
+          loading: false
+        });
+        return;
+      }
+
+      setNameValidation({
+        isValid: null,
+        message: "",
+        loading: true
+      });
+
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/funcionarios/check-name`, {
+          params: { name }
+        });
+        
+        setNameValidation({
+          isValid: response.data.available,
+          message: response.data.message,
+          loading: false
+        });
+      } catch (error) {
+        setNameValidation({
+          isValid: false,
+          message: "Erro ao verificar disponibilidade do nome",
+          loading: false
+        });
+      }
+    }, 500),
+    []
+  );
 
   const validateFields = () => {
     const newErrors = {};
@@ -215,6 +267,12 @@ function Step1Form({
     cargo.cargo.toLowerCase().includes(searchCargo.toLowerCase())
   );
 
+    const handleNameChange = (e) => {
+    const name = e.target.value;
+    setNewUser({ ...newUser, nome: name });
+    checkNameAvailability(name);
+  };
+
   return (
     <Form>
       <Row>
@@ -273,9 +331,17 @@ function Step1Form({
               type="text"
               placeholder="Digite o servidor"
               value={newUser?.nome}
-              onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })}
-              isInvalid={!!errors.nome}
+              onChange={handleNameChange}
+              isInvalid={!!errors.nome || nameValidation.isValid === false}
             />
+            {nameValidation.isValid === false && (
+              <Form.Text className="text-danger">
+                {nameValidation.message}
+              </Form.Text>
+            )}
+            <Form.Control.Feedback type="invalid">
+              {errors.nome}
+            </Form.Control.Feedback>
           </Form.Group>
         </Col>
 
