@@ -121,7 +121,7 @@ const handleSubsetorSelect = (subsetorId) => {
     formData.append("referencia", newUser.referencia);
     formData.append("salarioBruto", newUser.salarioBruto || 0);
     formData.append("salarioLiquido", Number(newUser.salarioLiquido || 0));
-    formData.append("funcao", newUser.cargo);
+    formData.append("funcao", newUser.funcao);
     formData.append("tipo", newUser.tipo);
     formData.append("observacoes", JSON.stringify(newUser.observacoes) || []);
     formData.append("coordenadoria", newUser.coordenadoria);
