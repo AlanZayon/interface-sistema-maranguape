@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "./AuthContext"; // Importa o contexto
 import { API_BASE_URL } from "../utils/apiConfig";
 import { FaSyncAlt, FaSave, FaTimes } from "react-icons/fa";
+import { use } from "react";
 
 function Step2Form({
   newUser = { coordenadoria: [] },
@@ -34,6 +35,7 @@ function Step2Form({
   const [isLoading, setIsLoading] = useState(false);
   const { addFuncionarios, addFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
   const currentSetorId = subPath ? subPath.split("/").pop() : setorId;
+
 
   // Carrega os dados quando a resposta da API é recebida
   useEffect(() => {
@@ -72,14 +74,14 @@ function Step2Form({
   };
 
   // Função para tratar a seleção do subsetor
-const handleSubsetorSelect = (subsetorId) => {
-  const subsetor = findSubsetorById(setorSelecionado.subsetores, subsetorId);
-  if (subsetor) {
-    setSubsetorSelecionado([subsetor]);
-    setCoordenadoriaSelecionada(null);  // **limpa aqui também**
-    newUser.coordenadoria = "";
-  }
-};
+  const handleSubsetorSelect = (subsetorId) => {
+    const subsetor = findSubsetorById(setorSelecionado.subsetores, subsetorId);
+    if (subsetor) {
+      setSubsetorSelecionado([subsetor]);
+      setCoordenadoriaSelecionada(null); // **limpa aqui também**
+      newUser.coordenadoria = "";
+    }
+  };
 
   // Função para atualizar o newUser com o ID da coordenadoria selecionada
   const handleCoordenadoriaSelect = (coordenadoriaId) => {
@@ -121,7 +123,7 @@ const handleSubsetorSelect = (subsetorId) => {
     formData.append("referencia", newUser.referencia);
     formData.append("salarioBruto", newUser.salarioBruto || 0);
     formData.append("salarioLiquido", Number(newUser.salarioLiquido || 0));
-    formData.append("funcao", newUser.cargo);
+    formData.append("funcao", newUser.funcao);
     formData.append("tipo", newUser.tipo);
     formData.append("observacoes", JSON.stringify(newUser.observacoes) || []);
     formData.append("coordenadoria", newUser.coordenadoria);
@@ -145,7 +147,7 @@ const handleSubsetorSelect = (subsetorId) => {
         }
       );
 
-      // Exibe a resposta da API
+
       addFuncionarios(response.data);
       addFuncionariosPath(response.data);
       handleCloseModal();

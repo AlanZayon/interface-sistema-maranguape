@@ -26,7 +26,8 @@ function EditUsersForm({
     const [setorSelecionado, setSetorSelecionado] = useState(null);
     const [subsetorSelecionado, setSubsetorSelecionado] = useState([]);
     const [coordenadoriaSelecionada, setCoordenadoriaSelecionada] = useState(null);
-    const { addFuncionarios, addFuncionariosPath } = useAuth(); // Usar o contexto de autenticação
+    const [isSaving, setIsSaving] = useState(false);
+    const { addFuncionarios, addFuncionariosPath } = useAuth();
 
     useEffect(() => {
         if (data && data.setores) {
@@ -98,6 +99,7 @@ function EditUsersForm({
     };
 
     const handleSubmit = async () => {
+        setIsSaving(true);
         try {
             const response = await axios.put(`${API_BASE_URL}/api/funcionarios/editar-coordenadoria-usuario`, {
                 usuariosIds: usuariosIds,
@@ -111,6 +113,8 @@ function EditUsersForm({
             alert("Usuários atualizados com sucesso!");
         } catch (error) {
             console.error('Erro ao atualizar os usuários:', error);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -204,12 +208,12 @@ function EditUsersForm({
                         <Row>
                             <Col md={12}>
                                 <Form.Group controlId="formCoordenadoriaInicial">
-                                    <Form.Label>Cargos: {setorSelecionado.nome}</Form.Label>
+                                    <Form.Label>Divisões: {setorSelecionado.nome}</Form.Label>
                                     <div className="d-flex flex-wrap">
                                         {setorSelecionado.coordenadorias.map((coordenadoria) => (
                                             <Button
                                                 key={coordenadoria._id}
-                                                variant={coordenadoriaSelecionada?._id === coordenadoria._id ? "primary" : "outline-primary"}
+                                                variant={coordenadoriaSelecionada?._id === coordenadoria._id ? "warning" : "outline-warning"}
                                                 className="me-2 mb-2"
                                                 onClick={() => handleCoordenadoriaSelect(coordenadoria._id)}
                                             >
@@ -231,9 +235,24 @@ function EditUsersForm({
                 <Button
                     variant="primary"
                     onClick={handleSubmit}
-                    disabled={!coordenadoriaSelecionada}
+                    disabled={!coordenadoriaSelecionada || isSaving}
                 >
-                    <FaSave /> Salvar
+                    {isSaving ? (
+                        <>
+                            <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
+                            <span className="ms-2">Salvando...</span>
+                        </>
+                    ) : (
+                        <>
+                            <FaSave /> Salvar
+                        </>
+                    )}
                 </Button>
             </Modal.Footer>
         </Form>

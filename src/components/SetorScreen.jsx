@@ -114,6 +114,7 @@ function SetorScreen() {
       const response = await axios.get(
         `${API_BASE_URL}/api/funcionarios/buscarFuncionariosPorCoordenadoria/${coordId}`
       );
+      console.log("Funcionários da coordenadoria:", response.data);
       setFuncionarios((prevFuncionarios) => ({
         ...prevFuncionarios,
         [coordId]: response.data,
@@ -367,7 +368,7 @@ function SetorScreen() {
   };
 
   return (
-    <div className="mx-1">
+    <div className="mx-1"  style={{ overflowX: 'hidden', overflowY: 'auto' }}>
       <h2 className="mt-4 d-flex">
         <Col xs="auto">
           <Button

@@ -6,6 +6,7 @@ import { API_BASE_URL } from "../utils/apiConfig";
 import { useAuth } from "./AuthContext"; // Importa o contexto
 import ObservationHistoryButton from "./ObservationHistoryButton";
 import ObservationHistoryModal from "./ObservationHistoryModal";
+import { use } from "react";
 
 function Step2Form({
   newUser,

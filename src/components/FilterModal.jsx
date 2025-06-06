@@ -1,5 +1,5 @@
 // FilterModal.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Modal, Form, DropdownButton, Dropdown, Button } from "react-bootstrap";
 
 function FilterModal({
@@ -18,38 +18,68 @@ function FilterModal({
   toggleReferencia,
   handleSalarioBrutoChange,
 }) {
-  const [salariosBrutos, setSalariosBrutos] = useState([]);
   const [funcaoSearch, setFuncaoSearch] = useState("");
   const [referenciaSearch, setReferenciaSearch] = useState("");
   const [bairroSearch, setBairroSearch] = useState("");
+  const [salarioMinSearch, setSalarioMinSearch] = useState("");
+  const [salarioMaxSearch, setSalarioMaxSearch] = useState("");
+
+  // Ordena os salários uma vez para melhor experiência do usuário
+  const salariosOrdenados = useMemo(() => {
+    return [...todosSalariosBrutos].sort((a, b) => a - b);
+  }, [todosSalariosBrutos]);
+
+  // Função para filtrar salários baseados no valor de pesquisa
+  const filtrarSalarios = (salarios, valorPesquisa, tipo = 'min') => {
+    if (!valorPesquisa) return salarios;
+    
+    // Remove caracteres não numéricos e converte para número
+    const valorNumerico = parseFloat(valorPesquisa.replace(/[^0-9.,]/g, '').replace(',', '.'));
+    if (isNaN(valorNumerico)) return [];
+    
+    return salarios.filter(salario => 
+      tipo === 'min' ? salario >= valorNumerico : salario <= valorNumerico
+    );
+  };
 
   // Filtrar funções baseadas no termo de pesquisa
-  const funcoesFiltradas = todasFuncoes.filter(funcao =>
+  const funcoesFiltradas = todasFuncoes.filter((funcao) =>
     funcao.toLowerCase().includes(funcaoSearch.toLowerCase())
   );
 
   // Filtrar referências baseadas no termo de pesquisa
-  const referenciasFiltradas = todasReferencias.filter(referencia =>
+  const referenciasFiltradas = todasReferencias.filter((referencia) =>
     referencia.toLowerCase().includes(referenciaSearch.toLowerCase())
   );
 
   // Filtrar bairros baseados no termo de pesquisa
-  const bairrosFiltrados = todosBairros.filter(bairro =>
+  const bairrosFiltrados = todosBairros.filter((bairro) =>
     bairro.toLowerCase().includes(bairroSearch.toLowerCase())
   );
 
+  // Filtra os salários mínimos
+  const salariosMinFiltrados = filtrarSalarios(
+    salariosOrdenados, 
+    salarioMinSearch, 
+    'min'
+  );
+
+  // Filtra os salários máximos
+  const salariosMaxFiltrados = filtrarSalarios(
+    salariosOrdenados, 
+    salarioMaxSearch, 
+    'max'
+  );
+
+  // Inicializa os valores mínimo e máximo
   useEffect(() => {
-    const salariosBrutosExemplo = todosSalariosBrutos;
-
-    setSalariosBrutos(salariosBrutosExemplo);
-
-    if (show) {
+    if (show && salariosOrdenados.length > 0) {
       handleSalarioBrutoChange({
-        min: Math.min(...salariosBrutosExemplo),
-        max: Math.max(...salariosBrutosExemplo),
+        min: salariosOrdenados[0],
+        max: salariosOrdenados[salariosOrdenados.length - 1],
       });
     }
-  }, [show]);
+  }, [show, salariosOrdenados]);
 
   return (
     <Modal show={show} onHide={onHide} centered>
@@ -136,49 +166,69 @@ function FilterModal({
           </div>
         </DropdownButton>
 
-        {/* Seção Salário Bruto */}
+        {/* Seção Salário Bruto - Melhorada */}
         <h5>Salário Bruto</h5>
         <div className="d-flex gap-2 mb-3">
           <DropdownButton
             id="dropdown-salario-bruto-min"
-            title={`Mínimo: ${activeFilters.salarioBruto.min}`}
+            title={`Mínimo: ${activeFilters.salarioBruto.min.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
             variant="outline-primary"
+            autoClose="outside"
           >
-            {salariosBrutos.map((salario) => (
-              <Dropdown.Item
-                key={`bruto-min-${salario}`}
-                onClick={() =>
-                  handleSalarioBrutoChange({
-                    ...activeFilters.salarioBruto,
-                    min: salario,
-                  })
-                }
-                active={activeFilters.salarioBruto.min === salario}
-              >
-                {salario}
-              </Dropdown.Item>
-            ))}
+            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+              <Form.Control
+                type="text"
+                placeholder="Digite valor mínimo..."
+                className="mx-3 my-2"
+                value={salarioMinSearch}
+                onChange={(e) => setSalarioMinSearch(e.target.value)}
+              />
+              {salariosMinFiltrados.map((salario) => (
+                <Dropdown.Item
+                  key={`bruto-min-${salario}`}
+                  onClick={() =>
+                    handleSalarioBrutoChange({
+                      ...activeFilters.salarioBruto,
+                      min: salario,
+                    })
+                  }
+                  active={activeFilters.salarioBruto.min === salario}
+                >
+                  {salario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </Dropdown.Item>
+              ))}
+            </div>
           </DropdownButton>
 
           <DropdownButton
             id="dropdown-salario-bruto-max"
-            title={`Máximo: ${activeFilters.salarioBruto.max}`}
+            title={`Máximo: ${activeFilters.salarioBruto.max.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
             variant="outline-primary"
+            autoClose="outside"
           >
-            {salariosBrutos.map((salario) => (
-              <Dropdown.Item
-                key={`bruto-max-${salario}`}
-                onClick={() =>
-                  handleSalarioBrutoChange({
-                    ...activeFilters.salarioBruto,
-                    max: salario,
-                  })
-                }
-                active={activeFilters.salarioBruto.max === salario}
-              >
-                {salario}
-              </Dropdown.Item>
-            ))}
+            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+              <Form.Control
+                type="text"
+                placeholder="Digite valor máximo..."
+                className="mx-3 my-2"
+                value={salarioMaxSearch}
+                onChange={(e) => setSalarioMaxSearch(e.target.value)}
+              />
+              {salariosMaxFiltrados.map((salario) => (
+                <Dropdown.Item
+                  key={`bruto-max-${salario}`}
+                  onClick={() =>
+                    handleSalarioBrutoChange({
+                      ...activeFilters.salarioBruto,
+                      max: salario,
+                    })
+                  }
+                  active={activeFilters.salarioBruto.max === salario}
+                >
+                  {salario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </Dropdown.Item>
+              ))}
+            </div>
           </DropdownButton>
         </div>
 

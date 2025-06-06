@@ -278,6 +278,23 @@ function UserEdit({ funcionario, handleCloseModal }) {
     ? `Arquivo Selecionado: ${newUser.arquivo.name || ""}`
     : "Nenhum arquivo selecionado";
 
+    const groupCargosBySimbologia = (cargos) => {
+  const grouped = {};
+  
+  cargos.forEach(cargo => {
+    if (!grouped[cargo.simbologia]) {
+      grouped[cargo.simbologia] = {
+        simbologia: cargo.simbologia,
+        limite: cargo.simbologiaInfo.limite,
+        cargos: []
+      };
+    }
+    grouped[cargo.simbologia].cargos.push(cargo);
+  });
+  
+  return Object.values(grouped);
+};
+
   return (
     <Form>
       {/* Campo de Upload de Foto de Perfil */}
@@ -485,93 +502,96 @@ function UserEdit({ funcionario, handleCloseModal }) {
             </Col>
           </Row>
 
-          {newUser.salarioBruto && (
-            <Row>
-              <Col md={12}>
-                <Form.Group controlId="formCargo">
-                  <Form.Label>Cargo</Form.Label>
-                  <Dropdown
-                    show={showCargoDropdown}
-                    onToggle={(isOpen) => setShowCargoDropdown(isOpen)}
+  {newUser.salarioBruto && (
+      <Col md={6}>
+        <Form.Group controlId="formCargo">
+          <Form.Label>Cargo</Form.Label>
+          <Dropdown
+            show={showCargoDropdown}
+            onToggle={(isOpen) => setShowCargoDropdown(isOpen)}
+          >
+            <Dropdown.Toggle
+              variant="light"
+              id="dropdown-cargo"
+              className="w-100"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {newUser.funcao || "Selecione o cargo"}
+              </span>
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu className="w-100">
+              <div className="p-2">
+                <Form.Control
+                  type="text"
+                  placeholder="Pesquisar cargo"
+                  value={searchCargo}
+                  onChange={(e) => setSearchCargo(e.target.value)}
+                />
+              </div>
+              
+              {groupCargosBySimbologia(filteredCargos).map((grupo, index) => (
+                <React.Fragment key={index}>
+                  <Dropdown.Header 
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      backgroundColor: grupo.limite === 0 ? "#ffe6e6" : "#e6ffe6",
+                    }}
                   >
-                    <Dropdown.Toggle
-                      variant="light"
-                      id="dropdown-cargo"
-                      className="w-100"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      <span
+                    <span>Simbologia: {grupo.simbologia}</span>
+                    <span style={{ color: grupo.limite === 0 ? "red" : "green" }}>
+                      Limite: {grupo.limite}
+                    </span>
+                  </Dropdown.Header>
+                  
+                  {grupo.cargos
+                    .filter(cargo => 
+                      cargo.cargo.toLowerCase().includes(searchCargo.toLowerCase())
+                    )
+                    .map((cargo, cargoIndex) => (
+                      <Dropdown.Item
+                        key={`${index}-${cargoIndex}`}
+                        title={cargo.cargo}
                         style={{
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                        onClick={() => {
+                          setNewUser({ ...newUser, funcao: cargo.cargo });
+                          setShowCargoDropdown(false);
                         }}
                       >
-                        {newUser.funcao || "Selecione o cargo"}
-                      </span>
-                    </Dropdown.Toggle>
-
-                    <Dropdown.Menu className="w-100">
-                      <div className="p-2">
-                        <Form.Control
-                          type="text"
-                          placeholder="Pesquisar cargo"
-                          value={searchCargo}
-                          onChange={(e) => setSearchCargo(e.target.value)}
-                        />
-                      </div>
-                      {filteredCargos.map((cargo, index) => (
-                        <Dropdown.Item
-                          key={index}
-                          title={cargo.cargo}
-                          style={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            opacity: cargo.limite === 0 ? 0.5 : 1,
-                            pointerEvents: cargo.limite === 0 ? "none" : "auto",
-                          }}
-                          onClick={() => {
-                            if (cargo.limite > 0) {
-                              setNewUser({ ...newUser, funcao: cargo.cargo });
-                              setShowCargoDropdown(false);
-                            }
-                          }}
-                        >
-                          <span
-                            style={{
-                              color: cargo.limite === 0 ? "red" : "green",
-                              marginLeft: "10px",
-                            }}
-                          >
-                            {cargo.limite === 0
-                              ? "Sem vagas - "
-                              : ` ${cargo.limite} - `}
-                          </span>
-                          <span style={{ flex: 1, textAlign: "left" }}>
-                            {cargo.cargo}
-                          </span>
-                        </Dropdown.Item>
-                      ))}
-                    </Dropdown.Menu>
-                  </Dropdown>
-                  <Form.Control.Feedback type="invalid">
-                    {errors.cargo}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
-            </Row>
-          )}
+                        <span style={{ flex: 1, textAlign: "left" }}>
+                          {cargo.cargo}
+                        </span>
+                      </Dropdown.Item>
+                    ))}
+                </React.Fragment>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+        </Form.Group>
+      </Col>
+    )}
         </>
       )}
 

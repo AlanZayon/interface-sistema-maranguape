@@ -14,7 +14,7 @@ import {
 } from "react-bootstrap";
 import { FaUserCircle, FaSearch } from "react-icons/fa";
 import { API_BASE_URL } from "../utils/apiConfig";
-import { useAuth } from "./AuthContext"; // Importa o contexto
+import { useAuth } from "./AuthContext";
 
 const fetchSetoresData = async () => {
   const response = await axios.get(
@@ -59,11 +59,28 @@ function Step1Form({
   const [showSalarioDropdown, setShowSalarioDropdown] = useState(false);
   const [showCargoDropdown, setShowCargoDropdown] = useState(false);
   const [showNaturezaDropdown, setShowNaturezaDropdown] = useState(false);
-    const [nameValidation, setNameValidation] = useState({
+  const [nameValidation, setNameValidation] = useState({
     isValid: null,
     message: "",
   });
 
+  // Função para agrupar cargos por simbologia
+  const groupCargosBySimbologia = (cargos) => {
+    const grouped = {};
+    
+    cargos.forEach(cargo => {
+      if (!grouped[cargo.simbologia]) {
+        grouped[cargo.simbologia] = {
+          simbologia: cargo.simbologia,
+          limite: cargo.simbologiaInfo.limite,
+          cargos: []
+        };
+      }
+      grouped[cargo.simbologia].cargos.push(cargo);
+    });
+    
+    return Object.values(grouped);
+  };
 
   useEffect(() => {
     if (newUser?.foto) {
@@ -150,7 +167,7 @@ function Step1Form({
     }));
   }, [newUser.natureza]);
 
-    useEffect(() => {
+  useEffect(() => {
     return () => {
       setNameValidation({
         isValid: null,
@@ -159,7 +176,7 @@ function Step1Form({
     };
   }, []);
 
-   const checkNameAvailability = useCallback(
+  const checkNameAvailability = useCallback(
     debounce(async (name) => {
       if (!name || name.length < 3) {
         setNameValidation({
@@ -241,9 +258,9 @@ function Step1Form({
     if (validateFields()) {
       setIsLoading(true);
       if (nextStep) {
-        nextStep(); // Navega para o passo 3 (caso exista)
+        nextStep();
       } else {
-        setStep(2); // Navega para o passo 2 (sempre acontece)
+        setStep(2);
       }
     }
   };
@@ -267,7 +284,7 @@ function Step1Form({
     cargo.cargo.toLowerCase().includes(searchCargo.toLowerCase())
   );
 
-    const handleNameChange = (e) => {
+  const handleNameChange = (e) => {
     const name = e.target.value;
     setNewUser({ ...newUser, nome: name });
     checkNameAvailability(name);
@@ -489,41 +506,49 @@ function Step1Form({
                           onChange={(e) => setSearchCargo(e.target.value)}
                         />
                       </div>
-                      {filteredCargos.map((cargo, index) => (
-                        <Dropdown.Item
-                          key={index}
-                          title={cargo.cargo} // Mostra o nome completo ao passar o mouse
-                          style={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            opacity: cargo.limite === 0 ? 0.5 : 1, // Desabilita visualmente se o limite for zero
-                            pointerEvents: cargo.limite === 0 ? "none" : "auto", // Impede a seleção se o limite for zero
-                          }}
-                          onClick={() => {
-                            if (cargo.limite > 0) {
-                              setNewUser({ ...newUser, funcao: cargo.cargo });
-                              setShowCargoDropdown(false);
-                            }
-                          }}
-                        >
-                          <span
+                      
+                      {groupCargosBySimbologia(filteredCargos).map((grupo, index) => (
+                        <React.Fragment key={index}>
+                          <Dropdown.Header 
                             style={{
-                              color: cargo.limite === 0 ? "red" : "green",
-                              marginLeft: "10px",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              backgroundColor: grupo.limite === 0 ? "#ffe6e6" : "#e6ffe6",
                             }}
                           >
-                            {cargo.limite === 0
-                              ? "Sem vagas - "
-                              : ` ${cargo.limite} - `}
-                          </span>
-                          <span style={{ flex: 1, textAlign: "left" }}>
-                            {cargo.cargo}
-                          </span>
-                        </Dropdown.Item>
+                            <span>Simbologia: {grupo.simbologia}</span>
+                            <span style={{ color: grupo.limite === 0 ? "red" : "green" }}>
+                              Limite: {grupo.limite}
+                            </span>
+                          </Dropdown.Header>
+                          
+                          {grupo.cargos
+                            .filter(cargo => 
+                              cargo.cargo.toLowerCase().includes(searchCargo.toLowerCase())
+                            )
+                            .map((cargo, cargoIndex) => (
+                              <Dropdown.Item
+                                key={`${index}-${cargoIndex}`}
+                                title={cargo.cargo}
+                                style={{
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
+                                onClick={() => {
+                                  setNewUser({ ...newUser, funcao: cargo.cargo });
+                                  setShowCargoDropdown(false);
+                                }}
+                              >
+                                <span style={{ flex: 1, textAlign: "left" }}>
+                                  {cargo.cargo}
+                                </span>
+                              </Dropdown.Item>
+                            ))}
+                        </React.Fragment>
                       ))}
                     </Dropdown.Menu>
                   </Dropdown>

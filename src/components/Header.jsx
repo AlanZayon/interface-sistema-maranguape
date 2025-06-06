@@ -175,7 +175,6 @@ function Header() {
           withCredentials: true,
         }
       );
-      console.log(response.data.message);
       logout();
       navigate("/");
     } catch (error) {

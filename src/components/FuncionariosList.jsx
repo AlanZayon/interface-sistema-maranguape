@@ -21,6 +21,8 @@ import {
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom"; // Importe o hook
+import { FixedSizeGrid as Grid } from "react-window";
+import AutoSizer from "react-virtualized-auto-sizer";
 import { useAuth } from "./AuthContext"; // Importa o contexto
 import FilterModal from "./FilterModal";
 import ObservationHistoryButton from "./ObservationHistoryButton";
@@ -28,6 +30,7 @@ import ObservationHistoryModal from "./ObservationHistoryModal";
 import CoordEdit from "./CoordEdit";
 import UserEdit from "./userEdit";
 import { API_BASE_URL } from "../utils/apiConfig";
+import { set } from "lodash";
 
 function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
   const location = useLocation();
@@ -66,9 +69,9 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
   const [todosBairros, setTodosBairros] = useState([]);
   const [todasReferencias, setTodasReferencias] = useState([]);
   const [todosSalariosBrutos, setTodosSalariosBrutos] = useState([]);
-  // const [funcionariosPath, setFuncionariosPath] = useState([]);
   const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
   const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
+  const [loading, setLoading] = useState(false);
   const {
     role,
     funcionarios,
@@ -79,17 +82,53 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
   const searchRef = useRef(null);
 
   const fetchSetoresData = async () => {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/funcionarios/setores/${setorPathId}/funcionarios`
-    );
-    return response.data;
+    setLoading(true);
+    let page = 1;
+    const limit = 1000;
+    let totalPages = 1;
+    let allFuncionarios = [];
+    try {
+      while (page <= totalPages) {
+        const res = await axios.get(
+          `${API_BASE_URL}/api/funcionarios/setores/${setorPathId}/funcionarios?page=${page}&limit=${limit}`
+        );
+        allFuncionarios = [...allFuncionarios, ...res.data.funcionarios];
+        totalPages = res.data.pages;
+        page++;
+      }
+    } catch (error) {
+      console.error("Erro ao buscar os dados:", error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+
+    return allFuncionarios;
   };
 
   const fetchFuncionariosData = async () => {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/funcionarios/buscarFuncionarios`
-    );
-    return response.data;
+    setLoading(true);
+    let page = 1;
+    const limit = 1000;
+    let totalPages = 1;
+    let allFuncionarios = [];
+    try {
+      while (page <= totalPages) {
+        const res = await axios.get(
+          `${API_BASE_URL}/api/funcionarios/buscarFuncionarios?page=${page}&limit=${limit}`
+        );
+        allFuncionarios = [...allFuncionarios, ...res.data.funcionarios];
+        totalPages = res.data.pages;
+        page++;
+      }
+    } catch (error) {
+      console.error("Erro ao buscar os dados:", error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+
+    return allFuncionarios;
   };
 
   const handleCloseModal = () => {
@@ -99,7 +138,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     setShowModalSingleEdit(false);
   };
 
-    const sortFuncionariosAlphabetically = (funcionarios) => {
+  const sortFuncionariosAlphabetically = (funcionarios) => {
     return [...funcionarios].sort((a, b) => {
       const nomeA = a.nome.toUpperCase();
       const nomeB = b.nome.toUpperCase();
@@ -112,7 +151,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
       return 0;
     });
   };
-
 
   const applyFilters = (funcionarios) => {
     const allFuncionarios = Array.isArray(funcionarios)
@@ -252,7 +290,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     setFilteredFuncionarios(applyFilters(filtered));
   }, [setorPathId, funcionariosPath, funcionarios, activeFilters, searchTerm]);
 
-
   const buscarFuncionario = (userId) => {
     const funcionario =
       funcionarios[coordenadoriaId]?.find((func) => func._id === userId) ||
@@ -340,6 +377,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
   };
 
   const handleDeleteSelected = async (userId = null) => {
+    setLoading(true);
     const idsToDelete = userId ? [userId] : selectedUsers;
 
     if (idsToDelete.length === 0) {
@@ -351,7 +389,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
       "Tem certeza de que deseja apagar os usuários selecionados?"
     );
     if (!userConfirmed) {
-      return; // Sai da função se o usuário cancelar
+      setLoading(false);
+      return;
     }
 
     try {
@@ -379,7 +418,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
           );
 
           const updatedState = { ...prev };
-
           deletedUsersCoordenadoria.forEach((coordenadoria) => {
             updatedState[coordenadoria] =
               updatedState[coordenadoria]?.filter(
@@ -398,6 +436,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     } catch (error) {
       console.error("Erro ao deletar usuários:", error);
       alert("Erro ao deletar usuários. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -458,8 +498,263 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     }));
   };
 
+  const UserCard = ({ columnIndex, rowIndex, style, columnCount }) => {
+    const index = rowIndex * columnCount + columnIndex;
+    if (index >= filteredFuncionarios.length) return null;
+
+    const user = filteredFuncionarios[index];
+    const [activeTab, setActiveTab] = useState("financeiro");
+
+    const renderTabContent = () => {
+      switch (activeTab) {
+        case "financeiro":
+          return (
+            <div className="info-card financial-info my-2">
+              <h3>Financeiro</h3>
+              <p>
+                <strong>Sal. Bruto:</strong> {user.salarioBruto}
+              </p>
+            </div>
+          );
+        case "localidade":
+          return (
+            <div className="info-card personal-info my-2">
+              <h3>Localidade</h3>
+              <p>
+                <strong>Cidade:</strong> {user.cidade}
+              </p>
+              <p>
+                <strong>Endereço:</strong> {user.endereco}
+              </p>
+              <p>
+                <strong>Bairro:</strong> {user.bairro}
+              </p>
+              <p>
+                <strong>Telefone:</strong> {user.telefone}
+              </p>
+            </div>
+          );
+        case "redes-sociais":
+          return (
+            <div className="info-card social-info my-2">
+              <h3>Redes Sociais</h3>
+              {Array.isArray(user.redesSociais) &&
+              user.redesSociais.length > 0 ? (
+                <div className="social-links d-flex flex-column">
+                  {user.redesSociais.map((social, index) => (
+                    <a
+                      key={index}
+                      href={social.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="social-link"
+                    >
+                      {social.nome}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p>Nenhuma rede social disponível.</p>
+              )}
+            </div>
+          );
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <div style={style}>
+        <Col
+          key={user._id}
+          style={{
+            zIndex: expandedCards.includes(user._id) ? 10 : 1,
+            position: "relative",
+          }}
+        >
+          <div className={`user-card mb-2 mx-2`}>
+            <div className="card-header d-flex justify-content-between align-items-center">
+              {(showSelectionControlsDelete ||
+                showSelectionControlsEdit ||
+                showSelectionControlsReport) && (
+                <Form.Check
+                  type="checkbox"
+                  checked={selectedUsers.includes(user._id)}
+                  onChange={() => handleUserSelect(user._id)}
+                  className="user-checkbox"
+                />
+              )}
+              <p>
+                <strong>{user.nome}</strong>
+              </p>
+            </div>
+
+            <div className="d-flex">
+              <div className="user-photo-container">
+                <img
+                  src={
+                    user.fotoUrl ||
+                    "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
+                  }
+                  alt="Foto do Funcionário"
+                  className="user-photo"
+                />
+                <div className="action-buttons d-flex mt-3">
+                  {role === "admin" && (
+                    <>
+                      <Button
+                        onClick={() => handleClick(user._id)}
+                        variant="outline-dark"
+                        className="action-btn mx-1"
+                      >
+                        <i className="fas fa-edit"></i>
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteSelected(user._id)}
+                        variant="outline-dark"
+                        className="action-btn mx-1"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="outline-dark"
+                    className="action-btn mx-1"
+                    onClick={() => toggleExpand(user._id)}
+                  >
+                    <i
+                      className={`fas fa-angle-${
+                        expandedCards.includes(user._id) ? "left" : "right"
+                      }`}
+                    ></i>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="user-info-container">
+                <p>
+                  <strong>Secretaria:</strong> {user.secretaria}
+                </p>
+                <p>
+                  <strong>Função:</strong> {user.funcao}
+                </p>
+                <p>
+                  <strong>Natureza:</strong> {user.natureza}
+                </p>
+                <p>
+                  <strong>Referência:</strong> {user.referencia}
+                </p>
+              </div>
+            </div>
+
+            {expandedCards.includes(user._id) && (
+              <>
+                <div className="button-group d-flex justify-content-center my-5">
+                  <ObservationHistoryButton
+                    onClick={() => handleViewObservations(user._id)}
+                  />
+                  {user.arquivo && (
+                    <Button
+                      variant="outline-success"
+                      className="action-btn m-1 w-25"
+                      onClick={() => window.open(user.arquivoUrl, "_blank")}
+                      download
+                    >
+                      <i className="fas fa-download"></i> Baixar Arquivo
+                    </Button>
+                  )}
+                </div>
+
+                <Row className="extra-info professional-info">
+                  <Col>
+                    {/* Navegação entre abas */}
+                    <div className="d-flex justify-content-around mb-3">
+                      <Button
+                        variant={
+                          activeTab === "financeiro"
+                            ? "primary"
+                            : "outline-primary"
+                        }
+                        onClick={() => setActiveTab("financeiro")}
+                      >
+                        Financeiro
+                      </Button>
+                      <Button
+                        variant={
+                          activeTab === "localidade"
+                            ? "primary"
+                            : "outline-primary"
+                        }
+                        onClick={() => setActiveTab("localidade")}
+                      >
+                        Localidade
+                      </Button>
+                      <Button
+                        variant={
+                          activeTab === "redes-sociais"
+                            ? "primary"
+                            : "outline-primary"
+                        }
+                        onClick={() => setActiveTab("redes-sociais")}
+                      >
+                        Redes Sociais
+                      </Button>
+                    </div>
+
+                    {/* Conteúdo da aba ativa */}
+                    {renderTabContent()}
+                  </Col>
+                </Row>
+              </>
+            )}
+          </div>
+        </Col>
+      </div>
+    );
+  };
+
+  // Calcula o número de colunas baseado na largura
+  const getColumnCount = (width) => {
+    if (width < 768) return 1; // Mobile
+    if (width < 992) return 2; // Tablet
+    return 3; // Desktop
+  };
+
+  if (loading) {
+    return (
+      <div className="d-flex flex-column justify-content-center align-items-center vh-100 bg-light">
+        <div className="position-relative mb-4">
+          <div
+            className="spinner-border text-primary"
+            style={{ width: "3rem", height: "3rem" }}
+            role="status"
+          >
+            <span className="visually-hidden">Carregando...</span>
+          </div>
+          <div className="position-absolute top-0 start-0 w-100 h-100">
+            <div
+              className="spinner-grow text-info opacity-25"
+              style={{ width: "3.5rem", height: "3.5rem" }}
+              role="status"
+            ></div>
+          </div>
+        </div>
+
+        <h5 className="text-muted mb-2">Carregando dados</h5>
+      </div>
+    );
+  }
+
   return (
-    <Container style={{ maxHeight: "540px", overflowY: "auto" }}>
+    <Container
+      style={{
+        height: setorPathId ? "calc(100vh - 92px)" : "calc(100vh - 200px)",
+        display: "flex",
+        flexDirection: "column",
+        padding: "0",
+      }}
+    >
       {setorPathId && (
         <h2 className="mt-4 d-flex">
           <Col xs="auto"></Col>
@@ -481,7 +776,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
         </h2>
       )}
 
-      {/* Modal de Filtros */}
       <FilterModal
         show={showModal}
         onHide={() => setShowModal(false)}
@@ -498,7 +792,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
         handleSalarioBrutoChange={handleSalarioBrutoChange}
       />
 
-      {/* Botões de Filtros, Editar, Apagar */}
       <div className="d-flex justify-content-between mx-3">
         {role === "admin" ? (
           <div className="position-sticky my-2">
@@ -522,7 +815,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
                   : "m-1"
               }
             >
-              <FaExchangeAlt /> {/* Ícone de Editar */}
+              <FaExchangeAlt />
             </Button>
 
             <Button
@@ -557,7 +850,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
               <FaFile />
             </Button>
 
-            {/* Popover com Input de Pesquisa */}
             <Overlay
               target={searchRef.current}
               show={showSearch}
@@ -599,7 +891,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
           </div>
         )}
 
-        {/* Checkbox Global e Botão "Apagar Selecionados" */}
         {showSelectionControlsDelete &&
           !showSelectionControlsEdit &&
           !showSelectionControlsReport && (
@@ -622,7 +913,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
             </div>
           )}
 
-        {/* Checkbox Global e Botão "editar Selecionados" */}
         {showSelectionControlsEdit &&
           !showSelectionControlsDelete &&
           !showSelectionControlsReport && (
@@ -666,204 +956,95 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
               </Button>
             </div>
           )}
-
-        <Modal show={showModalEdit} onHide={() => setShowModalEdit(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Editar Usuarios</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <CoordEdit
-              usuariosIds={selectedUsers}
-              handleCloseModal={handleCloseModal}
-              setShowSelectionControlsEdit={setShowSelectionControlsEdit}
-              setActivateModified={setActivateModified}
-            />
-          </Modal.Body>
-        </Modal>
-
-        <Modal
-          show={showModalSingleEdit}
-          onHide={() => setShowModalSingleEdit(false)}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Editar Usuarios</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <UserEdit
-              funcionario={funcionarioEncontrado}
-              handleCloseModal={handleCloseModalSingleEdit}
-            />
-          </Modal.Body>
-        </Modal>
       </div>
-      <Row className="m-3">
-        {filteredFuncionarios.map((user) => (
-          <Col key={user._id} md={expandedCards.includes(user._id) ? 12 : ""}>
-            <div className={`user-card mb-2`}>
-              {/* Header do card */}
-              <div className="card-header d-flex justify-content-between align-items-center">
-                {(showSelectionControlsDelete ||
-                  showSelectionControlsEdit ||
-                  showSelectionControlsReport) && (
-                  <Form.Check
-                    type="checkbox"
-                    checked={selectedUsers.includes(user._id)}
-                    onChange={() => handleUserSelect(user._id)}
-                    className="user-checkbox"
-                  />
-                )}
-                <p>
-                  <strong>{user.nome}</strong>
-                </p>
+
+      <div
+        style={{
+          flex: 1,
+          overflow: "auto",
+          padding: "0 1rem",
+        }}
+      >
+        <AutoSizer>
+          {({ height, width }) => {
+            const columnCount = getColumnCount(width);
+            const rowCount = Math.ceil(
+              filteredFuncionarios.length / columnCount
+            );
+            const columnWidth = width / columnCount;
+            const rowHeight = 220; // Altura base, ajuste conforme necessário
+
+            // Função de renderização das células
+            const renderCell = ({ columnIndex, rowIndex, style }) => {
+              return (
+                <UserCard
+                  columnIndex={columnIndex}
+                  rowIndex={rowIndex}
+                  style={style}
+                  columnCount={columnCount}
+                />
+              );
+            };
+
+            return filteredFuncionarios.length > 0 ? (
+              <Grid
+                height={height}
+                width={width}
+                columnCount={columnCount}
+                columnWidth={columnWidth}
+                rowCount={rowCount}
+                rowHeight={rowHeight}
+              >
+                {renderCell}
+              </Grid>
+            ) : (
+              <div
+                style={{ width, height }}
+                className="d-flex justify-content-center align-items-center"
+              >
+                <p>Nenhum funcionário encontrado</p>
               </div>
+            );
+          }}
+        </AutoSizer>
+      </div>
 
-              {/* Corpo do Card */}
-              <div className=" d-flex">
-                {/* Foto do usuário à esquerda */}
-                <div className="user-photo-container">
-                  <img
-                    src={
-                      user.fotoUrl ||
-                      "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
-                    }
-                    alt="Foto do Funcionário"
-                    className="user-photo"
-                  />
-                  {/* Botões abaixo da foto */}
-                  <div className="action-buttons d-flex mt-3">
-                    {role === "admin" ? (
-                      <>
-                        <Button
-                          onClick={() => handleClick(user._id)}
-                          variant="outline-dark"
-                          className="action-btn mx-1"
-                        >
-                          <i className="fas fa-edit"></i>
-                        </Button>
-                        <Button
-                          onClick={() => handleDeleteSelected(user._id)}
-                          variant="outline-dark"
-                          className="action-btn mx-1"
-                        >
-                          <i className="fas fa-trash"></i>
-                        </Button>
-                      </>
-                    ) : null}
-                    <Button
-                      variant="outline-dark"
-                      className="action-btn mx-1"
-                      onClick={() => toggleExpand(user._id)}
-                    >
-                      <i
-                        className={`fas fa-angle-${
-                          expandedCards.includes(user._id) ? "left" : "right"
-                        }`}
-                      ></i>
-                    </Button>
-                  </div>
-                </div>
+      <Modal show={showModalEdit} onHide={() => setShowModalEdit(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Editar Usuarios</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <CoordEdit
+            usuariosIds={selectedUsers}
+            handleCloseModal={handleCloseModal}
+            setShowSelectionControlsEdit={setShowSelectionControlsEdit}
+            setActivateModified={setActivateModified}
+          />
+        </Modal.Body>
+      </Modal>
 
-                {/* Informações do usuário à direita */}
-                <div className="user-info-container">
-                  <p>
-                    <strong>Secretaria:</strong> {user.secretaria}
-                  </p>
-                  <p>
-                    <strong>Função:</strong> {user.funcao}
-                  </p>
-                  <p>
-                    <strong>Natureza:</strong> {user.natureza}
-                  </p>
-                  <p>
-                    <strong>Referência:</strong> {user.referencia}
-                  </p>
-                </div>
-              </div>
+      <Modal
+        show={showModalSingleEdit}
+        onHide={() => setShowModalSingleEdit(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Editar Usuarios</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <UserEdit
+            funcionario={funcionarioEncontrado}
+            handleCloseModal={handleCloseModalSingleEdit}
+          />
+        </Modal.Body>
+      </Modal>
 
-              <ObservationHistoryModal
-                show={showObservationModal}
-                onHide={() => setShowObservationModal(false)}
-                userId={user._id}
-                initialObservations={observations[currentUserId] || []}
-              />
-
-              {/* Botões Horizontais Acima das Informações Adicionais */}
-              {expandedCards.includes(user._id) && (
-                <div className="button-group d-flex justify-content-center my-5">
-                  <ObservationHistoryButton
-                    onClick={() => handleViewObservations(user._id)}
-                  />
-                  {user.arquivo && (
-                    <Button
-                      variant="outline-success"
-                      className="action-btn m-1 w-25"
-                      onClick={() => window.open(user.arquivoUrl, "_blank")}
-                      download
-                    >
-                      <i className="fas fa-download"></i> Baixar Arquivo
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {/* Se o card estiver expandido, exibe mais informações */}
-              {expandedCards.includes(user._id) && (
-                <Row className="extra-info professional-info">
-                  <Col className="d-flex flex-wrap justify-content-between ">
-                    {/* Redes Sociais */}
-                    <div className="info-card social-info my-2">
-                      <h3>Redes Sociais</h3>
-                      {Array.isArray(user.redesSociais) &&
-                      user.redesSociais.length > 0 ? (
-                        <div className="social-links d-flex flex-column">
-                          {user.redesSociais.map((social, index) => (
-                            <a
-                              key={index}
-                              href={social.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="social-link"
-                            >
-                              {social.nome}
-                            </a>
-                          ))}
-                        </div>
-                      ) : (
-                        <p>Nenhuma rede social disponível.</p>
-                      )}
-                    </div>
-
-                    {/* Informações Financeiras */}
-                    <div className="info-card financial-info my-2">
-                      <h3>Financeiro</h3>
-                      <p>
-                        <strong>Sal. Bruto:</strong> {user.salarioBruto}
-                      </p>
-                    </div>
-
-                    {/* Informações Pessoais */}
-                    <div className="info-card personal-info my-2">
-                      <h3>Localidade</h3>
-                      <p>
-                        <strong>Cidade:</strong> {user.cidade}
-                      </p>
-                      <p>
-                        <strong>Endereço:</strong> {user.endereco}
-                      </p>
-                      <p>
-                        <strong>Bairro:</strong> {user.bairro}
-                      </p>
-                      <p>
-                        <strong>Telefone:</strong> {user.telefone}
-                      </p>
-                    </div>
-                  </Col>
-                </Row>
-              )}
-            </div>
-          </Col>
-        ))}
-      </Row>
+      <ObservationHistoryModal
+        show={showObservationModal}
+        onHide={() => setShowObservationModal(false)}
+        userId={currentUserId}
+        initialObservations={observations[currentUserId] || []}
+        onAddObservation={handleAddObservation}
+      />
     </Container>
   );
 }
