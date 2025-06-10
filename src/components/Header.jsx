@@ -1,13 +1,16 @@
-// components/Header.js
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import {
   Button,
-  Col,
   Form,
   InputGroup,
   Modal,
   Dropdown,
+  Container,
+  Navbar,
+  Badge,
+  ListGroup,
+  Spinner
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import Step1Form from "./Step1Form";
@@ -15,6 +18,16 @@ import Step2Form from "./Step2Form";
 import Step3Form from "./Step3Form";
 import { useAuth } from "./AuthContext";
 import { API_BASE_URL } from "../utils/apiConfig";
+import {
+  FaSearch,
+  FaPlus,
+  FaHome,
+  FaSignOutAlt,
+  FaUser,
+  FaUserCog,
+  FaTimes,
+  FaChevronRight
+} from "react-icons/fa";
 
 function Header() {
   const [newUser, setNewUser] = useState({
@@ -42,16 +55,15 @@ function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [autocompleteResults, setAutocompleteResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const timeoutRef = useRef(null);
   const [showSearch, setShowSearch] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const searchRef = useRef(null);
 
-  // Efeito para detectar mudanças no tamanho da tela
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      // Se a tela for maior que mobile e a busca estiver visível, esconder
       if (window.innerWidth >= 768) {
         setShowSearch(false);
       }
@@ -61,11 +73,11 @@ function Header() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Efeito para fechar a busca quando clicar fora
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSearch(false);
+        setShowSuggestions(false);
       }
     };
 
@@ -83,6 +95,7 @@ function Header() {
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
+    setSearchLoading(true);
     timeoutRef.current = setTimeout(() => {
       axios
         .get(`${API_BASE_URL}/api/search/autocomplete?q=${searchQuery}`)
@@ -93,15 +106,16 @@ function Header() {
         .catch((err) => {
           console.error("Erro ao buscar autocomplete:", err);
           setAutocompleteResults([]);
-        });
+        })
+        .finally(() => setSearchLoading(false));
     }, 300);
   }, [searchQuery]);
 
-  // Update the handleSearch function to send the request
   const handleSearch = (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
+    setSearchLoading(true);
     axios
       .get(`${API_BASE_URL}/api/search/search-funcionarios?q=${searchQuery}`)
       .then((response) => {
@@ -110,27 +124,35 @@ function Header() {
       })
       .catch((error) => {
         console.error("Search error:", error);
-      });
+      })
+      .finally(() => setSearchLoading(false));
   };
 
-  // Add a function to handle suggestion selection
   const handleSuggestionSelect = (term) => {
     setSearchQuery(term);
     setShowSuggestions(false);
-
-
-    // Immediately search with the selected term
+    setSearchLoading(true);
+    
     axios
       .get(`${API_BASE_URL}/api/search/search-funcionarios?q=${term}`)
       .then((response) => {
+        setFuncionariosPath(response.data);
+        navigate(`/search/${term}`);
       })
       .catch((error) => {
         console.error("Search error:", error);
-      });
+      })
+      .finally(() => setSearchLoading(false));
   };
 
   const toggleSearch = () => {
     setShowSearch(!showSearch);
+    if (!showSearch) {
+      setTimeout(() => {
+        const input = document.querySelector('.mobile-search-input');
+        if (input) input.focus();
+      }, 100);
+    }
   };
 
   const handleShowModal = () => {
@@ -158,22 +180,15 @@ function Header() {
     setShowModal(false);
   };
 
-  const nextStep = () => {
-    setCurrentStep(currentStep + 1);
-  };
-
-  const prevStep = () => {
-    setCurrentStep(currentStep - 1);
-  };
+  const nextStep = () => setCurrentStep(currentStep + 1);
+  const prevStep = () => setCurrentStep(currentStep - 1);
 
   const logoutUser = async () => {
     try {
-      const response = await axios.post(
+      await axios.post(
         `${API_BASE_URL}/api/usuarios/logout`,
         {},
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
       logout();
       navigate("/");
@@ -183,155 +198,203 @@ function Header() {
   };
 
   return (
-    <>
-      <header className="w-100 d-flex justify-content-between align-items-center bg-dark text-white p-2 header">
-        <div>
+    <Navbar bg="dark" variant="dark" expand="md" sticky="top" className="px-3 shadow-sm">
+      <Container fluid>
+        {/* Left side - User dropdown */}
+        <div className="d-flex align-items-center">
           {role === "admin" ? (
             <Dropdown align="end">
               <Dropdown.Toggle
                 variant="outline-light"
-                className="px-2"
-                style={{ minWidth: "auto" }}
+                className="d-flex align-items-center gap-2"
                 title={username}
               >
-                <i className="fas fa-user-cog"></i>
+                <FaUserCog size={18} />
+                <span className="d-none d-md-inline">{username}</span>
               </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item
-                  onClick={() => {
-                    navigate("/indicadores");
-                  }}
+              <Dropdown.Menu className="shadow">
+                <Dropdown.Item 
+                  onClick={() => navigate("/indicadores")}
+                  className="d-flex align-items-center gap-2"
                 >
+                  <FaUserCog className="text-primary" />
                   Painel de Referências
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
           ) : (
-            <Button variant="outline-light" className="p-1" title={username}>
-              <i className="fas fa-user"></i>
+            <Button variant="outline-light" title={username}>
+              <FaUser size={18} />
+              <span className="d-none d-md-inline ms-2">{username}</span>
             </Button>
           )}
         </div>
 
-        <div className="d-flex align-items-center">
-          {/* Barra de pesquisa - Versão melhorada para mobile */}
-          <div ref={searchRef} className="d-flex align-items-center">
-            {!isMobile ? (
-              // Barra de pesquisa para desktop
-              <Form onSubmit={handleSearch} className="me-2">
-                <InputGroup>
-                  <Form.Control
-                    type="search"
-                    placeholder="Pesquisar..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onBlur={() =>
-                      setTimeout(() => setShowSuggestions(false), 200)
-                    }
-                    onFocus={() => searchQuery && setShowSuggestions(true)}
-                    style={{ width: "200px" }}
-                  />
-                  <Button variant="outline-light" type="submit">
-                    <i className="fas fa-search"></i>
-                  </Button>
-                </InputGroup>
-                {showSuggestions && autocompleteResults.length > 0 && (
-                  <ul className="list-group position-absolute mt-1 z-3 w-40 shadow-sm">
-                    {autocompleteResults.map((term, idx) => (
-                      <li
-                        key={idx}
-                        className="list-group-item list-group-item-action"
-                        onClick={() => {
-                          handleSuggestionSelect(term);
-                        }}
-                        style={{ cursor: "pointer" }}
-                      >
-                        {term}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Form>
-            ) : showSearch ? (
-              // Barra de pesquisa expandida para mobile
-              <div
-                className="position-absolute top-0 start-0 w-100 bg-dark p-2"
-                style={{
-                  zIndex: 1050,
-                  marginTop: "56px",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <Form onSubmit={handleSearch} className="d-flex flex-grow-1">
-                  <InputGroup>
-                    <Form.Control
-                      type="search"
-                      placeholder="Pesquisar..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      autoFocus
-                      className="flex-grow-1"
-                    />
-                    <Button variant="outline-light" type="submit">
-                      <i className="fas fa-search"></i>
-                    </Button>
-                    <Button
-                      variant="outline-light"
-                      onClick={() => setShowSearch(false)}
+        {/* Center - Search (desktop) */}
+        {!isMobile && (
+          <div className="mx-4 flex-grow-1" style={{ maxWidth: "500px" }} ref={searchRef}>
+            <Form onSubmit={handleSearch}>
+              <InputGroup>
+                <Form.Control
+                  type="search"
+                  placeholder="Pesquisar funcionários..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onFocus={() => searchQuery && setShowSuggestions(true)}
+                  className="border-end-0"
+                />
+                <Button 
+                  variant="light" 
+                  type="submit"
+                  disabled={searchLoading}
+                >
+                  {searchLoading ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : (
+                    <FaSearch />
+                  )}
+                </Button>
+              </InputGroup>
+              
+              {showSuggestions && autocompleteResults.length > 0 && (
+                <ListGroup className="position-absolute w-100 mt-1 shadow" style={{ zIndex: 1000 }}>
+                  {autocompleteResults.map((term, idx) => (
+                    <ListGroup.Item
+                      key={idx}
+                      action
+                      onClick={() => handleSuggestionSelect(term)}
+                      className="d-flex justify-content-between align-items-center"
                     >
-                      <i className="fas fa-times"></i>
-                    </Button>
-                  </InputGroup>
-                </Form>
-              </div>
-            ) : (
-              // Ícone de pesquisa para mobile
-              <Button
-                variant="outline-light"
-                className="mx-1"
-                onClick={toggleSearch}
-              >
-                <i className="fas fa-search"></i>
-              </Button>
+                      {term}
+                      <FaChevronRight size={12} className="text-muted" />
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              )}
+            </Form>
+          </div>
+        )}
+
+        {/* Right side - Action buttons */}
+        <div className="d-flex align-items-center gap-2">
+          {/* Mobile search toggle */}
+          {isMobile && (
+            <Button
+              variant="outline-light"
+              onClick={toggleSearch}
+              className="d-md-none"
+            >
+              <FaSearch />
+            </Button>
+          )}
+
+          <Button
+            variant="outline-light"
+            onClick={handleShowModal}
+            title="Adicionar funcionário"
+          >
+            <FaPlus />
+            <span className="d-none d-md-inline ms-2">Novo</span>
+          </Button>
+
+          <Button
+            onClick={() => navigate("/mainscreen")}
+            variant="outline-light"
+            title="Página inicial"
+          >
+            <FaHome />
+            <span className="d-none d-md-inline ms-2">Início</span>
+          </Button>
+
+          <Button
+            onClick={logoutUser}
+            variant="outline-light"
+            title="Sair"
+          >
+            <FaSignOutAlt />
+            <span className="d-none d-md-inline ms-2">Sair</span>
+          </Button>
+        </div>
+
+        {/* Mobile search overlay */}
+        {isMobile && showSearch && (
+          <div 
+            className="position-fixed top-0 start-0 w-100 bg-dark p-3 d-md-none"
+            style={{
+              zIndex: 1050,
+              marginTop: "56px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.2)"
+            }}
+            ref={searchRef}
+          >
+            <Form onSubmit={handleSearch} className="d-flex">
+              <InputGroup>
+                <Form.Control
+                  type="search"
+                  placeholder="Pesquisar funcionários..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                  className="mobile-search-input"
+                />
+                <Button 
+                  variant="light" 
+                  type="submit"
+                  disabled={searchLoading}
+                >
+                  {searchLoading ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : (
+                    <FaSearch />
+                  )}
+                </Button>
+                <Button
+                  variant="outline-light"
+                  onClick={() => setShowSearch(false)}
+                >
+                  <FaTimes />
+                </Button>
+              </InputGroup>
+            </Form>
+
+            {showSuggestions && autocompleteResults.length > 0 && (
+              <ListGroup className="mt-2 shadow">
+                {autocompleteResults.map((term, idx) => (
+                  <ListGroup.Item
+                    key={idx}
+                    action
+                    onClick={() => handleSuggestionSelect(term)}
+                    className="d-flex justify-content-between align-items-center"
+                  >
+                    {term}
+                    <FaChevronRight size={12} className="text-muted" />
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
             )}
           </div>
+        )}
+      </Container>
 
-          {/* Botões de ação */}
-          <div className="d-flex">
-            <Button
-              variant="outline-light"
-              className="mx-1"
-              onClick={handleShowModal}
-            >
-              <i className="fas fa-plus"></i>
-            </Button>
-            <Button
-              onClick={() => {
-                navigate("/mainscreen");
-              }}
-              variant="outline-light"
-              className="mx-1"
-            >
-              <i className="fas fa-home-alt"></i>
-            </Button>
-            <Button
-              onClick={logoutUser}
-              variant="outline-light"
-              className="mx-1"
-            >
-              <i className="fas fa-sign-out-alt"></i>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Modal para registrar novo funcionário */}
-      <Modal show={showModal} onHide={handleCloseModal}>
-        <Modal.Header closeButton>
+      {/* New Employee Modal */}
+      <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
+        <Modal.Header closeButton className="border-0 pb-0">
           <Modal.Title>Registrar Novo Funcionário</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="pt-0">
+          <div className="d-flex mb-3">
+            <Badge bg={currentStep >= 1 ? "primary" : "secondary"} className="d-flex align-items-center me-2">
+              {currentStep > 1 ? "✓" : "1"}
+            </Badge>
+            <Badge bg={currentStep >= 2 ? "primary" : "secondary"} className="d-flex align-items-center me-2">
+              {currentStep > 2 ? "✓" : "2"}
+            </Badge>
+            <Badge bg={currentStep >= 3 ? "primary" : "secondary"} className="d-flex align-items-center">
+              3
+            </Badge>
+          </div>
+
           {currentStep === 1 && (
             <Step1Form
               nextStep={nextStep}
@@ -358,7 +421,7 @@ function Header() {
           )}
         </Modal.Body>
       </Modal>
-    </>
+    </Navbar>
   );
 }
 

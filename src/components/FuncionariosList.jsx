@@ -92,6 +92,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
         const res = await axios.get(
           `${API_BASE_URL}/api/funcionarios/setores/${setorPathId}/funcionarios?page=${page}&limit=${limit}`
         );
+        console.log("Dados recebidos:", res.data);
         allFuncionarios = [...allFuncionarios, ...res.data.funcionarios];
         totalPages = res.data.pages;
         page++;
@@ -750,6 +751,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     <Container
       style={{
         height: setorPathId ? "calc(100vh - 92px)" : "calc(100vh - 200px)",
+        overflow: "auto",
         display: "flex",
         flexDirection: "column",
         padding: "0",
@@ -961,8 +963,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
       <div
         style={{
           flex: 1,
+          width: "100%",
           overflow: "auto",
-          padding: "0 1rem",
         }}
       >
         <AutoSizer>

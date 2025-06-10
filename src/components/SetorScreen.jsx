@@ -1,4 +1,3 @@
-// components/SetorScreen.js
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Row,
@@ -10,6 +9,9 @@ import {
   Collapse,
   Container,
   Dropdown,
+  Spinner,
+  Alert,
+  Badge,
 } from "react-bootstrap";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
@@ -20,7 +22,11 @@ import {
   FaChevronLeft,
   FaPencilAlt,
   FaEdit,
-  FaMinus,
+  FaTrash,
+  FaFolderPlus,
+  FaFolder,
+  FaIdCard,
+  FaEllipsisV,
 } from "react-icons/fa";
 import axios from "axios";
 import { useAuth } from "./AuthContext";
@@ -57,7 +63,8 @@ function SetorScreen() {
   const [editedName, setEditedName] = useState("");
   const [editingCoordenadoriaId, setEditingCoordenadoriaId] = useState(null);
   const [editedNameCoordenadoria, setEditedNameCoordenadoria] = useState("");
-  const [showSelectionControlsEdit, setShowSelectionControlsEdit] = useState(false);
+  const [showSelectionControlsEdit, setShowSelectionControlsEdit] =
+    useState(false);
   const [coordenadorias, setCoordenadorias] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showModalCoordenadoria, setShowModalCoordenadoria] = useState(false);
@@ -68,7 +75,8 @@ function SetorScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [setorToDelete, setSetorToDelete] = useState(null);
   const [step, setStep] = useState(1);
-  const [setoresLookupMap, setSetoresLookupMap] = useState(new Map());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isCreatingSubSetor, setIsCreatingSubSetor] = useState(false);
   const [isCreatingCoord, setIsCreatingCoord] = useState(false);
   const location = useLocation();
@@ -76,6 +84,7 @@ function SetorScreen() {
   const navigate = useNavigate();
   const { funcionarios, setFuncionarios } = useAuth();
 
+  // Decode path names
   let setorNomeDecodificado;
   let setorNomeDecodificadoLink;
   let setorSegment;
@@ -83,7 +92,7 @@ function SetorScreen() {
 
   const subSetorSegment = `${fullPath.split("/")[2]}`;
   if (fullPath.split("/").length === 3) {
-    setorSegment = `${fullPath.split("/")[1]}`; 
+    setorSegment = `${fullPath.split("/")[1]}`;
     setorNomeDecodificado = decodeURIComponent(setorSegment);
   } else {
     setorSegment = `${fullPath.split("/")[1]}`;
@@ -103,10 +112,14 @@ function SetorScreen() {
   }, [coordenadorias]);
 
   const fetchSetoresData = async () => {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/setores/dados/${currentSetorId}`
-    );
-    return response.data;
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/setores/dados/${currentSetorId}`
+      );
+      return response.data;
+    } catch (err) {
+      throw err;
+    }
   };
 
   const fetchFuncionarios = async (coordId) => {
@@ -114,7 +127,6 @@ function SetorScreen() {
       const response = await axios.get(
         `${API_BASE_URL}/api/funcionarios/buscarFuncionariosPorCoordenadoria/${coordId}`
       );
-      console.log("Funcionários da coordenadoria:", response.data);
       setFuncionarios((prevFuncionarios) => ({
         ...prevFuncionarios,
         [coordId]: response.data,
@@ -149,19 +161,26 @@ function SetorScreen() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const data = await fetchSetoresData();
         const coordenadorias = data.subsetores
           .filter((subsetor) => subsetor.tipo === "Coordenadoria")
           .sort((a, b) => a.nome.localeCompare(b.nome));
-        
+
         const subsetores = data.subsetores
           .filter((subsetor) => subsetor.tipo === "Subsetor")
           .sort((a, b) => a.nome.localeCompare(b.nome));
-        
+
         setCoordenadorias(coordenadorias);
         setSubSetores(subsetores);
+        setError(null);
       } catch (error) {
         console.error("Erro ao buscar os dados:", error);
+        setError(
+          "Falha ao carregar dados do setor. Tente novamente mais tarde."
+        );
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -170,7 +189,7 @@ function SetorScreen() {
 
   useEffect(() => {
     Object.keys(openCoord).forEach((coordNome) => {
-      const coordId = coordenadorias.find(c => c.nome === coordNome)?._id;
+      const coordId = coordenadorias.find((c) => c.nome === coordNome)?._id;
       if (openCoord[coordNome] && coordId && !funcionarios[coordId]) {
         fetchFuncionarios(coordId);
       }
@@ -240,9 +259,13 @@ function SetorScreen() {
     mutationFn: createSetor,
     onSuccess: (data) => {
       if (data.tipo === "Subsetor") {
-        setSubSetores(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+        setSubSetores((prev) =>
+          [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome))
+        );
       } else if (data.tipo === "Coordenadoria") {
-        setCoordenadorias(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+        setCoordenadorias((prev) =>
+          [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome))
+        );
       }
       queryClient.invalidateQueries("setores");
       if (data.tipo === "Subsetor") {
@@ -259,23 +282,42 @@ function SetorScreen() {
       console.error("Erro ao criar setor:", error);
       setIsCreatingSubSetor(false);
       setIsCreatingCoord(false);
-    }
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: updateSetor,
     onSuccess: (data, variables) => {
-      if (subSetores.some(s => s._id === variables.id)) {
-        setSubSetores(prev => 
-          prev.map(s => s._id === variables.id ? {...s, nome: variables.nome} : s)
+      const formatNome = (valor) => {
+        if (typeof valor !== "string" || !valor.trim()) return valor;
+        return valor
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/ç/g, "c")
+          .replace(/Ç/g, "C")
+          .toUpperCase();
+      };
+
+      const nomeFormatado = formatNome(variables.nome);
+
+      if (subSetores.some((s) => s._id === variables.id)) {
+        setSubSetores((prev) =>
+          prev
+            .map((s) =>
+              s._id === variables.id ? { ...s, nome: nomeFormatado } : s
+            )
             .sort((a, b) => a.nome.localeCompare(b.nome))
         );
       } else {
-        setCoordenadorias(prev => 
-          prev.map(c => c._id === variables.id ? {...c, nome: variables.nome} : c)
+        setCoordenadorias((prev) =>
+          prev
+            .map((c) =>
+              c._id === variables.id ? { ...c, nome: nomeFormatado } : c
+            )
             .sort((a, b) => a.nome.localeCompare(b.nome))
         );
       }
+
       setEditingSetorId(null);
       setEditingCoordenadoriaId(null);
       queryClient.invalidateQueries("setores");
@@ -290,7 +332,7 @@ function SetorScreen() {
       alert("O nome do subsetor não pode estar vazio!");
       return;
     }
-    
+
     setIsCreatingSubSetor(true);
     try {
       await mutation.mutateAsync({
@@ -342,7 +384,7 @@ function SetorScreen() {
       alert("O nome da divisão não pode estar vazio!");
       return;
     }
-    
+
     setIsCreatingCoord(true);
     try {
       await mutation.mutateAsync({
@@ -367,163 +409,408 @@ function SetorScreen() {
     setShowSelectionControlsEdit(!showSelectionControlsEdit);
   };
 
+  if (loading) {
+    return (
+      <Container
+        className="d-flex justify-content-center align-items-center"
+        style={{ minHeight: "60vh" }}
+      >
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Carregando...</span>
+        </Spinner>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="mt-5">
+        <Alert variant="danger">{error}</Alert>
+        <Button variant="primary" onClick={() => window.location.reload()}>
+          Tentar novamente
+        </Button>
+      </Container>
+    );
+  }
+
   return (
-    <div className="mx-1"  style={{ overflowX: 'hidden', overflowY: 'auto' }}>
-      <h2 className="mt-4 d-flex">
-        <Col xs="auto">
-          <Button
-            variant="link"
-            onClick={() => navigate(-1)}
-            style={{
-              backgroundColor: "rgba(0, 0, 0, 0.7)", 
-              color: "white",
-              borderRadius: "50%",
-              padding: "10px", 
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "40px",
-              height: "40px",
-            }}
-          >
-            <FaChevronLeft size={20} />
-          </Button>
-        </Col>
-        <span
-          style={{
-            fontSize: "1.5rem",
-            fontWeight: "bold",
-            marginLeft: "15px",
-            color: "#333",
-            textTransform: "capitalize",
-          }}
+    <Container className="py-4">
+      {/* Header Section */}
+      <div className="d-flex align-items-center mb-4">
+        <Button
+          variant="light"
+          onClick={() => navigate(-1)}
+          className="me-3 d-flex align-items-center justify-content-center"
+          style={{ width: "40px", height: "40px", borderRadius: "50%" }}
         >
+          <FaChevronLeft />
+        </Button>
+        <h2 className="mb-0 text-capitalize">
           {setorNomeDecodificado || subSetorNomeDecodificado}
-        </span>
-      </h2>
-      <Row className="mt-4">
-        {/* Botão para criar novo subsetor */}
-        <Row className="m-2" xs={3} sm={3} md={6}>
-          <Card
-            className="create-sector-card text-center"
-            style={{ cursor: "pointer" }}
+        </h2>
+      </div>
+
+      {/* Subsetores Section */}
+      <div className="mb-5">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h4>Subsetores</h4>
+          <Button
+            variant="primary"
             onClick={() => setShowModal(true)}
+            className="d-flex align-items-center gap-2"
           >
-            <Card.Body>
-              <div className="icon-container">
-                <i className="fas fa-folder-plus"></i>
-              </div>
-            </Card.Body>
+            <FaFolderPlus /> Novo Subsetor
+          </Button>
+        </div>
+
+        {sortedSubSetores.length === 0 ? (
+          <Card className="text-center py-4">
+            <FaFolder size={48} className="text-muted mb-3 mx-auto" />
+            <h5>Nenhum subsetor encontrado</h5>
+            <p className="text-muted">Crie um novo subsetor para começar</p>
           </Card>
-        </Row>
-
-        {/* Exibição de subsetores ORDENADOS */}
-        {sortedSubSetores.map((subSetor) => (
-          <Col md={3} key={subSetor._id}>
-            {editingSetorId !== subSetor._id ? (
-              <Card className="custom-card text-center my-2">
-                <Card.Header className="d-flex justify-content-between align-items-center">
-                  <span>Subsetor</span>
-                  <Dropdown onClick={(e) => e.stopPropagation()}>
-                    <Dropdown.Toggle
-                      variant="link"
-                      className="text-dark p-0 border-0 dropdown-toggle-split"
-                      id={`dropdown-${subSetor._id}`}
+        ) : (
+          <Row xs={1} sm={2} md={3} lg={4} className="g-4">
+            {sortedSubSetores.map((subSetor) => (
+              <Col key={subSetor._id}>
+                {editingSetorId !== subSetor._id ? (
+                  <Card className="h-100 shadow-sm">
+                    <Card.Header className="d-flex justify-content-between align-items-center bg-light">
+                      <Badge bg="secondary">Subsetor</Badge>
+                      <Dropdown onClick={(e) => e.stopPropagation()}>
+                        <Dropdown.Toggle
+                          variant="light"
+                          size="sm"
+                          className="p-1 border-0"
+                          id={`dropdown-${subSetor._id}`}
+                        >
+                          <FaEllipsisV />
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item
+                            onClick={() =>
+                              handleRenameSetor(subSetor._id, subSetor.nome)
+                            }
+                            className="d-flex align-items-center gap-2"
+                          >
+                            <FaEdit /> Renomear
+                          </Dropdown.Item>
+                          <Dropdown.Item
+                            className="d-flex align-items-center gap-2 text-danger"
+                            onClick={() => handleDeleteSetor(subSetor._id)}
+                          >
+                            <FaTrash /> Deletar
+                          </Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Card.Header>
+                    <Link
+                      to={`/${
+                        setorNomeDecodificado || setorNomeDecodificadoLink
+                      }/${subSetor.nome}/${currentSetorId}/${
+                        subPath ? `${subPath}/${subSetor._id}` : subSetor._id
+                      }`}
+                      className="text-decoration-none text-reset"
                     >
-                      <i className="fas fa-ellipsis-v w-100"></i>
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu style={{ zIndex: 5 }}>
-                      <Dropdown.Item
-                        onClick={() =>
-                          handleRenameSetor(subSetor._id, subSetor.nome)
+                      <Card.Body className="d-flex flex-column align-items-center">
+                        <FaFolder size={48} className="text-primary mb-3" />
+                        <Card.Title className="text-center">
+                          {subSetor.nome}
+                        </Card.Title>
+                      </Card.Body>
+                    </Link>
+                  </Card>
+                ) : (
+                  <Card className="h-100">
+                    <Card.Header className="bg-light">
+                      <Badge bg="secondary">Subsetor</Badge>
+                    </Card.Header>
+                    <Card.Body>
+                      <Form.Control
+                        type="text"
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        onBlur={() => handleSaveRename(subSetor._id)}
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && handleSaveRename(subSetor._id)
                         }
-                      >
-                        Renomear
-                      </Dropdown.Item>
-                      <Dropdown.Item
-                        style={{ color: "red" }}
-                        onClick={() => handleDeleteSetor(subSetor._id)}
-                      >
-                        Deletar
-                      </Dropdown.Item>
-                    </Dropdown.Menu>
-                  </Dropdown>
-                </Card.Header>
-                <Link
-                  to={`/${setorNomeDecodificado || setorNomeDecodificadoLink}/${
-                    subSetor.nome
-                  }/${currentSetorId}/${
-                    subPath ? `${subPath}/${subSetor._id}` : subSetor._id
-                  }`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <Card.Body>
-                    <Card.Title>{subSetor.nome}</Card.Title>
-                  </Card.Body>
-                </Link>
-              </Card>
-            ) : (
-              <Card className="custom-card text-center my-2">
-                <Card.Header>
-                  <span>Subsetor</span>
-                </Card.Header>
-                <Card.Body>
-                  <Form.Control
-                    type="text"
-                    value={editedName}
-                    onChange={(e) => setEditedName(e.target.value)}
-                    onBlur={() => handleSaveRename(subSetor._id)}
-                    autoFocus
-                  />
-                </Card.Body>
-              </Card>
-            )}
-          </Col>
-        ))}
-      </Row>
+                        autoFocus
+                        className="mb-2"
+                      />
+                      <div className="d-flex gap-2">
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={() => handleSaveRename(subSetor._id)}
+                        >
+                          Salvar
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          onClick={() => setEditingSetorId(null)}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                )}
+              </Col>
+            ))}
+          </Row>
+        )}
+      </div>
 
+      {/* Coordenadorias Section */}
+      <div className="mt-5">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h4>Divisões</h4>
+          <div className="d-flex gap-2">
+            <Button
+              variant="primary"
+              onClick={() => setShowCoordModal(true)}
+              className="d-flex align-items-center gap-2"
+            >
+              <FaFolderPlus /> Nova Divisão
+            </Button>
+            <Button
+              onClick={toggleSelectionControlsEdit}
+              variant={
+                showSelectionControlsEdit ? "primary" : "outline-primary"
+              }
+              className="d-flex align-items-center justify-content-center"
+              style={{ width: "40px", height: "40px" }}
+            >
+              <FaPencilAlt />
+            </Button>
+          </div>
+        </div>
+
+        {sortedCoordenadorias.length === 0 ? (
+          <Card className="text-center py-4">
+            <FaFolder size={48} className="text-muted mb-3 mx-auto" />
+            <h5>Nenhuma divisão encontrada</h5>
+            <p className="text-muted">Crie uma nova divisão para começar</p>
+          </Card>
+        ) : (
+          <div className="accordion" id="coordenadoriasAccordion">
+            {sortedCoordenadorias.map((coord) => (
+              <Card key={coord._id} className="mb-3 shadow-sm">
+                <Card.Header className="bg-light">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex align-items-center gap-3">
+                      {showSelectionControlsEdit && (
+                        <div className="d-flex gap-2 me-2">
+                          <Button
+                            onClick={() =>
+                              handleRenameCoord(coord._id, coord.nome)
+                            }
+                            variant="outline-dark"
+                            size="sm"
+                            className="rounded-circle p-1"
+                            style={{ width: "30px", height: "30px" }}
+                          >
+                            <FaEdit size={12} />
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteSetor(coord._id)}
+                            variant="outline-danger"
+                            size="sm"
+                            className="rounded-circle p-1"
+                            style={{ width: "30px", height: "30px" }}
+                          >
+                            <FaTrash size={12} />
+                          </Button>
+                        </div>
+                      )}
+
+                      {editingCoordenadoriaId !== coord._id ? (
+                        <Button
+                          variant="link"
+                          onClick={() => toggleCoordCollapse(coord.nome)}
+                          className="text-dark text-decoration-none flex-grow-1 text-start ps-0"
+                        >
+                          <h5 className="mb-0">{coord.nome}</h5>
+                        </Button>
+                      ) : (
+                        <Form.Control
+                          type="text"
+                          value={editedNameCoordenadoria}
+                          onChange={(e) =>
+                            setEditedNameCoordenadoria(e.target.value)
+                          }
+                          onBlur={() => handleSaveRenameCoord(coord._id)}
+                          onKeyPress={(e) =>
+                            e.key === "Enter" &&
+                            handleSaveRenameCoord(coord._id)
+                          }
+                          autoFocus
+                          className="flex-grow-1"
+                        />
+                      )}
+                    </div>
+                    <Button
+                      variant="link"
+                      onClick={() => toggleCoordCollapse(coord.nome)}
+                      className="text-dark"
+                    >
+                      {openCoord[coord.nome] ? <FaAngleUp /> : <FaAngleDown />}
+                    </Button>
+                  </div>
+                </Card.Header>
+                <Collapse in={openCoord[coord.nome]}>
+                  <div>
+                    <Card.Body>
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h6 className="mb-0">Funcionários</h6>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setCoordenadoriaId(coord._id);
+                            setShowModalCoordenadoria(true);
+                          }}
+                          className="d-flex align-items-center gap-2"
+                        >
+                          <FaIdCard /> Novo Funcionário
+                        </Button>
+                      </div>
+                      <FuncionariosList coordenadoriaId={coord._id} />
+                    </Card.Body>
+                  </div>
+                </Collapse>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
       <ConfirmDeleteModal
         showModal={showDeleteModal}
         handleClose={handleCloseDeleteModal}
         handleConfirmDelete={handleConfirmDelete}
       />
 
-      <Modal show={showModal} onHide={() => !isCreatingSubSetor && setShowModal(false)}>
+      {/* Create Subsetor Modal */}
+      <Modal
+        show={showModal}
+        onHide={() => !isCreatingSubSetor && setShowModal(false)}
+        centered
+      >
         <Modal.Header closeButton>
-          <Modal.Title>Criar Novo Subsetor</Modal.Title>
+          <Modal.Title className="d-flex align-items-center gap-2">
+            <FaFolderPlus /> Criar Novo Subsetor
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <Form.Group controlId="formSubSetorName">
+            <Form.Group controlId="formSubSetorName" className="mb-3">
               <Form.Label>Nome do Subsetor</Form.Label>
               <Form.Control
                 type="text"
+                placeholder="Digite o nome do subsetor"
                 value={newSubSetorName}
                 onChange={(e) => setNewSubSetorName(e.target.value)}
                 disabled={isCreatingSubSetor}
+                onKeyPress={(e) => e.key === "Enter" && handleCreateSubSetor()}
               />
             </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="outline-secondary"
             onClick={() => setShowModal(false)}
             disabled={isCreatingSubSetor}
           >
             Cancelar
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={handleCreateSubSetor}
-            disabled={isCreatingSubSetor}
+            disabled={isCreatingSubSetor || !newSubSetorName.trim()}
           >
-            {isCreatingSubSetor ? 'Criando...' : 'Criar'}
+            {isCreatingSubSetor ? (
+              <>
+                <Spinner
+                  as="span"
+                  size="sm"
+                  animation="border"
+                  role="status"
+                  aria-hidden="true"
+                />
+                <span className="ms-2">Criando...</span>
+              </>
+            ) : (
+              "Criar"
+            )}
           </Button>
         </Modal.Footer>
       </Modal>
 
-      <Modal show={showModalCoordenadoria} onHide={handleCloseModal}>
+      {/* Create Coordenadoria Modal */}
+      <Modal
+        show={showCoordModal}
+        onHide={() => !isCreatingCoord && setShowCoordModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title className="d-flex align-items-center gap-2">
+            <FaFolderPlus /> Criar Nova Divisão
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group controlId="formCoordName" className="mb-3">
+              <Form.Label>Nome da Divisão</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Digite o nome da divisão"
+                value={newCoordName}
+                onChange={(e) => setNewCoordName(e.target.value)}
+                disabled={isCreatingCoord}
+                onKeyPress={(e) =>
+                  e.key === "Enter" && handleCreateCoordenadoria()
+                }
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="outline-secondary"
+            onClick={() => setShowCoordModal(false)}
+            disabled={isCreatingCoord}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleCreateCoordenadoria}
+            disabled={isCreatingCoord || !newCoordName.trim()}
+          >
+            {isCreatingCoord ? (
+              <>
+                <Spinner
+                  as="span"
+                  size="sm"
+                  animation="border"
+                  role="status"
+                  aria-hidden="true"
+                />
+                <span className="ms-2">Criando...</span>
+              </>
+            ) : (
+              "Criar"
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Funcionário Registration Modal */}
+      <Modal show={showModalCoordenadoria} onHide={handleCloseModal} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Registrar Novo Funcionário</Modal.Title>
         </Modal.Header>
@@ -550,128 +837,7 @@ function SetorScreen() {
           )}
         </Modal.Body>
       </Modal>
-
-      <div className="mt-4">
-        <h4 className="mx-2">
-          Criar Divisão:
-          <Button
-            variant="outline-primary"
-            className="m-2 custom-outline-button"
-            onClick={() => setShowCoordModal(true)}
-          >
-            Criar Divisão
-          </Button>
-          <Button
-            onClick={toggleSelectionControlsEdit}
-            variant="outline-primary"
-            className="m-2 custom-outline-button"
-          >
-            <FaPencilAlt />
-          </Button>
-        </h4>
-
-        {sortedCoordenadorias.map((coord) => (
-          <Card key={coord._id} className="m-3">
-            {showSelectionControlsEdit && (
-              <>
-                <div className="d-flex gap-2">
-                  <Button
-                    onClick={() => handleRenameCoord(coord._id, coord.nome)}
-                    variant="outline-dark"
-                    className="user-checkbox btn-sm rounded-circle"
-                  >
-                    <FaEdit />
-                  </Button>
-
-                  <Button
-                    onClick={() => handleDeleteSetor(coord._id)}
-                    variant="outline-danger"
-                    className="user-checkbox-2 btn-sm rounded-circle"
-                  >
-                    <FaMinus />
-                  </Button>
-                </div>
-              </>
-            )}
-
-            <Card.Header
-              variant="link"
-              onClick={() => toggleCoordCollapse(coord.nome)}
-              aria-expanded={openCoord[coord.nome]}
-              style={{ cursor: "pointer" }}
-            >
-              {editingCoordenadoriaId !== coord._id ? (
-                <span>{coord.nome}</span>
-              ) : (
-                <Form.Control
-                  type="text"
-                  value={editedNameCoordenadoria}
-                  onChange={(e) => setEditedNameCoordenadoria(e.target.value)}
-                  onBlur={() => handleSaveRenameCoord(coord._id)}
-                  autoFocus
-                />
-              )}
-
-              {openCoord[coord.nome] ? <FaAngleUp /> : <FaAngleDown />}
-            </Card.Header>
-            <Collapse in={openCoord[coord.nome]}>
-              <div className="mt-2">
-                <Button
-                  className="m-2 coord-register-btn"
-                  variant="primary"
-                  onClick={() => {
-                    setCoordenadoriaId(coord._id);
-                    setShowModalCoordenadoria(true);
-                  }}
-                >
-                  <i className="fas fa-id-card"></i>
-                </Button>
-                {openCoord[coord.nome] && (
-                  <FuncionariosList
-                    coordenadoriaId={coord._id}
-                  />
-                )}
-              </div>
-            </Collapse>
-          </Card>
-        ))}
-      </div>
-
-      <Modal show={showCoordModal} onHide={() => !isCreatingCoord && setShowCoordModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Criar Novo Cargo</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group controlId="formCoordName">
-              <Form.Label>Nome do Cargo</Form.Label>
-              <Form.Control
-                type="text"
-                value={newCoordName}
-                onChange={(e) => setNewCoordName(e.target.value)}
-                disabled={isCreatingCoord}
-              />
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button 
-            variant="secondary" 
-            onClick={() => setShowCoordModal(false)}
-            disabled={isCreatingCoord}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            variant="primary" 
-            onClick={handleCreateCoordenadoria}
-            disabled={isCreatingCoord}
-          >
-            {isCreatingCoord ? 'Criando...' : 'Criar'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </div>
+    </Container>
   );
 }
 

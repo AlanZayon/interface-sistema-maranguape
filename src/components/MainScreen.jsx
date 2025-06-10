@@ -1,14 +1,17 @@
 // components/MainScreen.js
 import React, { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Card, Button, Modal, Form, Dropdown } from 'react-bootstrap';
+import { Row, Col, Card, Button, Modal, Form, Dropdown, Container, Spinner, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import ConfirmDeleteModal from './ConfirmDeleteModal'; 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/apiConfig';
+import { FaFolderPlus, FaEllipsisV, FaEdit, FaTrash, FaFolder } from 'react-icons/fa';
 
 function MainScreen() {
   const [setores, setSetores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [newSetorName, setNewSetorName] = useState('');
@@ -24,19 +27,27 @@ function MainScreen() {
   }, [setores]);
 
   const fetchSetoresData = async () => {
-    const response = await axios.get(`${API_BASE_URL}/api/setores/setoresMain`);
-    return response.data;
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/setores/setoresMain`);
+      return response.data;
+    } catch (err) {
+      throw err;
+    }
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const data = await fetchSetoresData();
-        // Ordena os setores alfabeticamente ao receber os dados
         const setoresOrdenados = data.setores.sort((a, b) => a.nome.localeCompare(b.nome));
         setSetores(setoresOrdenados);
+        setError(null);
       } catch (error) {
         console.error('Erro ao buscar os dados:', error);
+        setError('Falha ao carregar setores. Tente novamente mais tarde.');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -107,9 +118,10 @@ function MainScreen() {
 
   const updateMutation = useMutation({
     mutationFn: updateSetor,
-    onSuccess: () => {
+    onSuccess: (data) => {
       setEditingSetorId(null);
       queryClient.invalidateQueries('setores');
+      return data;
     },
     onError: (error) => {
       console.error('Erro ao renomear setor:', error);
@@ -141,83 +153,130 @@ function MainScreen() {
       return;
     }
     try {
-      await updateMutation.mutateAsync({ id, nome: editedName });
+      const dataEditedName =await updateMutation.mutateAsync({ id, nome: editedName });
       setSetores((prev) =>
-        prev.map((setor) => (setor._id === id ? { ...setor, nome: editedName } : setor))
+        prev.map((setor) => (setor._id === id ? { ...setor, nome: dataEditedName.nome } : setor))
       );
     } catch (error) {
       console.error('Erro ao salvar renomeação:', error);
     }
   };
 
-  return (
-    <Row className="mt-4 mx-1">
-      {/* Card para criar um novo setor */}
-      <Row xs={3} sm={3} md={6} className='m-2 w-75'>
-        <Card
-          className="create-sector-card text-center"
-          style={{ cursor: 'pointer' }}
-          onClick={() => setShowModal(true)}
-        >
-          <Card.Body>
-            <div className="icon-container">
-              <i className="fas fa-folder-plus"></i>
-            </div>
-          </Card.Body>
-        </Card>
-      </Row>
+  if (loading) {
+    return (
+      <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Carregando...</span>
+        </Spinner>
+      </Container>
+    );
+  }
 
-      {sortedSetores.map((setor) => (
-        <Col md={3} key={setor._id}>
-          {editingSetorId !== setor._id ? (
-            <Card className="custom-card text-center my-2">
-              <Card.Header className="d-flex justify-content-between align-items-center">
-                <span>Setor</span>
-                <Dropdown onClick={(e) => e.stopPropagation()}>
-                  <Dropdown.Toggle
-                    variant="link"
-                    className="text-dark p-0 border-0 dropdown-toggle-split"
-                    id={`dropdown-${setor._id}`}
-                  >
-                    <i className="fas fa-ellipsis-v w-100"></i>
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu>
-                    <Dropdown.Item
-                      onClick={() => handleRenameSetor(setor._id, setor.nome)}
+  if (error) {
+    return (
+      <Container className="mt-5">
+        <Alert variant="danger">{error}</Alert>
+      </Container>
+    );
+  }
+
+  return (
+    <Container className="py-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="mb-0">Setores</h2>
+        <Button 
+          variant="primary" 
+          onClick={() => setShowModal(true)}
+          className="d-flex align-items-center gap-2"
+        >
+          <FaFolderPlus /> Novo Setor
+        </Button>
+      </div>
+
+      {sortedSetores.length === 0 && !loading && (
+        <div className="text-center py-5">
+          <FaFolder size={48} className="text-muted mb-3" />
+          <h4>Nenhum setor encontrado</h4>
+          <p className="text-muted">Clique no botão acima para criar seu primeiro setor</p>
+        </div>
+      )}
+
+      <Row xs={1} sm={2} md={3} lg={4} className="g-4">
+        {sortedSetores.map((setor) => (
+          <Col key={setor._id}>
+            {editingSetorId !== setor._id ? (
+              <Card className="h-100 shadow-sm">
+                <Card.Header className="d-flex justify-content-between align-items-center bg-light">
+                  <span className="badge bg-secondary">Setor</span>
+                  <Dropdown onClick={(e) => e.stopPropagation()}>
+                    <Dropdown.Toggle
+                      variant="light"
+                      size="sm"
+                      className="p-1 border-0"
+                      id={`dropdown-${setor._id}`}
                     >
-                      Renomear
-                    </Dropdown.Item>
-                    <Dropdown.Item style={{ color: 'red' }} onClick={() => handleDeleteSetor(setor._id)}>
-                      Deletar
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
-              </Card.Header>
-              <Link to={`/${setor.nome}/${setor._id}`} style={{ textDecoration: 'none' }}>
+                      <FaEllipsisV />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu>
+                      <Dropdown.Item
+                        onClick={() => handleRenameSetor(setor._id, setor.nome)}
+                        className="d-flex align-items-center gap-2"
+                      >
+                        <FaEdit /> Renomear
+                      </Dropdown.Item>
+                      <Dropdown.Item 
+                        className="d-flex align-items-center gap-2 text-danger"
+                        onClick={() => handleDeleteSetor(setor._id)}
+                      >
+                        <FaTrash /> Deletar
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </Card.Header>
+                <Link to={`/${setor.nome}/${setor._id}`} className="text-decoration-none text-reset">
+                  <Card.Body className="d-flex flex-column align-items-center">
+                    <FaFolder size={48} className="text-primary mb-3" />
+                    <Card.Title className="text-center">{setor.nome}</Card.Title>
+                  </Card.Body>
+                </Link>
+              </Card>
+            ) : (
+              <Card className="h-100">
+                <Card.Header className="bg-light">
+                  <span className="badge bg-secondary">Setor</span>
+                </Card.Header>
                 <Card.Body>
-                  <Card.Title>{setor.nome}</Card.Title>
+                  <Form.Control
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onBlur={() => handleSaveRename(setor._id)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSaveRename(setor._id)}
+                    autoFocus
+                    className="mb-2"
+                  />
+                  <div className="d-flex gap-2">
+                    <Button 
+                      variant="success" 
+                      size="sm" 
+                      onClick={() => handleSaveRename(setor._id)}
+                    >
+                      Salvar
+                    </Button>
+                    <Button 
+                      variant="outline-secondary" 
+                      size="sm" 
+                      onClick={() => setEditingSetorId(null)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
                 </Card.Body>
-              </Link>
-            </Card>
-          ) : (
-            <Card className="custom-card text-center my-2">
-              <Card.Header>
-                <span>Setor</span>
-              </Card.Header>
-              <Card.Body>
-                <Form.Control
-                  type="text"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  onBlur={() => handleSaveRename(setor._id)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSaveRename(setor._id)}
-                  autoFocus
-                />
-              </Card.Body>
-            </Card>
-          )}
-        </Col>
-      ))}
+              </Card>
+            )}
+          </Col>
+        ))}
+      </Row>
 
       <ConfirmDeleteModal
         showModal={showDeleteModal}
@@ -225,16 +284,19 @@ function MainScreen() {
         handleConfirmDelete={handleConfirmDelete}
       />
 
-      <Modal show={showModal} onHide={() => !isCreating && setShowModal(false)}>
+      <Modal show={showModal} onHide={() => !isCreating && setShowModal(false)} centered>
         <Modal.Header closeButton>
-          <Modal.Title>Criar Novo Setor</Modal.Title>
+          <Modal.Title className="d-flex align-items-center gap-2">
+            <FaFolderPlus /> Criar Novo Setor
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <Form.Group controlId="formSetorName">
+            <Form.Group controlId="formSetorName" className="mb-3">
               <Form.Label>Nome do Setor</Form.Label>
               <Form.Control
                 type="text"
+                placeholder="Digite o nome do setor"
                 value={newSetorName}
                 onChange={(e) => setNewSetorName(e.target.value)}
                 disabled={isCreating}
@@ -245,7 +307,7 @@ function MainScreen() {
         </Modal.Body>
         <Modal.Footer>
           <Button 
-            variant="secondary" 
+            variant="outline-secondary" 
             onClick={() => setShowModal(false)}
             disabled={isCreating}
           >
@@ -254,13 +316,18 @@ function MainScreen() {
           <Button 
             variant="primary" 
             onClick={handleCreateSetor}
-            disabled={isCreating}
+            disabled={isCreating || !newSetorName.trim()}
           >
-            {isCreating ? 'Criando...' : 'Criar'}
+            {isCreating ? (
+              <>
+                <Spinner as="span" size="sm" animation="border" role="status" aria-hidden="true" />
+                <span className="ms-2">Criando...</span>
+              </>
+            ) : 'Criar'}
           </Button>
         </Modal.Footer>
       </Modal>
-    </Row>
+    </Container>
   );
 }
 
