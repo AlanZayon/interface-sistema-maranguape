@@ -41,7 +41,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
   const [showModal, setShowModal] = useState(false);
   const [showModalEdit, setShowModalEdit] = useState(false);
   const [showModalSingleEdit, setShowModalSingleEdit] = useState(false);
-  const [activateModified, setActivateModified] = useState(false);
   const [activeFilters, setActiveFilters] = useState({
     natureza: [],
     funcao: [],
@@ -78,6 +77,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     setFuncionarios,
     funcionariosPath,
     setFuncionariosPath,
+    activateModified,
+    setActivateModified,
   } = useAuth(); // Usar o contexto de autenticação
   const searchRef = useRef(null);
 
@@ -92,7 +93,6 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
         const res = await axios.get(
           `${API_BASE_URL}/api/funcionarios/setores/${setorPathId}/funcionarios?page=${page}&limit=${limit}`
         );
-        console.log("Dados recebidos:", res.data);
         allFuncionarios = [...allFuncionarios, ...res.data.funcionarios];
         totalPages = res.data.pages;
         page++;

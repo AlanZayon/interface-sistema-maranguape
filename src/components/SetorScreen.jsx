@@ -188,9 +188,11 @@ function SetorScreen() {
   }, [currentSetorId]);
 
   useEffect(() => {
+
+
     Object.keys(openCoord).forEach((coordNome) => {
       const coordId = coordenadorias.find((c) => c.nome === coordNome)?._id;
-      if (openCoord[coordNome] && coordId && !funcionarios[coordId]) {
+      if (openCoord[coordNome] && coordId) {
         fetchFuncionarios(coordId);
       }
     });

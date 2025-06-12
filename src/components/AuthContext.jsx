@@ -12,6 +12,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [funcionariosPath, setFuncionariosPath] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
+  const [activateModified, setActivateModified] = useState(false);
 
   // Tentando obter o estado de autenticação do localStorage
   const storedAuth = sessionStorage.getItem("isAuthenticated");
@@ -61,7 +62,6 @@ export const AuthProvider = ({ children }) => {
         }
       });
 
-
       return prevUsersObject;
     });
   };
@@ -83,25 +83,22 @@ export const AuthProvider = ({ children }) => {
         prevUsersObject.map((u) => u.coordenadoria)
       );
 
-
       updatedUsers.forEach((user) => {
         const coordenadoriaId = user.coordenadoria;
         if (!coordenadoriaId) return;
 
         if (!coordenadoriasExistentes.has(coordenadoriaId)) {
+          setActivateModified(true);
 
           return;
         }
 
         prevUsersObject = prevUsersObject.filter((u) => u._id !== user._id);
 
-
         prevUsersObject.push(user);
       });
 
-
       const allUsersArray = Object.values(prevUsersObject).flat();
-
 
       return allUsersArray;
     });
@@ -178,6 +175,8 @@ export const AuthProvider = ({ children }) => {
         setFuncionariosPath,
         addFuncionarios,
         addFuncionariosPath,
+        activateModified,
+        setActivateModified,
       }}
     >
       {children}

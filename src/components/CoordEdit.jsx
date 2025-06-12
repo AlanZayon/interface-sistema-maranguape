@@ -107,7 +107,6 @@ function EditUsersForm({
             });
             addFuncionarios(response.data);
             addFuncionariosPath(response.data);
-            setActivateModified(true);
             handleCloseModal();
             setShowSelectionControlsEdit(false);
             alert("Usuários atualizados com sucesso!");
