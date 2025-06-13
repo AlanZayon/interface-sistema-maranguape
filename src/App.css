@@ -262,6 +262,7 @@
 .social-info {
     border-left: 4px solid #FF9800;
 }
+
 @media (max-width: 768px) {
     .info-card {
         flex: 1 1 100%;

@@ -26,6 +26,9 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
+    if (location.pathname === "/") {
+      setShowFuncionarios(false);
+    }
     const pathParts = location.pathname.split("/");
 
     if (pathParts.length > 3) {
