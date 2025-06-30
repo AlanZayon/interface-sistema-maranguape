@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import axios from "axios";
@@ -11,9 +11,42 @@ import {
   Modal,
   Spinner,
   Dropdown,
+  Card,
+  Accordion,
+  Badge
 } from "react-bootstrap";
-import { FaUserCircle } from "react-icons/fa";
+import {
+  FaUserCircle,
+  FaUser,
+  FaBuilding,
+  FaDollarSign,
+  FaPhone,
+  FaMapMarkerAlt,
+  FaLink,
+  FaFileUpload,
+  FaIdCard
+} from "react-icons/fa";
 import { API_BASE_URL } from "../utils/apiConfig";
+
+// Estilos personalizados
+const sectionHeaderStyle = {
+  backgroundColor: "#f8f9fa",
+  padding: "10px 15px",
+  borderRadius: "5px",
+  marginBottom: "20px",
+  borderLeft: "4px solid #0d6efd"
+};
+
+const iconStyle = {
+  marginRight: "8px",
+  color: "#0d6efd"
+};
+
+const errorStyle = {
+  color: "#dc3545",
+  fontSize: "0.875rem",
+  marginTop: "0.25rem"
+};
 
 const fetchSetoresData = async () => {
   const response = await axios.get(
@@ -48,7 +81,6 @@ function UserEdit({ funcionario, handleCloseModal }) {
     arquivo: "",
   });
   const [referenciasRegistradas, setReferenciasRegistradas] = useState([]);
-  const [filteredReferencias, setFilteredReferencias] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [sendImage, setSendImage] = useState(null);
   const [sendFile, setSendFile] = useState(null);
@@ -56,7 +88,6 @@ function UserEdit({ funcionario, handleCloseModal }) {
   const [isLoading, setIsLoading] = useState(false);
   const [cargosComissionados, setCargosComissionados] = useState([]);
   const [salarios, setSalarios] = useState([]);
-  const [cargos, setCargos] = useState([]);
   const [searchSalario, setSearchSalario] = useState("");
   const [searchCargo, setSearchCargo] = useState("");
   const [showSalarioDropdown, setShowSalarioDropdown] = useState(false);
@@ -74,10 +105,9 @@ function UserEdit({ funcionario, handleCloseModal }) {
     }
   }, [funcionario]);
 
-
   // Configura a pré-visualização da imagem
   useEffect(() => {
-    if (newUser?.foto) {
+    if (newUser?.foto instanceof File) {
       const objectUrl = URL.createObjectURL(newUser.foto);
       setPreviewImage(objectUrl);
       return () => URL.revokeObjectURL(objectUrl);
@@ -101,13 +131,12 @@ function UserEdit({ funcionario, handleCloseModal }) {
     fetchReferencias();
   }, []);
 
-  // Filtra as referências conforme o valor digitado
-  useEffect(() => {
-    const searchValue = newUser.referencia.toLowerCase();
-    const filtered = referenciasRegistradas.filter((referencia) =>
+  // Filtra as referências de forma memoizada
+  const filteredReferencias = useMemo(() => {
+    const searchValue = newUser.referencia?.toLowerCase() || '';
+    return referenciasRegistradas.filter((referencia) =>
       referencia.name.toLowerCase().includes(searchValue)
     );
-    setFilteredReferencias(filtered);
   }, [newUser.referencia, referenciasRegistradas]);
 
   // Carrega os cargos comissionados quando a natureza é alterada
@@ -115,27 +144,25 @@ function UserEdit({ funcionario, handleCloseModal }) {
     if (newUser.natureza === "COMISSIONADO") {
       fetchCargosComissionados().then((data) => {
         setCargosComissionados(data);
-        const uniqueSalarios = [
-          ...new Set(data.map((cargo) => cargo.aDefinir)),
-        ];
+        const uniqueSalarios = [...new Set(data.map((cargo) => cargo.aDefinir))];
         setSalarios(uniqueSalarios);
       });
     }
   }, [newUser.natureza]);
 
   // Filtra os cargos quando o salário é alterado
-  useEffect(() => {
+  const cargos = useMemo(() => {
     if (newUser.salarioBruto) {
-      const filteredCargos = cargosComissionados.filter(
+      return cargosComissionados.filter(
         (cargo) => cargo.aDefinir === Number(newUser.salarioBruto)
       );
-      setCargos(filteredCargos);
     }
+    return [];
   }, [newUser.salarioBruto, cargosComissionados]);
 
   // Atualiza o tipo quando o cargo é alterado
   useEffect(() => {
-    if (newUser.funcao) {
+    if (newUser.funcao && cargos.length > 0) {
       const selectedCargo = cargos.find(
         (cargo) => cargo.cargo === newUser.funcao
       );
@@ -147,27 +174,31 @@ function UserEdit({ funcionario, handleCloseModal }) {
 
   // Reseta o cargo quando o salário é alterado
   useEffect(() => {
-    setNewUser((prev) => ({ ...prev, funcao: "" }));
+    if (newUser.salarioBruto) {
+      setNewUser((prev) => ({ ...prev, funcao: "" }));
+    }
   }, [newUser.salarioBruto]);
 
   // Reseta salário e cargo quando a natureza é alterada
   useEffect(() => {
-    setNewUser((prev) => ({
-      ...prev,
-      salarioBruto: funcionario?.salarioBruto || "",
-      funcao: funcionario?.funcao || "",
-    }));
+    if (newUser.natureza && newUser.natureza !== "COMISSIONADO") {
+      setNewUser((prev) => ({
+        ...prev,
+        salarioBruto: funcionario?.salarioBruto || "",
+        funcao: funcionario?.funcao || "",
+      }));
+    }
   }, [newUser.natureza]);
 
-  const validateFields = () => {
+  const validateFields = useCallback(() => {
     const newErrors = {};
 
-    if (!newUser.nome) newErrors.nome = "O campo Nome é obrigatório";
-    if (!newUser.natureza)
-      newErrors.natureza = "O campo Natureza é obrigatório";
-    if (!newUser.referencia)
+    if (!newUser.nome?.trim()) newErrors.nome = "O campo Nome é obrigatório";
+    if (!newUser.natureza) newErrors.natureza = "O campo Natureza é obrigatório";
+    
+    if (!newUser.referencia?.trim()) {
       newErrors.referencia = "O campo Referência é obrigatório";
-    else {
+    } else {
       const isReferenciaValid = referenciasRegistradas.some(
         (referencia) =>
           referencia.name.toLowerCase() === newUser.referencia.toLowerCase()
@@ -177,18 +208,17 @@ function UserEdit({ funcionario, handleCloseModal }) {
       }
     }
 
-    if (newUser.natureza === "COMISSIONADO") {
-      if (!newUser.salarioBruto)
-        newErrors.salarioBruto = "O campo Salário é obrigatório";
-      if (!newUser.funcao) newErrors.cargo = "O campo Cargo é obrigatório";
-    } else {
-        if (!newUser.salarioBruto)
-          newErrors.salarioBruto = "O campo Salário Bruto é obrigatório";
-      }
+    if (!newUser.salarioBruto) {
+      newErrors.salarioBruto = "O campo Salário Bruto é obrigatório";
+    }
+
+    if (newUser.natureza === "COMISSIONADO" && !newUser.funcao) {
+      newErrors.funcao = "O campo Cargo é obrigatório";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [newUser, referenciasRegistradas]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -206,7 +236,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
   const { mutate: updateUserData } = useMutation({
     mutationFn: async () => {
       // Filtra redes sociais inválidas
-      newUser.redesSociais = newUser.redesSociais.filter(
+      const redesValidas = newUser.redesSociais.filter(
         (item) => item.link && item.nome
       );
 
@@ -219,10 +249,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
       formData.append("funcao", newUser.funcao);
       formData.append("natureza", newUser.natureza);
       formData.append("referencia", newUser.referencia);
-      formData.append(
-        "redesSociais",
-        JSON.stringify(newUser.redesSociais) || ""
-      );
+      formData.append("redesSociais", JSON.stringify(redesValidas) || "");
       formData.append("salarioBruto", newUser.salarioBruto);
       formData.append("cidade", newUser.cidade);
       formData.append("endereco", newUser.endereco);
@@ -255,6 +282,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
     onError: (error) => {
       console.error("Erro ao atualizar os dados:", error);
       setIsLoading(false);
+      alert("Ocorreu um erro ao atualizar. Por favor, tente novamente.");
     },
   });
 
@@ -266,152 +294,183 @@ function UserEdit({ funcionario, handleCloseModal }) {
     }
   };
 
-  const filteredSalarios = salarios.filter((salario) =>
-    salario.toString().toLowerCase().includes(searchSalario.toLowerCase())
+  const filteredSalarios = useMemo(() => 
+    salarios.filter((salario) =>
+      salario.toString().toLowerCase().includes(searchSalario.toLowerCase())
+    ),
+    [salarios, searchSalario]
   );
 
-  const filteredCargos = cargos.filter((cargo) =>
-    cargo.cargo.toLowerCase().includes(searchCargo.toLowerCase())
+  const filteredCargos = useMemo(() => 
+    cargos.filter((cargo) =>
+      cargo.cargo.toLowerCase().includes(searchCargo.toLowerCase())
+    ),
+    [cargos, searchCargo]
   );
 
   const fileMessage = newUser?.arquivo
     ? `Arquivo Selecionado: ${newUser.arquivo.name || ""}`
     : "Nenhum arquivo selecionado";
 
-    const groupCargosBySimbologia = (cargos) => {
-  const grouped = {};
-  
-  cargos.forEach(cargo => {
-    if (!grouped[cargo.simbologia]) {
-      grouped[cargo.simbologia] = {
-        simbologia: cargo.simbologia,
-        limite: cargo.simbologiaInfo.limite,
-        cargos: []
-      };
-    }
-    grouped[cargo.simbologia].cargos.push(cargo);
-  });
-  
-  return Object.values(grouped);
-};
+  const groupCargosBySimbologia = useCallback((cargos) => {
+    const grouped = {};
+    
+    cargos.forEach(cargo => {
+      if (!grouped[cargo.simbologia]) {
+        grouped[cargo.simbologia] = {
+          simbologia: cargo.simbologia,
+          limite: cargo.simbologiaInfo?.limite || 0,
+          cargos: []
+        };
+      }
+      grouped[cargo.simbologia].cargos.push(cargo);
+    });
+    
+    return Object.values(grouped);
+  }, []);
+
+  const groupedCargos = useMemo(() => 
+    groupCargosBySimbologia(filteredCargos),
+    [filteredCargos, groupCargosBySimbologia]
+  );
+
+  const handleAddSocialMedia = () => {
+    setNewUser({
+      ...newUser,
+      redesSociais: [...newUser.redesSociais, { link: "", nome: "" }],
+    });
+  };
+
+  const handleRemoveSocialMedia = (index) => {
+    const updatedRedes = [...newUser.redesSociais];
+    updatedRedes.splice(index, 1);
+    setNewUser({ ...newUser, redesSociais: updatedRedes });
+  };
 
   return (
-    <Form>
-      {/* Campo de Upload de Foto de Perfil */}
-      <Row>
-        <Col md={12}>
-          <Form.Group controlId="formFoto">
-            <Form.Label>Foto de Perfil</Form.Label>
-            <div className="profile-photo-upload d-flex justify-content-center">
-              {previewImage ? (
-                <img
-                  src={previewImage}
-                  alt="Foto do Funcionário"
-                  style={{
-                    width: "100px",
-                    height: "100px",
-                    objectFit: "cover",
-                    borderRadius: "50%",
-                    border: "2px solid #ccc",
-                    cursor: "pointer",
-                  }}
-                  onClick={handlePhotoClick}
-                />
-              ) : (
-                <div
-                  className="default-avatar"
-                  style={{
-                    width: "100px",
-                    height: "100px",
-                    borderRadius: "50%",
-                    backgroundColor: "#ddd",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    border: "2px solid #ccc",
-                    cursor: "pointer",
-                  }}
-                  onClick={handlePhotoClick}
-                >
-                  <FaUserCircle style={{ fontSize: "50px", color: "#555" }} />
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={handleFileChange}
+    <Form onSubmit={handleSubmit}>
+      {/* Seção: Foto e Informações Básicas */}
+      <div style={sectionHeaderStyle}>
+        <h5>
+          <FaUserCircle style={iconStyle} />
+          Informações Básicas
+        </h5>
+      </div>
+
+      <Row className="mb-4">
+        <Col md={12} className="d-flex flex-column align-items-center">
+          <div className="profile-photo-upload mb-3">
+            {previewImage ? (
+              <img
+                src={previewImage}
+                alt="Foto do Funcionário"
+                className="profile-image"
+                onClick={handlePhotoClick}
               />
-            </div>
-          </Form.Group>
+            ) : (
+              <div className="default-avatar" onClick={handlePhotoClick}>
+                <FaUserCircle className="default-avatar-icon" />
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="d-none"
+              onChange={handleFileChange}
+            />
+          </div>
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={handlePhotoClick}
+            className="mb-3"
+          >
+            Alterar Foto
+          </Button>
         </Col>
       </Row>
 
       <Row>
         <Col md={6}>
-          <Form.Group controlId="formServidor">
-            <Form.Label>Servidor</Form.Label>
+          <Form.Group className="mb-3" controlId="formServidor">
+            <Form.Label>
+              <FaUser style={iconStyle} />
+              Nome do Servidor
+            </Form.Label>
             <Form.Control
               type="text"
-              placeholder="Digite o servidor"
-              value={newUser?.nome}
+              placeholder="Digite o nome completo"
+              value={newUser?.nome || ""}
               onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })}
               isInvalid={!!errors.nome}
+              required
             />
-            <Form.Control.Feedback type="invalid">
+            <Form.Control.Feedback type="invalid" style={errorStyle}>
               {errors.nome}
             </Form.Control.Feedback>
           </Form.Group>
         </Col>
 
         <Col md={6}>
-          <Form.Group controlId="formSecretaria">
-            <Form.Label>Secretaria</Form.Label>
+          <Form.Group className="mb-3" controlId="formSecretaria">
+            <Form.Label>
+              <FaBuilding style={iconStyle} />
+              Secretaria
+            </Form.Label>
             <Form.Control
               type="text"
               placeholder="Digite a secretaria"
-              value={newUser?.secretaria}
+              value={newUser?.secretaria || ""}
               onChange={(e) =>
                 setNewUser({ ...newUser, secretaria: e.target.value })
               }
               isInvalid={!!errors.secretaria}
             />
-            <Form.Control.Feedback type="invalid">
+            <Form.Control.Feedback type="invalid" style={errorStyle}>
               {errors.secretaria}
             </Form.Control.Feedback>
           </Form.Group>
         </Col>
       </Row>
 
+      {/* Seção: Dados Profissionais */}
+      <div style={sectionHeaderStyle}>
+        <h5>
+          <FaIdCard style={iconStyle} />
+          Dados Profissionais
+        </h5>
+      </div>
+
       <Row>
         <Col md={6}>
-          <Form.Group controlId="formReferência">
+          <Form.Group className="mb-3" controlId="formReferência">
             <Form.Label>Referência</Form.Label>
             <Form.Control
               type="text"
               placeholder="Digite a referência"
-              value={newUser?.referencia}
+              value={newUser?.referencia || ""}
               onChange={(e) =>
                 setNewUser({ ...newUser, referencia: e.target.value })
               }
               list="referencias-list"
               isInvalid={!!errors.referencia}
               autoComplete="off"
+              required
             />
             <datalist id="referencias-list">
               {filteredReferencias.map((referencia, index) => (
                 <option key={index} value={referencia.name} />
               ))}
             </datalist>
-            <Form.Control.Feedback type="invalid">
+            <Form.Control.Feedback type="invalid" style={errorStyle}>
               {errors.referencia}
             </Form.Control.Feedback>
           </Form.Group>
         </Col>
 
         <Col md={6}>
-          <Form.Group controlId="formNatureza">
+          <Form.Group className="mb-3" controlId="formNatureza">
             <Form.Label>Natureza</Form.Label>
             <Dropdown
               show={showNaturezaDropdown}
@@ -420,11 +479,12 @@ function UserEdit({ funcionario, handleCloseModal }) {
               <Dropdown.Toggle
                 variant="light"
                 id="dropdown-natureza"
-                className="w-100"
+                className="w-100 d-flex justify-content-between align-items-center"
+                isInvalid={!!errors.natureza}
               >
                 {newUser.natureza
                   ? newUser.natureza.charAt(0).toUpperCase() +
-                    newUser.natureza.slice(1)
+                    newUser.natureza.slice(1).toLowerCase()
                   : "Selecione a natureza"}
               </Dropdown.Toggle>
               <Dropdown.Menu className="w-100">
@@ -440,15 +500,15 @@ function UserEdit({ funcionario, handleCloseModal }) {
                         setShowNaturezaDropdown(false);
                       }}
                     >
-                      {natureza}
+                      {natureza.charAt(0) + natureza.slice(1).toLowerCase()}
                     </Dropdown.Item>
                   )
                 )}
               </Dropdown.Menu>
             </Dropdown>
-            <Form.Control.Feedback type="invalid">
-              {errors.natureza}
-            </Form.Control.Feedback>
+            {errors.natureza && (
+              <div style={errorStyle}>{errors.natureza}</div>
+            )}
           </Form.Group>
         </Col>
       </Row>
@@ -457,8 +517,11 @@ function UserEdit({ funcionario, handleCloseModal }) {
         <>
           <Row>
             <Col md={6}>
-              <Form.Group controlId="formSalario">
-                <Form.Label>Salário Bruto</Form.Label>
+              <Form.Group className="mb-3" controlId="formSalario">
+                <Form.Label>
+                  <FaDollarSign style={iconStyle} />
+                  Salário Bruto
+                </Form.Label>
                 <Dropdown
                   show={showSalarioDropdown}
                   onToggle={(isOpen) => setShowSalarioDropdown(isOpen)}
@@ -466,9 +529,15 @@ function UserEdit({ funcionario, handleCloseModal }) {
                   <Dropdown.Toggle
                     variant="light"
                     id="dropdown-salario"
-                    className="w-100"
+                    className="w-100 d-flex justify-content-between align-items-center"
+                    isInvalid={!!errors.salarioBruto}
                   >
-                    {newUser.salarioBruto || "Selecione o salário"}
+                    {newUser.salarioBruto
+                      ? `R$ ${Number(newUser.salarioBruto).toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })}`
+                      : "Selecione o salário"}
                   </Dropdown.Toggle>
                   <Dropdown.Menu className="w-100">
                     <div className="p-2">
@@ -477,6 +546,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
                         placeholder="Pesquisar salário"
                         value={searchSalario}
                         onChange={(e) => setSearchSalario(e.target.value)}
+                        autoFocus
                       />
                     </div>
                     {filteredSalarios.map((salarioBruto, index) => (
@@ -490,264 +560,276 @@ function UserEdit({ funcionario, handleCloseModal }) {
                           setShowSalarioDropdown(false);
                         }}
                       >
-                        {salarioBruto}
+                        R$ {Number(salarioBruto).toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })}
                       </Dropdown.Item>
                     ))}
                   </Dropdown.Menu>
                 </Dropdown>
-                <Form.Control.Feedback type="invalid">
-                  {errors.salarioBruto}
-                </Form.Control.Feedback>
+                {errors.salarioBruto && (
+                  <div style={errorStyle}>{errors.salarioBruto}</div>
+                )}
               </Form.Group>
             </Col>
-          </Row>
 
-  {newUser.salarioBruto && (
-      <Col md={6}>
-        <Form.Group controlId="formCargo">
-          <Form.Label>Cargo</Form.Label>
-          <Dropdown
-            show={showCargoDropdown}
-            onToggle={(isOpen) => setShowCargoDropdown(isOpen)}
-          >
-            <Dropdown.Toggle
-              variant="light"
-              id="dropdown-cargo"
-              className="w-100"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {newUser.funcao || "Selecione o cargo"}
-              </span>
-            </Dropdown.Toggle>
-
-            <Dropdown.Menu className="w-100">
-              <div className="p-2">
-                <Form.Control
-                  type="text"
-                  placeholder="Pesquisar cargo"
-                  value={searchCargo}
-                  onChange={(e) => setSearchCargo(e.target.value)}
-                />
-              </div>
-              
-              {groupCargosBySimbologia(filteredCargos).map((grupo, index) => (
-                <React.Fragment key={index}>
-                  <Dropdown.Header 
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      backgroundColor: grupo.limite === 0 ? "#ffe6e6" : "#e6ffe6",
-                    }}
+            {newUser.salarioBruto && (
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="formCargo">
+                  <Form.Label>Cargo</Form.Label>
+                  <Dropdown
+                    show={showCargoDropdown}
+                    onToggle={(isOpen) => setShowCargoDropdown(isOpen)}
                   >
-                    <span>Simbologia: {grupo.simbologia}</span>
-                    <span style={{ color: grupo.limite === 0 ? "red" : "green" }}>
-                      Limite: {grupo.limite}
-                    </span>
-                  </Dropdown.Header>
-                  
-                  {grupo.cargos
-                    .filter(cargo => 
-                      cargo.cargo.toLowerCase().includes(searchCargo.toLowerCase())
-                    )
-                    .map((cargo, cargoIndex) => (
-                      <Dropdown.Item
-                        key={`${index}-${cargoIndex}`}
-                        title={cargo.cargo}
-                        style={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                        onClick={() => {
-                          setNewUser({ ...newUser, funcao: cargo.cargo });
-                          setShowCargoDropdown(false);
-                        }}
-                      >
-                        <span style={{ flex: 1, textAlign: "left" }}>
-                          {cargo.cargo}
-                        </span>
-                      </Dropdown.Item>
-                    ))}
-                </React.Fragment>
-              ))}
-            </Dropdown.Menu>
-          </Dropdown>
-        </Form.Group>
-      </Col>
-    )}
+                    <Dropdown.Toggle
+                      variant="light"
+                      id="dropdown-cargo"
+                      className="w-100 text-truncate d-flex justify-content-between align-items-center"
+                      isInvalid={!!errors.funcao}
+                    >
+                      <span className="text-truncate">
+                        {newUser.funcao || "Selecione o cargo"}
+                      </span>
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu className="w-100">
+                      <div className="p-2">
+                        <Form.Control
+                          type="text"
+                          placeholder="Pesquisar cargo"
+                          value={searchCargo}
+                          onChange={(e) => setSearchCargo(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      
+                      {groupedCargos.length > 0 ? (
+                        groupedCargos.map((grupo, index) => (
+                          <React.Fragment key={index}>
+                            <Dropdown.Header 
+                              className={`d-flex justify-content-between ${grupo.limite === 0 ? 'bg-danger-light' : 'bg-success-light'}`}
+                            >
+                              <span>Simbologia: {grupo.simbologia}</span>
+                              <Badge bg={grupo.limite === 0 ? 'danger' : 'success'}>
+                                Limite: {grupo.limite}
+                              </Badge>
+                            </Dropdown.Header>
+                            
+                            {grupo.cargos.map((cargo, cargoIndex) => (
+                              <Dropdown.Item
+                                key={`${index}-${cargoIndex}`}
+                                title={cargo.cargo}
+                                className="d-flex justify-content-between align-items-center"
+                                onClick={() => {
+                                  setNewUser({ ...newUser, funcao: cargo.cargo });
+                                  setShowCargoDropdown(false);
+                                }}
+                              >
+                                <span className="text-truncate flex-grow-1">
+                                  {cargo.cargo}
+                                </span>
+                              </Dropdown.Item>
+                            ))}
+                          </React.Fragment>
+                        ))
+                      ) : (
+                        <Dropdown.Item disabled>
+                          Nenhum cargo encontrado
+                        </Dropdown.Item>
+                      )}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                  {errors.funcao && (
+                    <div style={errorStyle}>{errors.funcao}</div>
+                  )}
+                </Form.Group>
+              </Col>
+            )}
+          </Row>
         </>
       )}
 
-      {/* Redes Sociais */}
-      <Row>
+      {/* Seção: Redes Sociais */}
+      <div style={sectionHeaderStyle}>
+        <h5>
+          <FaLink style={iconStyle} />
+          Redes Sociais
+        </h5>
+      </div>
+
+      <Row className="mb-4">
         <Col md={12}>
-          <Form.Group controlId="formRedesSociais">
-            <Form.Label>Redes Sociais</Form.Label>
-            <div>
-              {newUser?.redesSociais &&
-                newUser?.redesSociais.map((social, index) => (
-                  <div key={index}>
-                    <Form.Control
-                      className="w-50"
-                      type="text"
-                      placeholder={`Nome da Rede Social ${index + 1}`}
-                      value={social.nome}
-                      onChange={(e) => {
-                        const updatedRedes = [...newUser?.redesSociais];
-                        updatedRedes[index].nome = e.target.value;
-                        setNewUser({ ...newUser, redesSociais: updatedRedes });
-                      }}
-                    />
-                    <Form.Control
-                      type="text"
-                      placeholder={`Rede Social ${index + 1}`}
-                      value={social.link}
-                      onChange={(e) => {
-                        const updatedRedes = [...newUser?.redesSociais];
-                        updatedRedes[index].link = e.target.value;
-                        setNewUser({ ...newUser, redesSociais: updatedRedes });
-                      }}
-                    />
-                  </div>
-                ))}
+          {newUser.redesSociais.map((social, index) => (
+            <div key={index} className="mb-3">
+              <Row>
+                <Col md={5}>
+                  <Form.Control
+                    type="text"
+                    placeholder={`Nome da Rede Social (ex: LinkedIn)`}
+                    value={social.nome}
+                    onChange={(e) => {
+                      const updatedRedes = [...newUser.redesSociais];
+                      updatedRedes[index].nome = e.target.value;
+                      setNewUser({ ...newUser, redesSociais: updatedRedes });
+                    }}
+                  />
+                </Col>
+                <Col md={5}>
+                  <Form.Control
+                    type="url"
+                    placeholder={`URL (ex: https://linkedin.com/in/usuario)`}
+                    value={social.link}
+                    onChange={(e) => {
+                      const updatedRedes = [...newUser.redesSociais];
+                      updatedRedes[index].link = e.target.value;
+                      setNewUser({ ...newUser, redesSociais: updatedRedes });
+                    }}
+                  />
+                </Col>
+                <Col md={2} className="d-flex align-items-center">
+                  {index > 0 && (
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={() => handleRemoveSocialMedia(index)}
+                      className="ms-2"
+                    >
+                      Remover
+                    </Button>
+                  )}
+                </Col>
+              </Row>
+            </div>
+          ))}
+          <Button
+            variant="outline-primary"
+            onClick={handleAddSocialMedia}
+            className="mt-2"
+          >
+            Adicionar Rede Social
+          </Button>
+        </Col>
+      </Row>
+
+      {/* Seção: Informações Pessoais */}
+      <div style={sectionHeaderStyle}>
+        <h5>
+          <FaMapMarkerAlt style={iconStyle} />
+          Informações Pessoais
+        </h5>
+      </div>
+
+      <Row>
+        <Col md={6}>
+          <Form.Group className="mb-3" controlId="formCidade">
+            <Form.Label>Cidade</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Digite a cidade"
+              value={newUser?.cidade || ""}
+              onChange={(e) =>
+                setNewUser({ ...newUser, cidade: e.target.value })
+              }
+            />
+          </Form.Group>
+        </Col>
+
+        <Col md={6}>
+          <Form.Group className="mb-3" controlId="formEndereco">
+            <Form.Label>Endereço</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Digite o endereço"
+              value={newUser?.endereco || ""}
+              onChange={(e) =>
+                setNewUser({ ...newUser, endereco: e.target.value })
+              }
+            />
+          </Form.Group>
+        </Col>
+
+        <Col md={6}>
+          <Form.Group className="mb-3" controlId="formBairro">
+            <Form.Label>Bairro</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Digite o bairro"
+              value={newUser?.bairro || ""}
+              onChange={(e) =>
+                setNewUser({ ...newUser, bairro: e.target.value })
+              }
+            />
+          </Form.Group>
+        </Col>
+
+        <Col md={6}>
+          <Form.Group className="mb-3" controlId="formTelefone">
+            <Form.Label>
+              <FaPhone style={iconStyle} />
+              Telefone
+            </Form.Label>
+            <Form.Control
+              type="tel"
+              placeholder="Digite o telefone"
+              value={newUser?.telefone || ""}
+              onChange={(e) =>
+                setNewUser({ ...newUser, telefone: e.target.value })
+              }
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+
+      {/* Seção: Documentos */}
+      <div style={sectionHeaderStyle}>
+        <h5>
+          <FaFileUpload style={iconStyle} />
+          Documentos
+        </h5>
+      </div>
+
+      <Row className="mb-4">
+        <Col md={12}>
+          <Form.Group>
+            <Form.Label>Upload de Arquivo</Form.Label>
+            <div className="d-flex align-items-center">
+              <Form.Control
+                type="file"
+                id="file-upload"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  setSendFile(file);
+                  setNewUser({ ...newUser, arquivo: file });
+                }}
+                className="d-none"
+              />
               <Button
-                variant="link"
-                onClick={() =>
-                  setNewUser({
-                    ...newUser,
-                    redesSociais: [
-                      ...newUser?.redesSociais,
-                      { link: "", nome: "" },
-                    ],
-                  })
-                }
+                as="label"
+                htmlFor="file-upload"
+                variant="outline-primary"
+                className="me-3"
               >
-                Adicionar Rede Social
+                Escolher Arquivo
               </Button>
+              <span>{fileMessage}</span>
             </div>
           </Form.Group>
         </Col>
       </Row>
 
-      {/* Informações Pessoais */}
-      <Row>
-      <Col md={6}>
-          <Form.Group controlId="formEndereco">
-            <Form.Label>Cidade</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Digite o endereço"
-              value={newUser?.cidade}
-              onChange={(e) =>
-                setNewUser({ ...newUser, cidade: e.target.value })
-              }
-              isInvalid={!!errors.cidade}
-            />
-          </Form.Group>
-        </Col>
-        <Col md={6}>
-          <Form.Group controlId="formEndereco">
-            <Form.Label>Endereço</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Digite o endereço"
-              value={newUser?.endereco}
-              onChange={(e) =>
-                setNewUser({ ...newUser, endereco: e.target.value })
-              }
-              isInvalid={!!errors.endereco}
-            />
-          </Form.Group>
-        </Col>
-
-        <Col md={6}>
-          <Form.Group controlId="formBairro">
-            <Form.Label>Bairro</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Digite o bairro"
-              value={newUser?.bairro}
-              onChange={(e) =>
-                setNewUser({ ...newUser, bairro: e.target.value })
-              }
-              isInvalid={!!errors.bairro}
-            />
-          </Form.Group>
-        </Col>
-
-        <Col md={6}>
-          <Form.Group controlId="formTelefone">
-            <Form.Label>Telefone</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Digite o telefone"
-              value={newUser?.telefone}
-              onChange={(e) =>
-                setNewUser({ ...newUser, telefone: e.target.value })
-              }
-              isInvalid={!!errors.telefone}
-            />
-          </Form.Group>
-        </Col>
-
-        <Col md={6}>
-          <Form.Group>
-            <Row>
-              <Form.Label>Upload de Arquivo</Form.Label>
-            </Row>
-            <Form.Control
-              type="file"
-              id="file-upload"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                setSendFile(file);
-              }}
-              style={{ display: "none" }}
-            />
-            <Form.Label
-              htmlFor="file-upload"
-              className="btn btn-primary"
-              style={{
-                cursor: "pointer",
-                padding: "6px 16px",
-                marginRight: "10px",
-              }}
-            >
-              Escolher Arquivo
-            </Form.Label>
-            <div>{fileMessage}</div>
-          </Form.Group>
-        </Col>
-      </Row>
-
-      <Modal.Footer>
+      <Modal.Footer className="mt-4">
         {isLoading ? (
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Carregando...</span>
-          </Spinner>
+          <div className="d-flex align-items-center">
+            <Spinner animation="border" role="status" className="me-2" />
+            <span>Salvando alterações...</span>
+          </div>
         ) : (
           <>
-            <Button variant="secondary" onClick={handleCloseModal}>
+            <Button variant="outline-secondary" onClick={handleCloseModal}>
               Cancelar
             </Button>
-            <Button variant="primary" onClick={handleSubmit}>
+            <Button variant="primary" type="submit">
               Salvar Alterações
             </Button>
           </>
@@ -757,4 +839,67 @@ function UserEdit({ funcionario, handleCloseModal }) {
   );
 }
 
-export default UserEdit;
+// Estilos CSS-in-JS
+const styles = `
+  .profile-image {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid #0d6efd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .profile-image:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .default-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 3px solid #adb5bd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .default-avatar:hover {
+    background-color: #dee2e6;
+    border-color: #6c757d;
+  }
+  
+  .default-avatar-icon {
+    font-size: 60px;
+    color: #6c757d;
+  }
+  
+  .bg-danger-light {
+    background-color: #ffebee;
+  }
+  
+  .bg-success-light {
+    background-color: #e8f5e9;
+  }
+  
+  .dropdown-item {
+    white-space: normal;
+  }
+  
+  .dropdown-menu {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+`;
+
+// Adiciona os estilos ao documento
+const styleElement = document.createElement('style');
+styleElement.innerHTML = styles;
+document.head.appendChild(styleElement);
+
+export default React.memo(UserEdit);

@@ -564,129 +564,133 @@ function SetorScreen() {
         )}
       </div>
 
-      {/* Coordenadorias Section */}
-      <div className="mt-5">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h4>Divisões</h4>
-          <div className="d-flex gap-2">
-            <Button
-              variant="primary"
-              onClick={() => setShowCoordModal(true)}
-              className="d-flex align-items-center gap-2"
-            >
-              <FaFolderPlus /> Nova Divisão
-            </Button>
-            <Button
-              onClick={toggleSelectionControlsEdit}
-              variant={
-                showSelectionControlsEdit ? "primary" : "outline-primary"
-              }
-              className="d-flex align-items-center justify-content-center"
-              style={{ width: "40px", height: "40px" }}
-            >
-              <FaPencilAlt />
-            </Button>
-          </div>
-        </div>
+{/* Coordenadorias Section */}
+<div className="mt-5">
+  <div className="d-flex justify-content-between align-items-center mb-3">
+    <h4>Divisões</h4>
+    <div className="d-flex gap-2">
+      <Button
+        variant="primary"
+        onClick={() => setShowCoordModal(true)}
+        className="d-flex align-items-center gap-2"
+      >
+        <FaFolderPlus /> Nova Divisão
+      </Button>
+      <Button
+        onClick={toggleSelectionControlsEdit}
+        variant={
+          showSelectionControlsEdit ? "primary" : "outline-primary"
+        }
+        className="d-flex align-items-center justify-content-center"
+        style={{ width: "40px", height: "40px" }}
+      >
+        <FaPencilAlt />
+      </Button>
+    </div>
+  </div>
 
-        {sortedCoordenadorias.length === 0 ? (
-          <Card className="text-center py-4">
-            <FaFolder size={48} className="text-muted mb-3 mx-auto" />
-            <h5>Nenhuma divisão encontrada</h5>
-            <p className="text-muted">Crie uma nova divisão para começar</p>
-          </Card>
-        ) : (
-          <div className="accordion" id="coordenadoriasAccordion">
-            {sortedCoordenadorias.map((coord) => (
-              <Card key={coord._id} className="mb-3 shadow-sm">
-                <Card.Header className="bg-light">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div className="d-flex align-items-center gap-3">
-                      {showSelectionControlsEdit && (
-                        <div className="d-flex gap-2 me-2">
-                          <Button
-                            onClick={() =>
-                              handleRenameCoord(coord._id, coord.nome)
-                            }
-                            variant="outline-dark"
-                            size="sm"
-                            className="rounded-circle p-1"
-                            style={{ width: "30px", height: "30px" }}
-                          >
-                            <FaEdit size={12} />
-                          </Button>
-                          <Button
-                            onClick={() => handleDeleteSetor(coord._id)}
-                            variant="outline-danger"
-                            size="sm"
-                            className="rounded-circle p-1"
-                            style={{ width: "30px", height: "30px" }}
-                          >
-                            <FaTrash size={12} />
-                          </Button>
-                        </div>
-                      )}
-
-                      {editingCoordenadoriaId !== coord._id ? (
-                        <Button
-                          variant="link"
-                          onClick={() => toggleCoordCollapse(coord.nome)}
-                          className="text-dark text-decoration-none flex-grow-1 text-start ps-0"
-                        >
-                          <h5 className="mb-0">{coord.nome}</h5>
-                        </Button>
-                      ) : (
-                        <Form.Control
-                          type="text"
-                          value={editedNameCoordenadoria}
-                          onChange={(e) =>
-                            setEditedNameCoordenadoria(e.target.value)
-                          }
-                          onBlur={() => handleSaveRenameCoord(coord._id)}
-                          onKeyPress={(e) =>
-                            e.key === "Enter" &&
-                            handleSaveRenameCoord(coord._id)
-                          }
-                          autoFocus
-                          className="flex-grow-1"
-                        />
-                      )}
-                    </div>
+  {sortedCoordenadorias.length === 0 ? (
+    <Card className="text-center py-4">
+      <FaFolder size={48} className="text-muted mb-3 mx-auto" />
+      <h5>Nenhuma divisão encontrada</h5>
+      <p className="text-muted">Crie uma nova divisão para começar</p>
+    </Card>
+  ) : (
+    <div className="accordion" id="coordenadoriasAccordion">
+      {sortedCoordenadorias.map((coord) => (
+        <Card key={coord._id} className="mb-3 shadow-sm">
+          <Card.Header className="bg-light position-relative">
+            <div className="d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-3 flex-grow-1">
+                {editingCoordenadoriaId !== coord._id ? (
+                  <Button
+                    variant="link"
+                    onClick={() => toggleCoordCollapse(coord.nome)}
+                    className="text-dark text-decoration-none flex-grow-1 text-start ps-0"
+                  >
+                    <h5 className="mb-0">{coord.nome}</h5>
+                  </Button>
+                ) : (
+                  <Form.Control
+                    type="text"
+                    value={editedNameCoordenadoria}
+                    onChange={(e) =>
+                      setEditedNameCoordenadoria(e.target.value)
+                    }
+                    onBlur={() => handleSaveRenameCoord(coord._id)}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" &&
+                      handleSaveRenameCoord(coord._id)
+                    }
+                    autoFocus
+                    className="flex-grow-1"
+                  />
+                )}
+              </div>
+              
+              <div className="d-flex align-items-center gap-2">
+                {showSelectionControlsEdit && (
+                  <>
                     <Button
-                      variant="link"
-                      onClick={() => toggleCoordCollapse(coord.nome)}
-                      className="text-dark"
+                      onClick={() =>
+                        handleRenameCoord(coord._id, coord.nome)
+                      }
+                      variant="outline-dark"
+                      size="sm"
+                      className="rounded-circle p-1 d-flex align-items-center justify-content-center"
+                      style={{ width: "30px", height: "30px" }}
                     >
-                      {openCoord[coord.nome] ? <FaAngleUp /> : <FaAngleDown />}
+                      <FaEdit size={12} />
                     </Button>
-                  </div>
-                </Card.Header>
-                <Collapse in={openCoord[coord.nome]}>
-                  <div>
-                    <Card.Body>
-                      <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h6 className="mb-0">Funcionários</h6>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => {
-                            setCoordenadoriaId(coord._id);
-                            setShowModalCoordenadoria(true);
-                          }}
-                          className="d-flex align-items-center gap-2"
-                        >
-                          <FaIdCard /> Novo Funcionário
-                        </Button>
-                      </div>
-                      <FuncionariosList coordenadoriaId={coord._id} />
-                    </Card.Body>
-                  </div>
-                </Collapse>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+                    <Button
+                      onClick={() => handleDeleteSetor(coord._id)}
+                      variant="outline-danger"
+                      size="sm"
+                      className="rounded-circle p-1 d-flex align-items-center justify-content-center"
+                      style={{ width: "30px", height: "30px" }}
+                    >
+                      <FaTrash size={12} />
+                    </Button>
+                  </>
+                )}
+                
+                <Button
+                  variant="link"
+                  onClick={() => toggleCoordCollapse(coord.nome)}
+                  className="text-dark p-0"
+                  style={{ width: "24px", height: "24px" }}
+                >
+                  {openCoord[coord.nome] ? <FaAngleUp /> : <FaAngleDown />}
+                </Button>
+              </div>
+            </div>
+          </Card.Header>
+          <Collapse in={openCoord[coord.nome]}>
+            <div>
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h6 className="mb-0">Funcionários</h6>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setCoordenadoriaId(coord._id);
+                      setShowModalCoordenadoria(true);
+                    }}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    <FaIdCard /> Novo Funcionário
+                  </Button>
+                </div>
+                <FuncionariosList coordenadoriaId={coord._id} />
+              </Card.Body>
+            </div>
+          </Collapse>
+        </Card>
+      ))}
+    </div>
+  )}
+</div>
 
       {/* Modals */}
       <ConfirmDeleteModal
