@@ -48,7 +48,6 @@ const customStyles = {
   }
 };
 
-
 const fetchSetoresData = async () => {
   const response = await axios.get(`${API_BASE_URL}/api/referencias/referencias-dados`);
   return response.data.referencias;
@@ -96,7 +95,6 @@ function Step1Form({
 
   const fileInputRef = useRef(null);
 
-  // Função para agrupar cargos por simbologia
   const groupCargosBySimbologia = (cargos) => {
     const grouped = {};
     
@@ -114,7 +112,6 @@ function Step1Form({
     return Object.values(grouped);
   };
 
-  // Efeitos
   useEffect(() => {
     if (newUser?.foto) {
       const objectUrl = URL.createObjectURL(newUser.foto);
@@ -188,14 +185,13 @@ function Step1Form({
   }, [newUser.funcao, cargos]);
 
   const handleRemovePhoto = () => {
-  setNewUser((prevState) => ({ ...prevState, foto: null }));
-  setPreviewImage(null);
-  if (fileInputRef.current) {
-    fileInputRef.current.value = ''; // Limpa o input file
-  }
-};
+    setNewUser((prevState) => ({ ...prevState, foto: null }));
+    setPreviewImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
-  // Funções auxiliares
   const checkNameAvailability = useCallback(
     debounce(async (name) => {
       if (!name || name.length < 3) {
@@ -243,9 +239,10 @@ function Step1Form({
       newErrors.natureza = "O campo Natureza é obrigatório";
     }
 
-    if (!newUser.referencia) {
-      newErrors.referencia = "O campo Referência é obrigatório";
-    } else {
+    // Modified reference validation based on nature
+    if (newUser.natureza === "COMISSIONADO" && !newUser.referencia) {
+      newErrors.referencia = "O campo Referência é obrigatório para comissionados";
+    } else if (newUser.referencia) {
       const isReferenciaValid = referenciasRegistradas.some(
         (referencia) => referencia.name.toLowerCase() === newUser.referencia.toLowerCase()
       );
@@ -379,85 +376,85 @@ function Step1Form({
   return (
     <Form>
       <Row className="g-3">
-        {/* Seção de Foto e Dados Básicos */}
+        {/* Seção de Foto */}
         <Col md={12} className="text-center">
-<div className="mb-4">
-  <Form.Label className="d-block fw-bold mb-3">Foto de Perfil</Form.Label>
-  <div 
-    className="profile-photo-upload mx-auto"
-    style={{ width: '120px', height: '120px', position: 'relative' }}
-  >
-    {previewImage ? (
-      <>
-        <img
-          src={previewImage}
-          alt="Foto do Funcionário"
-          className="rounded-circle border border-3 border-primary"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            cursor: 'pointer',
-          }}
-          onClick={handlePhotoClick}
-        />
-        <Badge 
-          bg="danger" 
-          className="position-absolute top-0 end-0 rounded-circle p-1"
-          style={{ cursor: 'pointer', zIndex: 1 }}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRemovePhoto();
-          }}
-          title="Remover foto"
-        >
-          <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-          </svg>
-        </Badge>
-      </>
-    ) : (
-      <div
-        className="default-avatar rounded-circle border border-3 border-secondary d-flex justify-content-center align-items-center bg-light"
-        style={{
-          width: '100%',
-          height: '100%',
-          cursor: 'pointer',
-        }}
-        onClick={handlePhotoClick}
-      >
-        <FaUserCircle style={{ fontSize: "60px", color: "#6c757d" }} />
-      </div>
-    )}
-    <Badge 
-      bg="primary" 
-      className="position-absolute bottom-0 end-0 rounded-circle p-2"
-      style={{ cursor: 'pointer' }}
-      onClick={handlePhotoClick}
-    >
-      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-      </svg>
-    </Badge>
-    <input
-      ref={fileInputRef}
-      type="file"
-      accept="image/*"
-      style={{ display: "none" }}
-      onChange={handleFileChange}
-    />
-  </div>
-  {errors.foto && (
-    <div className="text-danger mt-2">
-      <FaTimes className="me-1" />
-      {errors.foto}
-    </div>
-  )}
-  <div className="text-muted small mt-2">
-    Tamanho máximo: 5MB. Formatos: JPG, PNG
-  </div>
-</div>
+          <div className="mb-4">
+            <Form.Label className="d-block fw-bold mb-3">Foto de Perfil</Form.Label>
+            <div 
+              className="profile-photo-upload mx-auto"
+              style={{ width: '120px', height: '120px', position: 'relative' }}
+            >
+              {previewImage ? (
+                <>
+                  <img
+                    src={previewImage}
+                    alt="Foto do Funcionário"
+                    className="rounded-circle border border-3 border-primary"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      cursor: 'pointer',
+                    }}
+                    onClick={handlePhotoClick}
+                  />
+                  <Badge 
+                    bg="danger" 
+                    className="position-absolute top-0 end-0 rounded-circle p-1"
+                    style={{ cursor: 'pointer', zIndex: 1 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemovePhoto();
+                    }}
+                    title="Remover foto"
+                  >
+                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                  </Badge>
+                </>
+              ) : (
+                <div
+                  className="default-avatar rounded-circle border border-3 border-secondary d-flex justify-content-center align-items-center bg-light"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'pointer',
+                  }}
+                  onClick={handlePhotoClick}
+                >
+                  <FaUserCircle style={{ fontSize: "60px", color: "#6c757d" }} />
+                </div>
+              )}
+              <Badge 
+                bg="primary" 
+                className="position-absolute bottom-0 end-0 rounded-circle p-2"
+                style={{ cursor: 'pointer' }}
+                onClick={handlePhotoClick}
+              >
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                  <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                </svg>
+              </Badge>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+            </div>
+            {errors.foto && (
+              <div className="text-danger mt-2">
+                <FaTimes className="me-1" />
+                {errors.foto}
+              </div>
+            )}
+            <div className="text-muted small mt-2">
+              Tamanho máximo: 5MB. Formatos: JPG, PNG
+            </div>
+          </div>
         </Col>
 
         {/* Dados Básicos */}
@@ -475,34 +472,42 @@ function Step1Form({
           </Form.Group>
         </Col>
 
-        <Col md={6}>
-          <Form.Group controlId="formReferência">
-            <Form.Label>Referência <span className="text-danger">*</span></Form.Label>
-            <InputGroup>
-              <Form.Control
-                type="text"
-                placeholder="Digite a referência"
-                value={newUser?.referencia || ''}
-                onChange={(e) => setNewUser({ ...newUser, referencia: e.target.value })}
-                list="referencias-list"
-                isInvalid={!!errors.referencia}
-                autoComplete="off"
-              />
-              <InputGroup.Text>
-                <FaSearch />
-              </InputGroup.Text>
-            </InputGroup>
-            <datalist id="referencias-list">
-              {filteredReferencias.map((referencia, index) => (
-                <option key={index} value={referencia.name} />
-              ))}
-            </datalist>
-            {renderValidationFeedback('referencia')}
-            <Form.Text className="text-muted">
-              Comece a digitar para ver sugestões
-            </Form.Text>
-          </Form.Group>
-        </Col>
+        {/* Reference field - conditionally rendered based on nature */}
+        {newUser.natureza !== "EFETIVO" && (
+          <Col md={6}>
+            <Form.Group controlId="formReferência">
+              <Form.Label>
+                Referência 
+                {newUser.natureza === "COMISSIONADO" && <span className="text-danger">*</span>}
+              </Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type="text"
+                  placeholder="Digite a referência"
+                  value={newUser?.referencia || ''}
+                  onChange={(e) => setNewUser({ ...newUser, referencia: e.target.value })}
+                  list="referencias-list"
+                  isInvalid={!!errors.referencia}
+                  autoComplete="off"
+                  required={newUser.natureza === "COMISSIONADO"}
+                />
+                <InputGroup.Text>
+                  <FaSearch />
+                </InputGroup.Text>
+              </InputGroup>
+              <datalist id="referencias-list">
+                {filteredReferencias.map((referencia, index) => (
+                  <option key={index} value={referencia.name} />
+                ))}
+              </datalist>
+              {renderValidationFeedback('referencia')}
+              <Form.Text className="text-muted">
+                Comece a digitar para ver sugestões
+                {newUser.natureza === "TEMPORARIO" && " (Opcional)"}
+              </Form.Text>
+            </Form.Group>
+          </Col>
+        )}
 
         <Col md={6}>
           <Form.Group controlId="formNatureza">

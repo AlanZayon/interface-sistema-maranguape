@@ -8,7 +8,7 @@ import { API_BASE_URL } from "../utils/apiConfig";
 import { FaSyncAlt, FaSave, FaTimes, FaSearch, FaInfoCircle } from "react-icons/fa";
 import debounce from 'lodash/debounce';
 
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 5;
 
 function Step2Form({
   newUser = { coordenadoria: [] },
@@ -21,7 +21,7 @@ function Step2Form({
   const [selectedPath, setSelectedPath] = useState([]);
   const { addFuncionarios, addFuncionariosPath } = useAuth();
   const currentSetorId = subPath ? subPath.split("/").pop() : setorId;
-  
+
   // Estados de paginação separados para cada tipo
   const [currentPageSetores, setCurrentPageSetores] = useState(1);
   const [currentPageSubsetores, setCurrentPageSubsetores] = useState(1);
@@ -74,120 +74,123 @@ function Step2Form({
     refetch();
   };
 
-const findItemPath = (item, type) => {
-  const path = [];
-  
-  if (type === 'coordenadoria') {
-    // Encontrar o subsetor e setor pai da coordenadoria
-    for (const setor of setoresOrganizados) {
-      // Verificar coordenadorias diretas do setor
-      if (setor.coordenadorias?.some(c => c._id === item._id)) {
-        path.push({ type: 'setor', item: setor });
-        path.push({ type, item });
-        return path;
+  const findItemPath = (item, type) => {
+    const path = [];
+
+    if (type === 'coordenadoria') {
+      // Encontrar o subsetor e setor pai da coordenadoria
+      for (const setor of setoresOrganizados) {
+        // Verificar coordenadorias diretas do setor
+        if (setor.coordenadorias?.some(c => c._id === item._id)) {
+          path.push({ type: 'setor', item: setor });
+          path.push({ type, item });
+          return path;
+        }
+
+        // Verificar subsetores do setor
+        const subsetorPath = findSubsetorWithCoordenadoria(setor.subsetores, item._id);
+        if (subsetorPath) {
+          path.push({ type: 'setor', item: setor });
+          path.push(...subsetorPath);
+          path.push({ type, item });
+          return path;
+        }
       }
-      
-      // Verificar subsetores do setor
-      const subsetorPath = findSubsetorWithCoordenadoria(setor.subsetores, item._id);
-      if (subsetorPath) {
-        path.push({ type: 'setor', item: setor });
-        path.push(...subsetorPath);
-        path.push({ type, item });
-        return path;
+    } else if (type === 'subsetor') {
+      // Encontrar o setor pai e qualquer subsetor pai
+      for (const setor of setoresOrganizados) {
+        if (setor._id === item._id) {
+          // Se o "subsetor" for na verdade um setor (caso especial)
+          path.push({ type: 'setor', item });
+          return path;
+        }
+
+        const subsetorPath = findSubsetorPath(setor.subsetores, item._id);
+        if (subsetorPath) {
+          path.push({ type: 'setor', item: setor });
+          path.push(...subsetorPath);
+          return path;
+        }
       }
+    } else if (type === 'setor') {
+      path.push({ type, item });
+      return path;
     }
-  } else if (type === 'subsetor') {
-    // Encontrar o setor pai e qualquer subsetor pai
-    for (const setor of setoresOrganizados) {
-      if (setor._id === item._id) {
-        // Se o "subsetor" for na verdade um setor (caso especial)
-        path.push({ type: 'setor', item });
-        return path;
-      }
-      
-      const subsetorPath = findSubsetorPath(setor.subsetores, item._id);
-      if (subsetorPath) {
-        path.push({ type: 'setor', item: setor });
-        path.push(...subsetorPath);
-        return path;
-      }
-    }
-  } else if (type === 'setor') {
-    path.push({ type, item });
+
     return path;
-  }
-  
-  return path;
-};
+  };
 
-const findSubsetorPath = (subsetores, subsetorId, currentPath = []) => {
-  for (const subsetor of subsetores || []) {
-    if (subsetor._id === subsetorId) {
-      return [...currentPath, { type: 'subsetor', item: subsetor }];
-    }
-    
-    const foundInChildren = findSubsetorPath(subsetor.subsetores, subsetorId, [
-      ...currentPath,
-      { type: 'subsetor', item: subsetor }
-    ]);
-    
-    if (foundInChildren) {
-      return foundInChildren;
-    }
-  }
-  return null;
-};
+  const findSubsetorPath = (subsetores, subsetorId, currentPath = []) => {
+    for (const subsetor of subsetores || []) {
+      if (subsetor._id === subsetorId) {
+        return [...currentPath, { type: 'subsetor', item: subsetor }];
+      }
 
-const findSubsetorWithCoordenadoria = (subsetores, coordenadoriaId) => {
-  for (const subsetor of subsetores || []) {
-    if (subsetor.coordenadorias?.some(c => c._id === coordenadoriaId)) {
-      return [{ type: 'subsetor', item: subsetor }];
-    }
-    
-    const foundInChildren = findSubsetorWithCoordenadoria(subsetor.subsetores, coordenadoriaId);
-    if (foundInChildren) {
-      return [{ type: 'subsetor', item: subsetor }, ...foundInChildren];
-    }
-  }
-  return null;
-};
+      const foundInChildren = findSubsetorPath(subsetor.subsetores, subsetorId, [
+        ...currentPath,
+        { type: 'subsetor', item: subsetor }
+      ]);
 
-const updateSelectedPath = (type, item) => {
-  const newPath = findItemPath(item, type);
-  setSelectedPath(newPath);
-  
-  // Atualiza os estados correspondentes baseados no caminho
-  if (type === 'coordenadoria') {
-    // Encontrar o setor e subsetor pai
-    const setorItem = newPath.find(p => p.type === 'setor');
-    const subsetorItem = newPath.find(p => p.type === 'subsetor');
-    
-    if (setorItem) {
-      setSetorSelecionado(setorItem.item);
+      if (foundInChildren) {
+        return foundInChildren;
+      }
     }
-    
-    if (subsetorItem) {
-      setSubsetorSelecionado([subsetorItem.item]);
-    } else {
+    return null;
+  };
+
+  const findSubsetorWithCoordenadoria = (subsetores, coordenadoriaId, currentPath = []) => {
+    for (const subsetor of subsetores || []) {
+      if (subsetor.coordenadorias?.some(c => c._id === coordenadoriaId)) {
+        return [...currentPath, { type: 'subsetor', item: subsetor }];
+      }
+
+      const foundInChildren = findSubsetorWithCoordenadoria(
+        subsetor.subsetores,
+        coordenadoriaId,
+        [...currentPath, { type: 'subsetor', item: subsetor }]
+      );
+
+      if (foundInChildren) {
+        return foundInChildren;
+      }
+    }
+    return null;
+  };
+
+  const updateSelectedPath = (type, item) => {
+    const newPath = findItemPath(item, type);
+    setSelectedPath(newPath);
+
+    // Atualiza os estados correspondentes baseados no caminho
+    if (type === 'coordenadoria') {
+      const setorItem = newPath.find(p => p.type === 'setor');
+      const subsetorItems = newPath.filter(p => p.type === 'subsetor');
+
+      if (setorItem) {
+        setSetorSelecionado(setorItem.item);
+      }
+
+      setSubsetorSelecionado(subsetorItems.map(s => s.item));
+      setCoordenadoriaSelecionada(item);
+    } else if (type === 'subsetor') {
+      const setorItem = newPath.find(p => p.type === 'setor');
+      const subsetorItems = newPath.filter(p => p.type === 'subsetor');
+
+      if (setorItem) {
+        setSetorSelecionado(setorItem.item);
+      }
+      setSubsetorSelecionado(subsetorItems.map(s => s.item));
+      setCoordenadoriaSelecionada(null);
+    } else if (type === 'setor') {
+      setSetorSelecionado(item);
       setSubsetorSelecionado([]);
+      setCoordenadoriaSelecionada(null);
     }
-    
-    setCoordenadoriaSelecionada(item);
-  } else if (type === 'subsetor') {
-    const setorItem = newPath.find(p => p.type === 'setor');
-    
-    if (setorItem) {
-      setSetorSelecionado(setorItem.item);
-    }
-    
-    setSubsetorSelecionado([item]);
-    setCoordenadoriaSelecionada(null);
-  } else if (type === 'setor') {
-    setSetorSelecionado(item);
-    setSubsetorSelecionado([]);
-    setCoordenadoriaSelecionada(null);
-  }
-};
+
+    // Resetar os filtros de pesquisa após selecionar um item
+    setSearchTerm("");
+    setActiveFilter("all");
+  };
 
   const getAllSubsetores = (subsetores) => {
     let allSubsetores = [];
@@ -206,7 +209,7 @@ const updateSelectedPath = (type, item) => {
       if (setor.coordenadorias) {
         allCoords = [...allCoords, ...setor.coordenadorias];
       }
-      
+
       if (setor.subsetores) {
         setor.subsetores.forEach(subsetor => {
           if (subsetor.coordenadorias) {
@@ -243,35 +246,35 @@ const updateSelectedPath = (type, item) => {
 
     const searchLower = searchTerm?.toLowerCase() || '';
 
-    switch(activeFilter) {
+    switch (activeFilter) {
       case 'setores':
-        return setoresOrganizados.filter(setor => 
+        return setoresOrganizados.filter(setor =>
           !searchTerm || setor.nome.toLowerCase().includes(searchLower)
         );
-      
+
       case 'subsetores':
         const allSubsetores = getAllSubsetores(setoresOrganizados.flatMap(s => s.subsetores));
-        return allSubsetores.filter(subsetor => 
+        return allSubsetores.filter(subsetor =>
           !searchTerm || subsetor.nome.toLowerCase().includes(searchLower)
         );
-      
+
       case 'coordenadorias':
         const allCoordenadorias = getAllCoordenadorias(setoresOrganizados);
-        return allCoordenadorias.filter(coord => 
+        return allCoordenadorias.filter(coord =>
           !searchTerm || coord.nome.toLowerCase().includes(searchLower)
         );
-      
+
       default:
-        return setoresOrganizados.filter(setor => 
-          !searchTerm || 
+        return setoresOrganizados.filter(setor =>
+          !searchTerm ||
           setor.nome.toLowerCase().includes(searchLower) ||
-          (setor.subsetores?.some(sub => 
+          (setor.subsetores?.some(sub =>
             sub.nome.toLowerCase().includes(searchLower) ||
-            sub.coordenadorias?.some(coord => 
+            sub.coordenadorias?.some(coord =>
               coord.nome.toLowerCase().includes(searchLower)
             )
           )) ||
-          setor.coordenadorias?.some(coord => 
+          setor.coordenadorias?.some(coord =>
             coord.nome.toLowerCase().includes(searchLower)
           )
         );
@@ -306,11 +309,11 @@ const updateSelectedPath = (type, item) => {
 
   const renderSetores = () => {
     if (activeFilter !== 'all' && activeFilter !== 'setores') return null;
-    
-    const itemsToRender = activeFilter === 'setores' ? 
-      getPaginatedItems(filteredItems, currentPageSetores) : 
+
+    const itemsToRender = activeFilter === 'setores' ?
+      getPaginatedItems(filteredItems, currentPageSetores) :
       getPaginatedItems(
-        setoresOrganizados.filter(setor => 
+        setoresOrganizados.filter(setor =>
           !searchTerm || itemMatchesSearch(setor, searchTerm)
         ),
         currentPageSetores
@@ -355,21 +358,22 @@ const updateSelectedPath = (type, item) => {
           </Col>
         </Row>
         {renderPagination('setores')}
+
       </>
     );
   };
 
   const renderSubsetores = () => {
     if (activeFilter !== 'all' && activeFilter !== 'subsetores') return null;
-    
-    let allSubsetores = setorSelecionado ? 
-      getAllSubsetores(setorSelecionado.subsetores) : 
+
+    let allSubsetores = setorSelecionado ?
+      getAllSubsetores(setorSelecionado.subsetores) :
       getAllSubsetores(setoresOrganizados.flatMap(s => s.subsetores));
-    
-    const filteredSubsetores = allSubsetores.filter(subsetor => 
+
+    const filteredSubsetores = allSubsetores.filter(subsetor =>
       !searchTerm || itemMatchesSearch(subsetor, searchTerm)
     );
-    
+
     const paginatedSubsetores = getPaginatedItems(filteredSubsetores, currentPageSubsetores);
     const subsetoresTotalPages = Math.ceil(filteredSubsetores.length / ITEMS_PER_PAGE);
 
@@ -392,8 +396,8 @@ const updateSelectedPath = (type, item) => {
                     }
                     onClick={() => {
                       const foundSubsetor = findSubsetorById(
-                        setorSelecionado?.subsetores || 
-                        setoresOrganizados.flatMap(s => s.subsetores), 
+                        setorSelecionado?.subsetores ||
+                        setoresOrganizados.flatMap(s => s.subsetores),
                         subsetor._id
                       );
                       if (foundSubsetor) {
@@ -418,38 +422,54 @@ const updateSelectedPath = (type, item) => {
           </Col>
         </Row>
         {subsetoresTotalPages > 1 && renderPagination('subsetores', subsetoresTotalPages)}
+
+
       </>
     );
   };
 
   const renderCoordenadorias = () => {
     if (activeFilter !== 'all' && activeFilter !== 'coordenadorias') return null;
-    
+
     let coordenadoriasToRender = [];
-    
+    let totalCoordenadorias = 0;
+
     if (activeFilter === 'coordenadorias') {
       coordenadoriasToRender = getPaginatedItems(filteredItems, currentPageCoordenadorias);
+      totalCoordenadorias = filteredItems.length;
     } else {
+      let allCoordenadorias = [];
+
+
       if (subsetorSelecionado.length > 0) {
-        coordenadoriasToRender = subsetorSelecionado.flatMap(s => s.coordenadorias || []);
+        const ultimoSubsetor = subsetorSelecionado[subsetorSelecionado.length - 1];
+
+        if (ultimoSubsetor.coordenadorias && ultimoSubsetor.coordenadorias.length > 0) {
+          allCoordenadorias = ultimoSubsetor.coordenadorias;
+        } else {
+          // Se o subsetor não tem coordenadorias, não mostra nada
+          return null;
+        }
+
       } else if (setorSelecionado) {
-        coordenadoriasToRender = setorSelecionado.coordenadorias || [];
+        allCoordenadorias = setorSelecionado.coordenadorias || [];
       } else {
-        coordenadoriasToRender = getAllCoordenadorias(setoresOrganizados);
+        allCoordenadorias = getAllCoordenadorias(setoresOrganizados);
       }
-      
-      coordenadoriasToRender = getPaginatedItems(
-        coordenadoriasToRender.filter(coord => 
-          !searchTerm || itemMatchesSearch(coord, searchTerm)
-        ),
-        currentPageCoordenadorias
+
+      const filteredCoordenadorias = allCoordenadorias.filter(coord =>
+        !searchTerm || itemMatchesSearch(coord, searchTerm)
       );
+
+      totalCoordenadorias = filteredCoordenadorias.length;
+      coordenadoriasToRender = getPaginatedItems(filteredCoordenadorias, currentPageCoordenadorias);
     }
 
     if (coordenadoriasToRender.length === 0) return null;
 
-    const parentName = subsetorSelecionado.length > 0 ? 
-      subsetorSelecionado[0].nome : 
+    const totalPagesCoordenadorias = Math.ceil(totalCoordenadorias / ITEMS_PER_PAGE);
+    const parentName = subsetorSelecionado.length > 0 ?
+      subsetorSelecionado[subsetorSelecionado.length - 1].nome :
       setorSelecionado?.nome || 'Todas';
 
     return (
@@ -480,7 +500,7 @@ const updateSelectedPath = (type, item) => {
             </Form.Group>
           </Col>
         </Row>
-        {renderPagination('coordenadorias')}
+        {totalPagesCoordenadorias > 1 && renderPagination('coordenadorias', totalPagesCoordenadorias)}
       </>
     );
   };
@@ -490,7 +510,7 @@ const updateSelectedPath = (type, item) => {
 
     let currentPage, handlePageChange;
 
-    switch(type) {
+    switch (type) {
       case 'setores':
         currentPage = currentPageSetores;
         handlePageChange = setCurrentPageSetores;
@@ -505,7 +525,7 @@ const updateSelectedPath = (type, item) => {
         break;
       default:
         currentPage = 1;
-        handlePageChange = () => {};
+        handlePageChange = () => { };
     }
 
     return (
@@ -514,7 +534,7 @@ const updateSelectedPath = (type, item) => {
           <Pagination>
             <Pagination.First onClick={() => handlePageChange(1)} disabled={currentPage === 1} />
             <Pagination.Prev onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} />
-            
+
             {Array.from({ length: Math.min(5, customTotalPages) }, (_, i) => {
               let pageNumber;
               if (customTotalPages <= 5) {
@@ -527,7 +547,7 @@ const updateSelectedPath = (type, item) => {
                 pageNumber = currentPage - 2 + i;
               }
               return (
-                <Pagination.Item 
+                <Pagination.Item
                   key={pageNumber}
                   active={pageNumber === currentPage}
                   onClick={() => handlePageChange(pageNumber)}
@@ -536,7 +556,7 @@ const updateSelectedPath = (type, item) => {
                 </Pagination.Item>
               );
             })}
-            
+
             <Pagination.Next onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === customTotalPages} />
             <Pagination.Last onClick={() => handlePageChange(customTotalPages)} disabled={currentPage === customTotalPages} />
           </Pagination>
@@ -621,7 +641,7 @@ const updateSelectedPath = (type, item) => {
             <Button onClick={refreshAll} variant="outline-secondary" size="sm" className="me-2">
               <FaSyncAlt className="me-1" /> Recarregar
             </Button>
-            
+
             <div className="d-flex">
               <Button
                 variant={activeFilter === 'all' ? 'primary' : 'outline-primary'}
@@ -691,7 +711,7 @@ const updateSelectedPath = (type, item) => {
             <FaTimes className="me-1" /> Voltar
           </Button>
         </div>
-        
+
         {isLoading ? (
           <Spinner animation="border" role="status">
             <span className="visually-hidden">Salvando...</span>
@@ -702,7 +722,7 @@ const updateSelectedPath = (type, item) => {
             onClick={handleSubmit2}
             disabled={!coordenadoriaSelecionada}
           >
-            <FaSave className="me-1" /> 
+            <FaSave className="me-1" />
             {coordenadoriaSelecionada ? "Salvar" : "Selecione uma divisão"}
           </Button>
         )}

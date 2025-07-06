@@ -7,7 +7,7 @@ import { API_BASE_URL } from '../utils/apiConfig';
 import { FaSyncAlt, FaSave, FaTimes, FaSearch, FaInfoCircle } from 'react-icons/fa';
 import debounce from 'lodash/debounce';
 
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 5; // Alterado para 5 itens por página para consistência
 
 function EditUsersForm({
     usuariosIds, 
@@ -20,7 +20,7 @@ function EditUsersForm({
     const [selectedPath, setSelectedPath] = useState([]);
     const { addFuncionarios, addFuncionariosPath } = useAuth();
     
-    // Estados de paginação
+    // Estados de paginação separados para cada tipo
     const [currentPageSetores, setCurrentPageSetores] = useState(1);
     const [currentPageSubsetores, setCurrentPageSubsetores] = useState(1);
     const [currentPageCoordenadorias, setCurrentPageCoordenadorias] = useState(1);
@@ -135,15 +135,20 @@ function EditUsersForm({
         return null;
     };
 
-    const findSubsetorWithCoordenadoria = (subsetores, coordenadoriaId) => {
+    const findSubsetorWithCoordenadoria = (subsetores, coordenadoriaId, currentPath = []) => {
         for (const subsetor of subsetores || []) {
             if (subsetor.coordenadorias?.some(c => c._id === coordenadoriaId)) {
-                return [{ type: 'subsetor', item: subsetor }];
+                return [...currentPath, { type: 'subsetor', item: subsetor }];
             }
-            
-            const foundInChildren = findSubsetorWithCoordenadoria(subsetor.subsetores, coordenadoriaId);
+
+            const foundInChildren = findSubsetorWithCoordenadoria(
+                subsetor.subsetores,
+                coordenadoriaId,
+                [...currentPath, { type: 'subsetor', item: subsetor }]
+            );
+
             if (foundInChildren) {
-                return [{ type: 'subsetor', item: subsetor }, ...foundInChildren];
+                return foundInChildren;
             }
         }
         return null;
@@ -155,35 +160,33 @@ function EditUsersForm({
         
         // Atualiza os estados correspondentes baseados no caminho
         if (type === 'coordenadoria') {
-            // Encontrar o setor e subsetor pai
             const setorItem = newPath.find(p => p.type === 'setor');
-            const subsetorItem = newPath.find(p => p.type === 'subsetor');
-            
+            const subsetorItems = newPath.filter(p => p.type === 'subsetor');
+
             if (setorItem) {
                 setSetorSelecionado(setorItem.item);
             }
-            
-            if (subsetorItem) {
-                setSubsetorSelecionado([subsetorItem.item]);
-            } else {
-                setSubsetorSelecionado([]);
-            }
-            
+
+            setSubsetorSelecionado(subsetorItems.map(s => s.item));
             setCoordenadoriaSelecionada(item);
         } else if (type === 'subsetor') {
             const setorItem = newPath.find(p => p.type === 'setor');
-            
+            const subsetorItems = newPath.filter(p => p.type === 'subsetor');
+
             if (setorItem) {
                 setSetorSelecionado(setorItem.item);
             }
-            
-            setSubsetorSelecionado([item]);
+            setSubsetorSelecionado(subsetorItems.map(s => s.item));
             setCoordenadoriaSelecionada(null);
         } else if (type === 'setor') {
             setSetorSelecionado(item);
             setSubsetorSelecionado([]);
             setCoordenadoriaSelecionada(null);
         }
+
+        // Resetar os filtros de pesquisa após selecionar um item
+        setSearchTerm("");
+        setActiveFilter("all");
     };
 
     const getAllSubsetores = (subsetores) => {
@@ -423,30 +426,42 @@ function EditUsersForm({
         if (activeFilter !== 'all' && activeFilter !== 'coordenadorias') return null;
         
         let coordenadoriasToRender = [];
-        
+        let totalCoordenadorias = 0;
+
         if (activeFilter === 'coordenadorias') {
             coordenadoriasToRender = getPaginatedItems(filteredItems, currentPageCoordenadorias);
+            totalCoordenadorias = filteredItems.length;
         } else {
+            let allCoordenadorias = [];
+
             if (subsetorSelecionado.length > 0) {
-                coordenadoriasToRender = subsetorSelecionado.flatMap(s => s.coordenadorias || []);
+                const ultimoSubsetor = subsetorSelecionado[subsetorSelecionado.length - 1];
+
+                if (ultimoSubsetor.coordenadorias && ultimoSubsetor.coordenadorias.length > 0) {
+                    allCoordenadorias = ultimoSubsetor.coordenadorias;
+                } else {
+                    // Se o subsetor não tem coordenadorias, não mostra nada
+                    return null;
+                }
             } else if (setorSelecionado) {
-                coordenadoriasToRender = setorSelecionado.coordenadorias || [];
+                allCoordenadorias = setorSelecionado.coordenadorias || [];
             } else {
-                coordenadoriasToRender = getAllCoordenadorias(setoresOrganizados);
+                allCoordenadorias = getAllCoordenadorias(setoresOrganizados);
             }
-            
-            coordenadoriasToRender = getPaginatedItems(
-                coordenadoriasToRender.filter(coord => 
-                    !searchTerm || itemMatchesSearch(coord, searchTerm)
-                ),
-                currentPageCoordenadorias
+
+            const filteredCoordenadorias = allCoordenadorias.filter(coord =>
+                !searchTerm || itemMatchesSearch(coord, searchTerm)
             );
+
+            totalCoordenadorias = filteredCoordenadorias.length;
+            coordenadoriasToRender = getPaginatedItems(filteredCoordenadorias, currentPageCoordenadorias);
         }
 
         if (coordenadoriasToRender.length === 0) return null;
 
-        const parentName = subsetorSelecionado.length > 0 ? 
-            subsetorSelecionado[0].nome : 
+        const totalPagesCoordenadorias = Math.ceil(totalCoordenadorias / ITEMS_PER_PAGE);
+        const parentName = subsetorSelecionado.length > 0 ?
+            subsetorSelecionado[subsetorSelecionado.length - 1].nome :
             setorSelecionado?.nome || 'Todas';
 
         return (
@@ -476,7 +491,7 @@ function EditUsersForm({
                         </Form.Group>
                     </Col>
                 </Row>
-                {renderPagination('coordenadorias')}
+                {totalPagesCoordenadorias > 1 && renderPagination('coordenadorias', totalPagesCoordenadorias)}
             </>
         );
     };
