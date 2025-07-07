@@ -101,15 +101,15 @@ function UserEdit({ funcionario, handleCloseModal }) {
   const [nameCheckTimer, setNameCheckTimer] = useState(null);
   const [initialNatureza, setInitialNatureza] = useState(funcionario?.natureza || null);
 
-const checkNameAvailability = useCallback(async (name) => {
-  const normalizedNewName = name.trim().toUpperCase();
-  const normalizedOriginalName = funcionario?.nome?.trim().toUpperCase();
+  const checkNameAvailability = useCallback(async (name) => {
+    const normalizedNewName = name.trim().toUpperCase();
+    const normalizedOriginalName = funcionario?.nome?.trim().toUpperCase();
 
-  // Se vazio ou igual ao nome original, pula a verificação
-  if (!normalizedNewName || normalizedNewName === normalizedOriginalName) {
-    setNameAvailable(true);
-    return;
-  }
+    // Se vazio ou igual ao nome original, pula a verificação
+    if (!normalizedNewName || normalizedNewName === normalizedOriginalName) {
+      setNameAvailable(true);
+      return;
+    }
 
     setNameCheckLoading(true);
     try {
@@ -146,20 +146,20 @@ const checkNameAvailability = useCallback(async (name) => {
   }, [newUser.nome]);
 
   // Atualizar validação quando o nome muda
-useEffect(() => {
-  if (newUser.nome && newUser.nome !== funcionario?.nome) {
-    setErrors(prev => ({
-      ...prev,
-      nome: !nameAvailable ? "Este nome já está em uso" : null
-    }));
-  } else {
-    // Limpa o erro se o nome for igual ao original
-    setErrors(prev => ({
-      ...prev,
-      nome: null
-    }));
-  }
-}, [nameAvailable, newUser.nome, funcionario?.nome]);
+  useEffect(() => {
+    if (newUser.nome && newUser.nome !== funcionario?.nome) {
+      setErrors(prev => ({
+        ...prev,
+        nome: !nameAvailable ? "Este nome já está em uso" : null
+      }));
+    } else {
+      // Limpa o erro se o nome for igual ao original
+      setErrors(prev => ({
+        ...prev,
+        nome: null
+      }));
+    }
+  }, [nameAvailable, newUser.nome, funcionario?.nome]);
 
 
   // Inicializa os dados do funcionário
@@ -235,24 +235,6 @@ useEffect(() => {
       }
     }
   }, [newUser.funcao, cargos]);
-
-  // Reseta o cargo quando o salário é alterado
-  useEffect(() => {
-    if (newUser.salarioBruto) {
-      setNewUser((prev) => ({ ...prev, funcao: "" }));
-    }
-  }, [newUser.salarioBruto]);
-
-  // Reseta salário e cargo quando a natureza é alterada
-  useEffect(() => {
-    if (newUser.natureza && newUser.natureza !== "COMISSIONADO") {
-      setNewUser((prev) => ({
-        ...prev,
-        salarioBruto: funcionario?.salarioBruto || "",
-        funcao: funcionario?.funcao || "",
-      }));
-    }
-  }, [newUser.natureza]);
 
   const validateFields = useCallback(() => {
     const newErrors = {};
@@ -334,8 +316,6 @@ useEffect(() => {
   }, [newUser, referenciasRegistradas, nameAvailable]);
 
 useEffect(() => {
-
-    // Só executa se a natureza mudou e é diferente de null/undefined
   if (!newUser.natureza) return;
 
   // Se for a primeira vez, guarda a natureza inicial
@@ -344,22 +324,18 @@ useEffect(() => {
     return;
   }
 
-  // Cria um objeto com as mudanças específicas para cada natureza
   const changes = {
     EFETIVO: {
       referencia: null,
       inicioContrato: null,
       fimContrato: null,
-      funcao:"",
+      funcao: "",
       salarioBruto: ""
-
     },
     TEMPORARIO: {
-      // Mantém os valores existentes ou usa padrão
       referencia: newUser.referencia || "",
-      funcao:"",
+      funcao: "",
       salarioBruto: ""
-
     },
     COMISSIONADO: {
       referencia: newUser.referencia || "",
@@ -368,23 +344,30 @@ useEffect(() => {
     }
   };
 
-  // Se estamos voltando para a natureza inicial, restauramos os valores originais
-  if (newUser.natureza === initialNatureza) {
-    setNewUser(prev => ({
+  // Função para lidar com a atualização do estado
+  const updateUser = () => {
+    if (newUser.natureza === initialNatureza) {
+      return {
+        referencia: funcionario?.referencia,
+        funcao: funcionario?.funcao,
+        salarioBruto: funcionario?.salarioBruto,
+        inicioContrato: funcionario?.inicioContrato,
+        fimContrato: funcionario?.fimContrato
+      };
+    } else {
+      return changes[newUser.natureza];
+    }
+  };
+
+  setNewUser(prev => {
+    const updatedUser = {
       ...prev,
-      referencia: funcionario?.referencia || prev.referencia,
-      funcao: funcionario?.funcao || prev.funcao,
-      salarioBruto: funcionario?.salarioBruto || prev.salarioBruto,
-      inicioContrato: funcionario?.inicioContrato || prev.inicioContrato,
-      fimContrato: funcionario?.fimContrato || prev.fimContrato
-    }));
-  } else {
-    // Se estamos mudando para uma nova natureza, aplicamos os resets necessários
-    setNewUser(prev => ({
-      ...prev,
-      ...changes[newUser.natureza]
-    }));
-  }
+      ...updateUser()
+    };
+    
+    return updatedUser;
+  });
+
 }, [newUser.natureza, initialNatureza, funcionario]);
 
   const handleFileChange = (e) => {
@@ -415,13 +398,15 @@ useEffect(() => {
       formData.append("secretaria", newUser.secretaria);
       formData.append("funcao", newUser.funcao);
       formData.append("natureza", newUser.natureza);
-      formData.append("referencia", newUser.referencia);
+      formData.append("referencia", newUser.referencia || "");
       formData.append("redesSociais", JSON.stringify(redesValidas) || "");
       formData.append("salarioBruto", newUser.salarioBruto);
       formData.append("cidade", newUser.cidade);
       formData.append("endereco", newUser.endereco);
       formData.append("bairro", newUser.bairro);
       formData.append("telefone", newUser.telefone);
+      formData.append("inicioContrato", newUser.inicioContrato || '');
+      formData.append("fimContrato", newUser.fimContrato || '');
       if (sendFile) {
         formData.append("arquivo", sendFile);
       }
@@ -528,7 +513,7 @@ useEffect(() => {
             </Form.Label>
             <Form.Control
               type="date"
-              value={newUser.inicioContrato || ""}
+              value={newUser.inicioContrato ? new Date(newUser.inicioContrato).toISOString().split('T')[0] : ''}
               onChange={(e) =>
                 setNewUser({ ...newUser, inicioContrato: e.target.value })
               }
@@ -547,7 +532,7 @@ useEffect(() => {
             </Form.Label>
             <Form.Control
               type="date"
-              value={newUser.fimContrato || ""}
+              value={newUser.fimContrato ? new Date(newUser.fimContrato).toISOString().split('T')[0] : ''}
               onChange={(e) =>
                 setNewUser({ ...newUser, fimContrato: e.target.value })
               }
@@ -620,7 +605,6 @@ useEffect(() => {
       </Col>
     );
   };
-
 
   return (
     <Form onSubmit={handleSubmit}>
