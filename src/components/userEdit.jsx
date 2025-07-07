@@ -11,8 +11,6 @@ import {
   Modal,
   Spinner,
   Dropdown,
-  Card,
-  Accordion,
   Badge
 } from "react-bootstrap";
 import {
@@ -24,7 +22,8 @@ import {
   FaMapMarkerAlt,
   FaLink,
   FaFileUpload,
-  FaIdCard
+  FaIdCard,
+  FaCalendarAlt
 } from "react-icons/fa";
 import { API_BASE_URL } from "../utils/apiConfig";
 
@@ -94,9 +93,74 @@ function UserEdit({ funcionario, handleCloseModal }) {
   const [showCargoDropdown, setShowCargoDropdown] = useState(false);
   const [showNaturezaDropdown, setShowNaturezaDropdown] = useState(false);
   const { addFuncionarios, addFuncionariosPath } = useAuth();
-  const currentSetorId = subPath ? subPath.split("/").pop() : setorId;
+  const prevNatureza = useRef(funcionario?.natureza || null);
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
+  const [nameAvailable, setNameAvailable] = useState(true);
+  const [nameCheckLoading, setNameCheckLoading] = useState(false);
+  const [nameCheckTimer, setNameCheckTimer] = useState(null);
+  const [initialNatureza, setInitialNatureza] = useState(funcionario?.natureza || null);
+
+const checkNameAvailability = useCallback(async (name) => {
+  const normalizedNewName = name.trim().toUpperCase();
+  const normalizedOriginalName = funcionario?.nome?.trim().toUpperCase();
+
+  // Se vazio ou igual ao nome original, pula a verificação
+  if (!normalizedNewName || normalizedNewName === normalizedOriginalName) {
+    setNameAvailable(true);
+    return;
+  }
+
+    setNameCheckLoading(true);
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/funcionarios/check-name`,
+        { params: { name } }
+      );
+      setNameAvailable(response.data.available);
+    } catch (error) {
+      console.error("Erro ao verificar nome:", error);
+      setNameAvailable(true); // Assume disponível em caso de erro
+    } finally {
+      setNameCheckLoading(false);
+    }
+  }, [funcionario?.nome]);
+
+  // Debounce para verificação do nome
+  useEffect(() => {
+    if (nameCheckTimer) {
+      clearTimeout(nameCheckTimer);
+    }
+
+    const timer = setTimeout(() => {
+      checkNameAvailability(newUser.nome);
+    }, 500);
+
+    setNameCheckTimer(timer);
+
+    return () => {
+      if (nameCheckTimer) {
+        clearTimeout(nameCheckTimer);
+      }
+    };
+  }, [newUser.nome]);
+
+  // Atualizar validação quando o nome muda
+useEffect(() => {
+  if (newUser.nome && newUser.nome !== funcionario?.nome) {
+    setErrors(prev => ({
+      ...prev,
+      nome: !nameAvailable ? "Este nome já está em uso" : null
+    }));
+  } else {
+    // Limpa o erro se o nome for igual ao original
+    setErrors(prev => ({
+      ...prev,
+      nome: null
+    }));
+  }
+}, [nameAvailable, newUser.nome, funcionario?.nome]);
+
 
   // Inicializa os dados do funcionário
   useEffect(() => {
@@ -193,32 +257,135 @@ function UserEdit({ funcionario, handleCloseModal }) {
   const validateFields = useCallback(() => {
     const newErrors = {};
 
-    if (!newUser.nome?.trim()) newErrors.nome = "O campo Nome é obrigatório";
-    if (!newUser.natureza) newErrors.natureza = "O campo Natureza é obrigatório";
-    
-    if (!newUser.referencia?.trim()) {
-      newErrors.referencia = "O campo Referência é obrigatório";
-    } else {
-      const isReferenciaValid = referenciasRegistradas.some(
-        (referencia) =>
-          referencia.name.toLowerCase() === newUser.referencia.toLowerCase()
-      );
-      if (!isReferenciaValid) {
-        newErrors.referencia = "A referência informada não é válida";
+    if (!newUser.nome?.trim()) {
+      newErrors.nome = "O campo Nome é obrigatório";
+    } else if (!nameAvailable && newUser.nome !== funcionario?.nome) {
+      newErrors.nome = "Este nome já está em uso";
+    }
+
+    if (!newUser.natureza) {
+      newErrors.natureza = "O campo Natureza é obrigatório";
+    }
+
+    // Regras específicas por natureza
+    if (newUser.natureza === "EFETIVO") {
+      // Efetivo não tem referência
+      setNewUser(prev => ({ ...prev, referencia: null }));
+
+      if (!newUser.funcao?.trim()) {
+        newErrors.funcao = "O campo Função é obrigatório para efetivos";
+      }
+
+      if (!newUser.salarioBruto) {
+        newErrors.salarioBruto = "O campo Salário Bruto é obrigatório";
       }
     }
+    else if (newUser.natureza === "TEMPORARIO") {
+      // Temporário: referência é opcional
+      if (newUser.referencia?.trim()) {
+        const isReferenciaValid = referenciasRegistradas.some(
+          (referencia) =>
+            referencia.name.toLowerCase() === newUser.referencia.toLowerCase()
+        );
+        if (!isReferenciaValid) {
+          newErrors.referencia = "A referência informada não é válida";
+        }
+      }
 
-    if (!newUser.salarioBruto) {
-      newErrors.salarioBruto = "O campo Salário Bruto é obrigatório";
+      if (!newUser.salarioBruto) {
+        newErrors.salarioBruto = "O campo Salário Bruto é obrigatório";
+      }
+
+      if (!newUser.inicioContrato) {
+        newErrors.inicioContrato = "Data de início do contrato é obrigatória";
+      }
+
+      if (!newUser.fimContrato) {
+        newErrors.fimContrato = "Data de término do contrato é obrigatória";
+      } else if (newUser.inicioContrato && new Date(newUser.fimContrato) <= new Date(newUser.inicioContrato)) {
+        newErrors.fimContrato = "Data de término deve ser posterior à data de início";
+      }
     }
+    else if (newUser.natureza === "COMISSIONADO") {
+      // Validações existentes para comissionado
+      if (!newUser.referencia?.trim()) {
+        newErrors.referencia = "O campo Referência é obrigatório";
+      } else {
+        const isReferenciaValid = referenciasRegistradas.some(
+          (referencia) =>
+            referencia.name.toLowerCase() === newUser.referencia.toLowerCase()
+        );
+        if (!isReferenciaValid) {
+          newErrors.referencia = "A referência informada não é válida";
+        }
+      }
 
-    if (newUser.natureza === "COMISSIONADO" && !newUser.funcao) {
-      newErrors.funcao = "O campo Cargo é obrigatório";
+      if (!newUser.salarioBruto) {
+        newErrors.salarioBruto = "O campo Salário Bruto é obrigatório";
+      }
+
+      if (!newUser.funcao) {
+        newErrors.funcao = "O campo Cargo é obrigatório";
+      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [newUser, referenciasRegistradas]);
+  }, [newUser, referenciasRegistradas, nameAvailable]);
+
+useEffect(() => {
+
+    // Só executa se a natureza mudou e é diferente de null/undefined
+  if (!newUser.natureza) return;
+
+  // Se for a primeira vez, guarda a natureza inicial
+  if (!initialNatureza) {
+    setInitialNatureza(newUser.natureza);
+    return;
+  }
+
+  // Cria um objeto com as mudanças específicas para cada natureza
+  const changes = {
+    EFETIVO: {
+      referencia: null,
+      inicioContrato: null,
+      fimContrato: null,
+      funcao:"",
+      salarioBruto: ""
+
+    },
+    TEMPORARIO: {
+      // Mantém os valores existentes ou usa padrão
+      referencia: newUser.referencia || "",
+      funcao:"",
+      salarioBruto: ""
+
+    },
+    COMISSIONADO: {
+      referencia: newUser.referencia || "",
+      funcao: "",
+      salarioBruto: ""
+    }
+  };
+
+  // Se estamos voltando para a natureza inicial, restauramos os valores originais
+  if (newUser.natureza === initialNatureza) {
+    setNewUser(prev => ({
+      ...prev,
+      referencia: funcionario?.referencia || prev.referencia,
+      funcao: funcionario?.funcao || prev.funcao,
+      salarioBruto: funcionario?.salarioBruto || prev.salarioBruto,
+      inicioContrato: funcionario?.inicioContrato || prev.inicioContrato,
+      fimContrato: funcionario?.fimContrato || prev.fimContrato
+    }));
+  } else {
+    // Se estamos mudando para uma nova natureza, aplicamos os resets necessários
+    setNewUser(prev => ({
+      ...prev,
+      ...changes[newUser.natureza]
+    }));
+  }
+}, [newUser.natureza, initialNatureza, funcionario]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -294,14 +461,14 @@ function UserEdit({ funcionario, handleCloseModal }) {
     }
   };
 
-  const filteredSalarios = useMemo(() => 
+  const filteredSalarios = useMemo(() =>
     salarios.filter((salario) =>
       salario.toString().toLowerCase().includes(searchSalario.toLowerCase())
     ),
     [salarios, searchSalario]
   );
 
-  const filteredCargos = useMemo(() => 
+  const filteredCargos = useMemo(() =>
     cargos.filter((cargo) =>
       cargo.cargo.toLowerCase().includes(searchCargo.toLowerCase())
     ),
@@ -314,7 +481,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
 
   const groupCargosBySimbologia = useCallback((cargos) => {
     const grouped = {};
-    
+
     cargos.forEach(cargo => {
       if (!grouped[cargo.simbologia]) {
         grouped[cargo.simbologia] = {
@@ -325,11 +492,11 @@ function UserEdit({ funcionario, handleCloseModal }) {
       }
       grouped[cargo.simbologia].cargos.push(cargo);
     });
-    
+
     return Object.values(grouped);
   }, []);
 
-  const groupedCargos = useMemo(() => 
+  const groupedCargos = useMemo(() =>
     groupCargosBySimbologia(filteredCargos),
     [filteredCargos, groupCargosBySimbologia]
   );
@@ -346,6 +513,114 @@ function UserEdit({ funcionario, handleCloseModal }) {
     updatedRedes.splice(index, 1);
     setNewUser({ ...newUser, redesSociais: updatedRedes });
   };
+
+  // Adicionar campos de data para temporários
+  const renderTemporaryFields = () => {
+    if (newUser.natureza !== "TEMPORARIO") return null;
+
+    return (
+      <Row>
+        <Col md={6}>
+          <Form.Group className="mb-3" controlId="formInicioContrato">
+            <Form.Label>
+              <FaCalendarAlt style={iconStyle} />
+              Início do Contrato
+            </Form.Label>
+            <Form.Control
+              type="date"
+              value={newUser.inicioContrato || ""}
+              onChange={(e) =>
+                setNewUser({ ...newUser, inicioContrato: e.target.value })
+              }
+              isInvalid={!!errors.inicioContrato}
+            />
+            <Form.Control.Feedback type="invalid" style={errorStyle}>
+              {errors.inicioContrato}
+            </Form.Control.Feedback>
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3" controlId="formFimContrato">
+            <Form.Label>
+              <FaCalendarAlt style={iconStyle} />
+              Término do Contrato
+            </Form.Label>
+            <Form.Control
+              type="date"
+              value={newUser.fimContrato || ""}
+              onChange={(e) =>
+                setNewUser({ ...newUser, fimContrato: e.target.value })
+              }
+              isInvalid={!!errors.fimContrato}
+            />
+            <Form.Control.Feedback type="invalid" style={errorStyle}>
+              {errors.fimContrato}
+            </Form.Control.Feedback>
+          </Form.Group>
+        </Col>
+      </Row>
+    );
+  };
+
+  // Renderização do campo de referência condicional
+  const renderReferenceField = () => {
+    if (newUser.natureza === "EFETIVO") return null;
+
+    return (
+      <Col md={6}>
+        <Form.Group className="mb-3" controlId="formReferência">
+          <Form.Label>Referência</Form.Label>
+          <Form.Control
+            type="text"
+            placeholder={newUser.natureza === "TEMPORARIO" ? "Referência (opcional)" : "Digite a referência"}
+            value={newUser.referencia || ""}
+            onChange={(e) =>
+              setNewUser({ ...newUser, referencia: e.target.value })
+            }
+            list="referencias-list"
+            isInvalid={!!errors.referencia}
+            autoComplete="off"
+            required={newUser.natureza === "COMISSIONADO"}
+          />
+          <datalist id="referencias-list">
+            {filteredReferencias.map((referencia, index) => (
+              <option key={index} value={referencia.name} />
+            ))}
+          </datalist>
+          <Form.Control.Feedback type="invalid" style={errorStyle}>
+            {errors.referencia}
+          </Form.Control.Feedback>
+        </Form.Group>
+      </Col>
+    );
+  };
+
+  // Renderização do campo de função condicional
+  const renderFunctionField = () => {
+    if (newUser.natureza === "COMISSIONADO") return null;
+
+    return (
+      <Col md={6}>
+        <Form.Group className="mb-3" controlId="formFuncao">
+          <Form.Label>Função</Form.Label>
+          <Form.Control
+            type="text"
+            placeholder="Digite a função"
+            value={newUser.funcao || ""}
+            onChange={(e) =>
+              setNewUser({ ...newUser, funcao: e.target.value })
+            }
+            isInvalid={!!errors.funcao}
+            required={newUser.natureza === "EFETIVO"}
+          />
+          <Form.Control.Feedback type="invalid" style={errorStyle}>
+            {errors.funcao}
+          </Form.Control.Feedback>
+        </Form.Group>
+      </Col>
+    );
+  };
+
 
   return (
     <Form onSubmit={handleSubmit}>
@@ -443,31 +718,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
       </div>
 
       <Row>
-        <Col md={6}>
-          <Form.Group className="mb-3" controlId="formReferência">
-            <Form.Label>Referência</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Digite a referência"
-              value={newUser?.referencia || ""}
-              onChange={(e) =>
-                setNewUser({ ...newUser, referencia: e.target.value })
-              }
-              list="referencias-list"
-              isInvalid={!!errors.referencia}
-              autoComplete="off"
-              required
-            />
-            <datalist id="referencias-list">
-              {filteredReferencias.map((referencia, index) => (
-                <option key={index} value={referencia.name} />
-              ))}
-            </datalist>
-            <Form.Control.Feedback type="invalid" style={errorStyle}>
-              {errors.referencia}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
+        {renderReferenceField()}
 
         <Col md={6}>
           <Form.Group className="mb-3" controlId="formNatureza">
@@ -484,7 +735,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
               >
                 {newUser.natureza
                   ? newUser.natureza.charAt(0).toUpperCase() +
-                    newUser.natureza.slice(1).toLowerCase()
+                  newUser.natureza.slice(1).toLowerCase()
                   : "Selecione a natureza"}
               </Dropdown.Toggle>
               <Dropdown.Menu className="w-100">
@@ -534,9 +785,9 @@ function UserEdit({ funcionario, handleCloseModal }) {
                   >
                     {newUser.salarioBruto
                       ? `R$ ${Number(newUser.salarioBruto).toLocaleString('pt-BR', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        })}`
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}`
                       : "Selecione o salário"}
                   </Dropdown.Toggle>
                   <Dropdown.Menu className="w-100">
@@ -603,11 +854,11 @@ function UserEdit({ funcionario, handleCloseModal }) {
                           autoFocus
                         />
                       </div>
-                      
+
                       {groupedCargos.length > 0 ? (
                         groupedCargos.map((grupo, index) => (
                           <React.Fragment key={index}>
-                            <Dropdown.Header 
+                            <Dropdown.Header
                               className={`d-flex justify-content-between ${grupo.limite === 0 ? 'bg-danger-light' : 'bg-success-light'}`}
                             >
                               <span>Simbologia: {grupo.simbologia}</span>
@@ -615,7 +866,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
                                 Limite: {grupo.limite}
                               </Badge>
                             </Dropdown.Header>
-                            
+
                             {grupo.cargos.map((cargo, cargoIndex) => (
                               <Dropdown.Item
                                 key={`${index}-${cargoIndex}`}
@@ -648,6 +899,37 @@ function UserEdit({ funcionario, handleCloseModal }) {
             )}
           </Row>
         </>
+      )}
+
+      {renderFunctionField()}
+
+      {renderTemporaryFields()}
+
+      {/* Renderização condicional do Salário Bruto para TEMPORARIO e EFETIVO */}
+      {(newUser.natureza === "TEMPORARIO" || newUser.natureza === "EFETIVO") && (
+        <Row>
+          <Col md={6}>
+            <Form.Group className="mb-3" controlId="formSalario">
+              <Form.Label>
+                <FaDollarSign style={iconStyle} />
+                Salário Bruto
+              </Form.Label>
+              <Form.Control
+                type="number"
+                placeholder="Digite o salário bruto"
+                value={newUser.salarioBruto || ""}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, salarioBruto: e.target.value })
+                }
+                isInvalid={!!errors.salarioBruto}
+                required
+              />
+              <Form.Control.Feedback type="invalid" style={errorStyle}>
+                {errors.salarioBruto}
+              </Form.Control.Feedback>
+            </Form.Group>
+          </Col>
+        </Row>
       )}
 
       {/* Seção: Redes Sociais */}

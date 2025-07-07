@@ -581,16 +581,18 @@ function Step2Form({
     if (newUser.foto) formData.append("foto", newUser.foto);
     formData.append("secretaria", setorSelecionado?.nome || '');
     formData.append("natureza", newUser.natureza);
-    formData.append("referencia", newUser.referencia);
+    formData.append("referencia", newUser.referencia ||'');
     formData.append("salarioBruto", newUser.salarioBruto || 0);
     formData.append("salarioLiquido", Number(newUser.salarioLiquido || 0));
     formData.append("funcao", newUser.funcao);
-    formData.append("tipo", newUser.tipo);
+    formData.append("tipo", newUser.tipo || '');
     formData.append("observacoes", JSON.stringify(newUser.observacoes) || []);
     formData.append("coordenadoria", newUser.coordenadoria);
     formData.append("endereco", newUser.endereco);
     formData.append("bairro", newUser.bairro);
     formData.append("telefone", newUser.telefone);
+    formData.append("inicioContrato", newUser.inicioContrato || '');
+    formData.append("fimContrato", newUser.fimContrato || '');
     if (newUser.arquivo) formData.append("arquivo", newUser.arquivo);
     formData.append("redesSociais", JSON.stringify(newUser.redesSociais));
 

@@ -545,7 +545,8 @@ function Step1Form({
                         salarioBruto: "",
                         funcao: "",
                         inicioContrato: "",
-                        fimContrato: ""
+                        fimContrato: "",
+                        tipo: "",
                       });
                       setShowNaturezaDropdown(false);
                     }}

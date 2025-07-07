@@ -37,16 +37,19 @@ function Step2Form({
       }
       formData.append("secretaria", secretaria);
       formData.append("natureza", newUser.natureza);
-      formData.append("referencia", newUser.referencia);
+      formData.append("referencia", newUser.referencia || '');
       formData.append("salarioBruto", newUser.salarioBruto || 0);
       formData.append("funcao", newUser.funcao);
-      formData.append("tipo", newUser.tipo);
+      formData.append("tipo", newUser.tipo || '');
       formData.append('observacoes', JSON.stringify(newUser.observacoes) || []);
       formData.append("coordenadoria", coordenadoriaId);
       formData.append("cidade", newUser.cidade || '');
       formData.append("endereco", newUser.endereco || '');
       formData.append("bairro", newUser.bairro || '');
       formData.append("telefone", newUser.telefone || '');
+      formData.append("inicioContrato", newUser.inicioContrato || '');
+      formData.append("fimContrato", newUser.fimContrato || '');
+
       if (newUser.arquivo) {
         formData.append("arquivo", newUser.arquivo);
       }
@@ -83,7 +86,7 @@ function Step2Form({
     event.preventDefault();
     setIsLoading(true);
     setError(null);
-    
+
     if (coordenadoriaId) {
       submitUserData();
     } else {
@@ -195,7 +198,7 @@ function Step2Form({
             </Col>
 
             <Col md={6} className="d-flex align-items-end">
-              <ObservationHistoryButton 
+              <ObservationHistoryButton
                 onClick={() => setShowModalObs(true)}
                 className="w-100"
               />
@@ -220,15 +223,15 @@ function Step2Form({
               <div key={index} className="mb-3 p-3 border rounded">
                 <div className="d-flex justify-content-between mb-2">
                   <span className="text-muted">Rede Social #{index + 1}</span>
-                  <Button 
-                    variant="outline-danger" 
+                  <Button
+                    variant="outline-danger"
                     size="sm"
                     onClick={() => removeSocialMedia(index)}
                   >
                     <FaTrash />
                   </Button>
                 </div>
-                
+
                 <Form.Control
                   type="text"
                   placeholder="Ex: LinkedIn, Instagram, etc."
@@ -257,7 +260,7 @@ function Step2Form({
                 </div>
               </div>
             ))}
-            
+
             <Button
               variant="outline-primary"
               onClick={() =>
