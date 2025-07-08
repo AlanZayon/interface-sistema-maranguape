@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Card, Button, Modal, Form, Dropdown, Container, Spinner, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import ConfirmDeleteModal from './ConfirmDeleteModal'; 
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/apiConfig';
@@ -133,7 +133,7 @@ function MainScreen() {
       alert('O nome do setor não pode estar vazio!');
       return;
     }
-    
+
     setIsCreating(true);
     try {
       await mutation.mutateAsync({ nome: newSetorName, tipo: 'Setor' });
@@ -153,7 +153,7 @@ function MainScreen() {
       return;
     }
     try {
-      const dataEditedName =await updateMutation.mutateAsync({ id, nome: editedName });
+      const dataEditedName = await updateMutation.mutateAsync({ id, nome: editedName });
       setSetores((prev) =>
         prev.map((setor) => (setor._id === id ? { ...setor, nome: dataEditedName.nome } : setor))
       );
@@ -184,8 +184,8 @@ function MainScreen() {
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">Setores</h2>
-        <Button 
-          variant="primary" 
+        <Button
+          variant="primary"
           onClick={() => setShowModal(true)}
           className="d-flex align-items-center gap-2"
         >
@@ -224,7 +224,7 @@ function MainScreen() {
                       >
                         <FaEdit /> Renomear
                       </Dropdown.Item>
-                      <Dropdown.Item 
+                      <Dropdown.Item
                         className="d-flex align-items-center gap-2 text-danger"
                         onClick={() => handleDeleteSetor(setor._id)}
                       >
@@ -256,16 +256,16 @@ function MainScreen() {
                     className="mb-2"
                   />
                   <div className="d-flex gap-2">
-                    <Button 
-                      variant="success" 
-                      size="sm" 
+                    <Button
+                      variant="success"
+                      size="sm"
                       onClick={() => handleSaveRename(setor._id)}
                     >
                       Salvar
                     </Button>
-                    <Button 
-                      variant="outline-secondary" 
-                      size="sm" 
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
                       onClick={() => setEditingSetorId(null)}
                     >
                       Cancelar
@@ -282,6 +282,8 @@ function MainScreen() {
         showModal={showDeleteModal}
         handleClose={handleCloseDeleteModal}
         handleConfirmDelete={handleConfirmDelete}
+        entityId={setorToDelete}
+        entityType="Setor"
       />
 
       <Modal show={showModal} onHide={() => !isCreating && setShowModal(false)} centered>
@@ -306,15 +308,15 @@ function MainScreen() {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button 
-            variant="outline-secondary" 
+          <Button
+            variant="outline-secondary"
             onClick={() => setShowModal(false)}
             disabled={isCreating}
           >
             Cancelar
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={handleCreateSetor}
             disabled={isCreating || !newSetorName.trim()}
           >

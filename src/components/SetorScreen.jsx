@@ -411,6 +411,12 @@ function SetorScreen() {
     setShowSelectionControlsEdit(!showSelectionControlsEdit);
   };
 
+  const getEntityType = (id) => {
+  if (subSetores.some(s => s._id === id)) return 'Subsetor';
+  if (coordenadorias.some(c => c._id === id)) return 'Coordenadoria';
+  return 'Setor'; // Caso seja o setor principal
+};
+
   if (loading) {
     return (
       <Container
@@ -693,11 +699,13 @@ function SetorScreen() {
 </div>
 
       {/* Modals */}
-      <ConfirmDeleteModal
-        showModal={showDeleteModal}
-        handleClose={handleCloseDeleteModal}
-        handleConfirmDelete={handleConfirmDelete}
-      />
+<ConfirmDeleteModal
+  showModal={showDeleteModal}
+  handleClose={handleCloseDeleteModal}
+  handleConfirmDelete={handleConfirmDelete}
+  entityId={setorToDelete}
+  entityType={getEntityType(setorToDelete)} // Função para determinar o tipo
+/>
 
       {/* Create Subsetor Modal */}
       <Modal
