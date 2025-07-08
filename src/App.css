@@ -263,7 +263,9 @@
     border-left: 4px solid #FF9800;
 }
 
-
+.contract-info {
+    border-left: 4px solid #be2f2f;
+}
 
 
 @media (max-width: 768px) {

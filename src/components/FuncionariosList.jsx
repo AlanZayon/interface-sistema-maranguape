@@ -50,6 +50,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
       max: Number.MAX_SAFE_INTEGER,
     },
     bairro: [],
+    inicioContrato: null,
+    fimContrato: null
   });
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -139,6 +141,51 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     setShowModalSingleEdit(false);
   };
 
+const handleInicioContratoChange = (date) => {
+  setActiveFilters(prev => {
+    const newInicio = date ? new Date(date.setHours(0, 0, 0, 0)).toISOString() : null;
+    
+    // Validação para garantir que a data inicial não seja depois da data final
+    const newFim = prev.fimContrato && newInicio > prev.fimContrato ? null : prev.fimContrato;
+    
+    return { 
+      ...prev, 
+      inicioContrato: newInicio,
+      fimContrato: newFim
+    };
+  });
+};
+
+const handleFimContratoChange = (date) => {
+  setActiveFilters(prev => {
+    const newFim = date ? new Date(date.setHours(23, 59, 59, 999)).toISOString() : null;
+    
+    // Validação para garantir que a data final não seja antes da data inicial
+    const newInicio = prev.inicioContrato && newFim < prev.inicioContrato ? null : prev.inicioContrato;
+    
+    return { 
+      ...prev, 
+      fimContrato: newFim,
+      inicioContrato: newInicio
+    };
+  });
+};
+
+const handleClearAllFilters = () => {
+  setActiveFilters({
+    natureza: [],
+    funcao: [],
+    bairro: [],
+    referencia: [],
+    salarioBruto: {
+      min: Math.min(...todosSalariosBrutos),
+      max: Math.max(...todosSalariosBrutos),
+    },
+    inicioContrato: null,
+    fimContrato: null,
+  });
+};
+
   const sortFuncionariosAlphabetically = (funcionarios) => {
     return [...funcionarios].sort((a, b) => {
       const nomeA = a.nome.toUpperCase();
@@ -153,38 +200,45 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     });
   };
 
-  const applyFilters = (funcionarios) => {
-    const allFuncionarios = Array.isArray(funcionarios)
-      ? funcionarios
-      : Object.values(funcionarios || {}).flat();
+const applyFilters = (funcionarios) => {
+  const allFuncionarios = Array.isArray(funcionarios)
+    ? funcionarios
+    : Object.values(funcionarios || {}).flat();
 
-    const filtered = allFuncionarios.filter((funcionario) => {
-      const salarioBrutoMin = validateBounds(
-        activeFilters.salarioBruto.min,
-        Number.MIN_SAFE_INTEGER
-      );
-      const salarioBrutoMax = validateBounds(
-        activeFilters.salarioBruto.max,
-        Number.MAX_SAFE_INTEGER
-      );
+  const filtered = allFuncionarios.filter((funcionario) => {
+    const salarioBrutoMin = validateBounds(
+      activeFilters.salarioBruto.min,
+      Number.MIN_SAFE_INTEGER
+    );
+    const salarioBrutoMax = validateBounds(
+      activeFilters.salarioBruto.max,
+      Number.MAX_SAFE_INTEGER
+    );
 
-      return (
-        (activeFilters.natureza.length === 0 ||
-          activeFilters.natureza.includes(funcionario.natureza)) &&
-        (activeFilters.funcao.length === 0 ||
-          activeFilters.funcao.includes(funcionario.funcao)) &&
-        (activeFilters.referencia.length === 0 ||
-          activeFilters.referencia.includes(funcionario.referencia)) &&
-        funcionario.salarioBruto >= salarioBrutoMin &&
-        funcionario.salarioBruto <= salarioBrutoMax &&
-        (activeFilters.bairro.length === 0 ||
-          activeFilters.bairro.includes(funcionario.bairro)) &&
-        (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId)
-      );
-    });
+    // Verifica filtros de contrato (apenas para temporários)
+    const contratoFilter = funcionario.natureza !== "TEMPORARIO" || (
+      (!activeFilters.inicioContrato || new Date(funcionario.inicioContrato) >= new Date(activeFilters.inicioContrato)) &&
+      (!activeFilters.fimContrato || new Date(funcionario.fimContrato) <= new Date(activeFilters.fimContrato))
+    );
 
-    return sortFuncionariosAlphabetically(filtered);
-  };
+    return (
+      (activeFilters.natureza.length === 0 ||
+        activeFilters.natureza.includes(funcionario.natureza)) &&
+      (activeFilters.funcao.length === 0 ||
+        activeFilters.funcao.includes(funcionario.funcao)) &&
+      (activeFilters.referencia.length === 0 ||
+        activeFilters.referencia.includes(funcionario.referencia)) &&
+      funcionario.salarioBruto >= salarioBrutoMin &&
+      funcionario.salarioBruto <= salarioBrutoMax &&
+      (activeFilters.bairro.length === 0 ||
+        activeFilters.bairro.includes(funcionario.bairro)) &&
+      (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId) &&
+      contratoFilter
+    );
+  });
+
+  return sortFuncionariosAlphabetically(filtered);
+};
 
   useEffect(() => {
     // Detecta se veio de uma pesquisa pela URL
@@ -540,7 +594,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
             <div className="info-card social-info my-2">
               <h3>Redes Sociais</h3>
               {Array.isArray(user.redesSociais) &&
-              user.redesSociais.length > 0 ? (
+                user.redesSociais.length > 0 ? (
                 <div className="social-links d-flex flex-column">
                   {user.redesSociais.map((social, index) => (
                     <a
@@ -557,6 +611,18 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
               ) : (
                 <p>Nenhuma rede social disponível.</p>
               )}
+            </div>
+          );
+        case "contrato":
+          return (
+            <div className="info-card contract-info my-2">
+              <h3>Contrato Temporário</h3>
+              <p>
+                <strong>Início do Contrato:</strong> {new Date(user.inicioContrato).toLocaleDateString()}
+              </p>
+              <p>
+                <strong>Fim do Contrato:</strong> {new Date(user.fimContrato).toLocaleDateString()}
+              </p>
             </div>
           );
         default:
@@ -578,13 +644,13 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
               {(showSelectionControlsDelete ||
                 showSelectionControlsEdit ||
                 showSelectionControlsReport) && (
-                <Form.Check
-                  type="checkbox"
-                  checked={selectedUsers.includes(user._id)}
-                  onChange={() => handleUserSelect(user._id)}
-                  className="user-checkbox"
-                />
-              )}
+                  <Form.Check
+                    type="checkbox"
+                    checked={selectedUsers.includes(user._id)}
+                    onChange={() => handleUserSelect(user._id)}
+                    className="user-checkbox"
+                  />
+                )}
               <p>
                 <strong>{user.nome}</strong>
               </p>
@@ -625,9 +691,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
                     onClick={() => toggleExpand(user._id)}
                   >
                     <i
-                      className={`fas fa-angle-${
-                        expandedCards.includes(user._id) ? "left" : "right"
-                      }`}
+                      className={`fas fa-angle-${expandedCards.includes(user._id) ? "left" : "right"
+                        }`}
                     ></i>
                   </Button>
                 </div>
@@ -643,9 +708,11 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
                 <p>
                   <strong>Natureza:</strong> {user.natureza}
                 </p>
-                <p>
-                  <strong>Referência:</strong> {user.referencia}
-                </p>
+                {user.referencia && (
+                  <p>
+                    <strong>Referência:</strong> {user.referencia}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -672,35 +739,35 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
                     {/* Navegação entre abas */}
                     <div className="d-flex justify-content-around mb-3">
                       <Button
-                        variant={
-                          activeTab === "financeiro"
-                            ? "primary"
-                            : "outline-primary"
-                        }
+                        variant={activeTab === "financeiro" ? "primary" : "outline-primary"}
                         onClick={() => setActiveTab("financeiro")}
+                        title="Financeiro"
                       >
-                        Financeiro
+                        <i className="fas fa-money-bill-wave"></i>
                       </Button>
                       <Button
-                        variant={
-                          activeTab === "localidade"
-                            ? "primary"
-                            : "outline-primary"
-                        }
+                        variant={activeTab === "localidade" ? "primary" : "outline-primary"}
                         onClick={() => setActiveTab("localidade")}
+                        title="Localidade"
                       >
-                        Localidade
+                        <i className="fas fa-map-marker-alt"></i>
                       </Button>
                       <Button
-                        variant={
-                          activeTab === "redes-sociais"
-                            ? "primary"
-                            : "outline-primary"
-                        }
+                        variant={activeTab === "redes-sociais" ? "primary" : "outline-primary"}
                         onClick={() => setActiveTab("redes-sociais")}
+                        title="Redes Sociais"
                       >
-                        Redes Sociais
+                        <i className="fas fa-share-alt"></i>
                       </Button>
+                      {user.natureza === "TEMPORARIO" && (
+                        <Button
+                          variant={activeTab === "contrato" ? "primary" : "outline-primary"}
+                          onClick={() => setActiveTab("contrato")}
+                          title="Contrato"
+                        >
+                          <i className="fas fa-file-contract"></i>
+                        </Button>
+                      )}
                     </div>
 
                     {/* Conteúdo da aba ativa */}
@@ -772,8 +839,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
             {departmentName === "mainscreen"
               ? "TODOS OS FUNCIONÁRIOS"
               : !departmentName
-              ? decodeURIComponent(searchTermFromURL)
-              : departmentName}
+                ? decodeURIComponent(searchTermFromURL)
+                : departmentName}
           </span>
         </h2>
       )}
@@ -792,6 +859,9 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
         toggleBairro={toggleBairro}
         toggleReferencia={toggleReferencia}
         handleSalarioBrutoChange={handleSalarioBrutoChange}
+        handleInicioContratoChange={handleInicioContratoChange}
+        handleFimContratoChange={handleFimContratoChange}
+        onClearAllFilters={handleClearAllFilters}
       />
 
       <div className="d-flex justify-content-between mx-3">
@@ -813,8 +883,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
                 showSelectionControlsEdit
                   ? "active m-1"
                   : showSelectionControlsDelete || showSelectionControlsReport
-                  ? "d-none"
-                  : "m-1"
+                    ? "d-none"
+                    : "m-1"
               }
             >
               <FaExchangeAlt />
@@ -829,8 +899,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
                 showSelectionControlsDelete
                   ? "active m-1"
                   : showSelectionControlsEdit || showSelectionControlsReport
-                  ? "d-none"
-                  : "m-1"
+                    ? "d-none"
+                    : "m-1"
               }
             >
               <FaTrash />
@@ -845,8 +915,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
                 showSelectionControlsReport
                   ? "active m-1"
                   : showSelectionControlsDelete || showSelectionControlsEdit
-                  ? "d-none"
-                  : "m-1"
+                    ? "d-none"
+                    : "m-1"
               }
             >
               <FaFile />
