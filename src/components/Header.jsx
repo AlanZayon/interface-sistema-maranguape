@@ -119,6 +119,7 @@ function Header() {
     axios
       .get(`${API_BASE_URL}/api/search/search-funcionarios?q=${searchQuery}`)
       .then((response) => {
+        console.log("Search results:", response.data);
         setFuncionariosPath(response.data);
         navigate(`/search/${searchQuery}`);
       })
@@ -231,50 +232,55 @@ function Header() {
         </div>
 
         {/* Center - Search (desktop) */}
-        {!isMobile && (
-          <div className="mx-4 flex-grow-1" style={{ maxWidth: "500px" }} ref={searchRef}>
-            <Form onSubmit={handleSearch}>
-              <InputGroup>
-                <Form.Control
-                  type="search"
-                  placeholder="Pesquisar funcionários..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  onFocus={() => searchQuery && setShowSuggestions(true)}
-                  className="border-end-0"
-                />
-                <Button 
-                  variant="light" 
-                  type="submit"
-                  disabled={searchLoading}
-                >
-                  {searchLoading ? (
-                    <Spinner animation="border" size="sm" />
-                  ) : (
-                    <FaSearch />
-                  )}
-                </Button>
-              </InputGroup>
-              
-              {showSuggestions && autocompleteResults.length > 0 && (
-                <ListGroup className="position-absolute w-100 mt-1 shadow" style={{ zIndex: 1000 }}>
-                  {autocompleteResults.map((term, idx) => (
-                    <ListGroup.Item
-                      key={idx}
-                      action
-                      onClick={() => handleSuggestionSelect(term)}
-                      className="d-flex justify-content-between align-items-center"
-                    >
-                      {term}
-                      <FaChevronRight size={12} className="text-muted" />
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              )}
-            </Form>
-          </div>
-        )}
+{/* Center - Search (desktop) */}
+{!isMobile && (
+  <div className="mx-4 flex-grow-1 position-relative" style={{ maxWidth: "500px" }} ref={searchRef}>
+    <Form onSubmit={handleSearch}>
+      <InputGroup>
+        <Form.Control
+          type="search"
+          placeholder="Pesquisar funcionários..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          onFocus={() => searchQuery && setShowSuggestions(true)}
+          className="border-end-0"
+        />
+        <Button 
+          variant="light" 
+          type="submit"
+          disabled={searchLoading}
+        >
+          {searchLoading ? (
+            <Spinner animation="border" size="sm" />
+          ) : (
+            <FaSearch />
+          )}
+        </Button>
+      </InputGroup>
+      
+      {showSuggestions && autocompleteResults.length > 0 && (
+        <ListGroup className="position-absolute w-100 mt-1 shadow" style={{ 
+          zIndex: 1000,
+          left: 0,
+          right: 0
+        }}>
+          {autocompleteResults.map((term, idx) => (
+            <ListGroup.Item
+              key={idx}
+              action
+              onClick={() => handleSuggestionSelect(term)}
+              className="d-flex justify-content-between align-items-center"
+            >
+              {term}
+              <FaChevronRight size={12} className="text-muted" />
+            </ListGroup.Item>
+          ))}
+        </ListGroup>
+      )}
+    </Form>
+  </div>
+)}
 
         {/* Right side - Action buttons */}
         <div className="d-flex align-items-center gap-2">

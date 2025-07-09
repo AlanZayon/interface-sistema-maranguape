@@ -51,7 +51,9 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     },
     bairro: [],
     inicioContrato: null,
-    fimContrato: null
+    fimContrato: null,
+    contratoIndeterminado: false
+
   });
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -141,50 +143,62 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     setShowModalSingleEdit(false);
   };
 
-const handleInicioContratoChange = (date) => {
-  setActiveFilters(prev => {
-    const newInicio = date ? new Date(date.setHours(0, 0, 0, 0)).toISOString() : null;
-    
-    // Validação para garantir que a data inicial não seja depois da data final
-    const newFim = prev.fimContrato && newInicio > prev.fimContrato ? null : prev.fimContrato;
-    
-    return { 
-      ...prev, 
-      inicioContrato: newInicio,
-      fimContrato: newFim
-    };
-  });
-};
+  const handleInicioContratoChange = (date) => {
+    setActiveFilters(prev => {
+      const newInicio = date ? new Date(date.setHours(0, 0, 0, 0)).toISOString() : null;
 
-const handleFimContratoChange = (date) => {
-  setActiveFilters(prev => {
-    const newFim = date ? new Date(date.setHours(23, 59, 59, 999)).toISOString() : null;
-    
-    // Validação para garantir que a data final não seja antes da data inicial
-    const newInicio = prev.inicioContrato && newFim < prev.inicioContrato ? null : prev.inicioContrato;
-    
-    return { 
-      ...prev, 
-      fimContrato: newFim,
-      inicioContrato: newInicio
-    };
-  });
-};
+      // Validação para garantir que a data inicial não seja depois da data final
+      const newFim = prev.fimContrato && newInicio > prev.fimContrato ? null : prev.fimContrato;
 
-const handleClearAllFilters = () => {
-  setActiveFilters({
-    natureza: [],
-    funcao: [],
-    bairro: [],
-    referencia: [],
-    salarioBruto: {
-      min: Math.min(...todosSalariosBrutos),
-      max: Math.max(...todosSalariosBrutos),
-    },
-    inicioContrato: null,
-    fimContrato: null,
-  });
-};
+      return {
+        ...prev,
+        inicioContrato: newInicio,
+        fimContrato: newFim
+      };
+    });
+  };
+
+  const handleFimContratoChange = (date) => {
+    setActiveFilters(prev => {
+      const newFim = date ? new Date(date.setHours(23, 59, 59, 999)).toISOString() : null;
+
+      // Validação para garantir que a data final não seja antes da data inicial
+      const newInicio = prev.inicioContrato && newFim < prev.inicioContrato ? null : prev.inicioContrato;
+
+      return {
+        ...prev,
+        fimContrato: newFim,
+        inicioContrato: newInicio
+      };
+    });
+  };
+
+  const handleIndeterminadoChange = (isIndeterminado) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      contratoIndeterminado: isIndeterminado,
+      ...(isIndeterminado && {
+        fimContrato: null
+      })
+    }));
+  };
+
+  const handleClearAllFilters = () => {
+    setActiveFilters({
+      natureza: [],
+      funcao: [],
+      bairro: [],
+      referencia: [],
+      salarioBruto: {
+        min: Math.min(...todosSalariosBrutos),
+        max: Math.max(...todosSalariosBrutos),
+      },
+      inicioContrato: null,
+      fimContrato: null,
+      contratoIndeterminado: false,
+
+    });
+  };
 
   const sortFuncionariosAlphabetically = (funcionarios) => {
     return [...funcionarios].sort((a, b) => {
@@ -200,45 +214,53 @@ const handleClearAllFilters = () => {
     });
   };
 
-const applyFilters = (funcionarios) => {
-  const allFuncionarios = Array.isArray(funcionarios)
-    ? funcionarios
-    : Object.values(funcionarios || {}).flat();
+  const applyFilters = (funcionarios) => {
+    const allFuncionarios = Array.isArray(funcionarios)
+      ? funcionarios
+      : Object.values(funcionarios || {}).flat();
 
-  const filtered = allFuncionarios.filter((funcionario) => {
-    const salarioBrutoMin = validateBounds(
-      activeFilters.salarioBruto.min,
-      Number.MIN_SAFE_INTEGER
-    );
-    const salarioBrutoMax = validateBounds(
-      activeFilters.salarioBruto.max,
-      Number.MAX_SAFE_INTEGER
-    );
+    const filtered = allFuncionarios.filter((funcionario) => {
+      const salarioBrutoMin = validateBounds(
+        activeFilters.salarioBruto.min,
+        Number.MIN_SAFE_INTEGER
+      );
+      const salarioBrutoMax = validateBounds(
+        activeFilters.salarioBruto.max,
+        Number.MAX_SAFE_INTEGER
+      );
 
-    // Verifica filtros de contrato (apenas para temporários)
-    const contratoFilter = funcionario.natureza !== "TEMPORARIO" || (
-      (!activeFilters.inicioContrato || new Date(funcionario.inicioContrato) >= new Date(activeFilters.inicioContrato)) &&
-      (!activeFilters.fimContrato || new Date(funcionario.fimContrato) <= new Date(activeFilters.fimContrato))
-    );
+      // Verifica filtros de contrato (apenas para temporários)
+      const contratoFilter = funcionario.natureza !== "TEMPORARIO" || (
+        (!activeFilters.inicioContrato || new Date(funcionario.inicioContrato) >= new Date(activeFilters.inicioContrato)) &&
+        (
+          !activeFilters.fimContrato ||
+          (
+            funcionario.fimContrato &&
+            funcionario.fimContrato.toUpperCase() !== "INDETERMINADO" &&
+            new Date(funcionario.fimContrato) <= new Date(activeFilters.fimContrato)
+          )
+        )
+      );
 
-    return (
-      (activeFilters.natureza.length === 0 ||
-        activeFilters.natureza.includes(funcionario.natureza)) &&
-      (activeFilters.funcao.length === 0 ||
-        activeFilters.funcao.includes(funcionario.funcao)) &&
-      (activeFilters.referencia.length === 0 ||
-        activeFilters.referencia.includes(funcionario.referencia)) &&
-      funcionario.salarioBruto >= salarioBrutoMin &&
-      funcionario.salarioBruto <= salarioBrutoMax &&
-      (activeFilters.bairro.length === 0 ||
-        activeFilters.bairro.includes(funcionario.bairro)) &&
-      (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId) &&
-      contratoFilter
-    );
-  });
 
-  return sortFuncionariosAlphabetically(filtered);
-};
+      return (
+        (activeFilters.natureza.length === 0 ||
+          activeFilters.natureza.includes(funcionario.natureza)) &&
+        (activeFilters.funcao.length === 0 ||
+          activeFilters.funcao.includes(funcionario.funcao)) &&
+        (activeFilters.referencia.length === 0 ||
+          activeFilters.referencia.includes(funcionario.referencia)) &&
+        funcionario.salarioBruto >= salarioBrutoMin &&
+        funcionario.salarioBruto <= salarioBrutoMax &&
+        (activeFilters.bairro.length === 0 ||
+          activeFilters.bairro.includes(funcionario.bairro)) &&
+        (!coordenadoriaId || funcionario.coordenadoria === coordenadoriaId) &&
+        contratoFilter
+      );
+    });
+
+    return sortFuncionariosAlphabetically(filtered);
+  };
 
   useEffect(() => {
     // Detecta se veio de uma pesquisa pela URL
@@ -621,7 +643,12 @@ const applyFilters = (funcionarios) => {
                 <strong>Início do Contrato:</strong> {new Date(user.inicioContrato).toLocaleDateString()}
               </p>
               <p>
-                <strong>Fim do Contrato:</strong> {new Date(user.fimContrato).toLocaleDateString()}
+                <strong>Fim do Contrato:</strong>{" "}
+                {user.fimContrato === 'indeterminado' ? (
+                  <span className="text-muted">Indeterminado</span>
+                ) : user.fimContrato ? (
+                  new Date(user.fimContrato).toLocaleDateString()
+                ) : null}
               </p>
             </div>
           );
@@ -862,6 +889,7 @@ const applyFilters = (funcionarios) => {
         handleInicioContratoChange={handleInicioContratoChange}
         handleFimContratoChange={handleFimContratoChange}
         onClearAllFilters={handleClearAllFilters}
+        handleIndeterminadoChange={handleIndeterminadoChange}
       />
 
       <div className="d-flex justify-content-between mx-3">

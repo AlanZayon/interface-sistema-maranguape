@@ -92,12 +92,13 @@ function Step1Form({
     message: "",
     loading: false
   });
+  const [contratoIndeterminado, setContratoIndeterminado] = useState(false);
 
   const fileInputRef = useRef(null);
 
   const groupCargosBySimbologia = (cargos) => {
     const grouped = {};
-    
+
     cargos.forEach(cargo => {
       if (!grouped[cargo.simbologia]) {
         grouped[cargo.simbologia] = {
@@ -108,7 +109,7 @@ function Step1Form({
       }
       grouped[cargo.simbologia].cargos.push(cargo);
     });
-    
+
     return Object.values(grouped);
   };
 
@@ -209,7 +210,7 @@ function Step1Form({
         const response = await axios.get(`${API_BASE_URL}/api/funcionarios/check-name`, {
           params: { name }
         });
-        
+
         setNameValidation({
           isValid: response.data.available,
           message: response.data.message,
@@ -268,9 +269,9 @@ function Step1Form({
       if (!newUser.fimContrato) {
         newErrors.fimContrato = "O campo Fim do Contrato é obrigatório";
       }
-      
-      if (newUser.inicioContrato && newUser.fimContrato && 
-          new Date(newUser.fimContrato) <= new Date(newUser.inicioContrato)) {
+
+      if (newUser.inicioContrato && newUser.fimContrato &&
+        new Date(newUser.fimContrato) <= new Date(newUser.inicioContrato)) {
         newErrors.fimContrato = "A data de fim deve ser posterior à data de início";
       }
     }
@@ -320,7 +321,7 @@ function Step1Form({
 
   const renderValidationFeedback = (field) => {
     if (!errors[field]) return null;
-    
+
     return (
       <Form.Text className="text-danger d-flex align-items-center mt-1">
         <FaTimes className="me-1" />
@@ -338,7 +339,7 @@ function Step1Form({
         </Form.Text>
       );
     }
-    
+
     if (nameValidation.isValid === true) {
       return (
         <Form.Text className="text-success d-flex align-items-center mt-1">
@@ -347,7 +348,7 @@ function Step1Form({
         </Form.Text>
       );
     }
-    
+
     if (nameValidation.isValid === false) {
       return (
         <Form.Text className="text-danger d-flex align-items-center mt-1">
@@ -356,7 +357,7 @@ function Step1Form({
         </Form.Text>
       );
     }
-    
+
     return (
       <Form.Text className="text-muted d-flex align-items-center mt-1">
         <FaInfoCircle className="me-1" />
@@ -380,7 +381,7 @@ function Step1Form({
         <Col md={12} className="text-center">
           <div className="mb-4">
             <Form.Label className="d-block fw-bold mb-3">Foto de Perfil</Form.Label>
-            <div 
+            <div
               className="profile-photo-upload mx-auto"
               style={{ width: '120px', height: '120px', position: 'relative' }}
             >
@@ -398,8 +399,8 @@ function Step1Form({
                     }}
                     onClick={handlePhotoClick}
                   />
-                  <Badge 
-                    bg="danger" 
+                  <Badge
+                    bg="danger"
                     className="position-absolute top-0 end-0 rounded-circle p-1"
                     style={{ cursor: 'pointer', zIndex: 1 }}
                     onClick={(e) => {
@@ -409,7 +410,7 @@ function Step1Form({
                     title="Remover foto"
                   >
                     <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
                     </svg>
                   </Badge>
                 </>
@@ -426,15 +427,15 @@ function Step1Form({
                   <FaUserCircle style={{ fontSize: "60px", color: "#6c757d" }} />
                 </div>
               )}
-              <Badge 
-                bg="primary" 
+              <Badge
+                bg="primary"
                 className="position-absolute bottom-0 end-0 rounded-circle p-2"
                 style={{ cursor: 'pointer' }}
                 onClick={handlePhotoClick}
               >
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                  <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                  <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                  <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z" />
                 </svg>
               </Badge>
               <input
@@ -477,7 +478,7 @@ function Step1Form({
           <Col md={6}>
             <Form.Group controlId="formReferência">
               <Form.Label>
-                Referência 
+                Referência
                 {newUser.natureza === "COMISSIONADO" && <span className="text-danger">*</span>}
               </Form.Label>
               <InputGroup>
@@ -526,8 +527,8 @@ function Step1Form({
                   <>
                     <span>{newUser.natureza.charAt(0).toUpperCase() + newUser.natureza.slice(1).toLowerCase()}</span>
                     <Badge bg="primary" className="ms-2">
-                      {newUser.natureza === 'COMISSIONADO' ? 'C' : 
-                       newUser.natureza === 'EFETIVO' ? 'E' : 'T'}
+                      {newUser.natureza === 'COMISSIONADO' ? 'C' :
+                        newUser.natureza === 'EFETIVO' ? 'E' : 'T'}
                     </Badge>
                   </>
                 ) : (
@@ -555,8 +556,8 @@ function Step1Form({
                     <div className="d-flex justify-content-between w-100">
                       <span>{natureza}</span>
                       <Badge bg="primary">
-                        {natureza === 'COMISSIONADO' ? 'C' : 
-                         natureza === 'EFETIVO' ? 'E' : 'T'}
+                        {natureza === 'COMISSIONADO' ? 'C' :
+                          natureza === 'EFETIVO' ? 'E' : 'T'}
                       </Badge>
                     </div>
                   </Dropdown.Item>
@@ -676,7 +677,7 @@ function Step1Form({
                             <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                               {groupCargosBySimbologia(filteredCargos).map((grupo, index) => (
                                 <React.Fragment key={index}>
-                                  <Dropdown.Header 
+                                  <Dropdown.Header
                                     className="d-flex justify-content-between align-items-center"
                                     style={{
                                       backgroundColor: grupo.limite === 0 ? '#fff0f0' : '#f0fff0',
@@ -688,7 +689,7 @@ function Step1Form({
                                       Limite: {grupo.limite}
                                     </Badge>
                                   </Dropdown.Header>
-                                  
+
                                   {grupo.cargos.map((cargo, cargoIndex) => (
                                     <Dropdown.Item
                                       key={`${index}-${cargoIndex}`}
@@ -737,7 +738,7 @@ function Step1Form({
                           type="number"
                           placeholder="0,00"
                           value={newUser.salarioBruto || ''}
-                          onChange={(e) => 
+                          onChange={(e) =>
                             setNewUser({ ...newUser, salarioBruto: e.target.value })
                           }
                           isInvalid={!!errors.salarioBruto}
@@ -748,7 +749,7 @@ function Step1Form({
                       {renderValidationFeedback('salarioBruto')}
                     </Form.Group>
                   </Col>
-                  
+
                   <Col md={6}>
                     <Form.Group controlId="formFuncaoEfetivo">
                       <Form.Label>Função <span className="text-danger">*</span></Form.Label>
@@ -756,7 +757,7 @@ function Step1Form({
                         type="text"
                         placeholder="Digite a função"
                         value={newUser.funcao || ''}
-                        onChange={(e) => 
+                        onChange={(e) =>
                           setNewUser({ ...newUser, funcao: e.target.value })
                         }
                         isInvalid={!!errors.funcao}
@@ -779,7 +780,7 @@ function Step1Form({
                           type="number"
                           placeholder="0,00"
                           value={newUser.salarioBruto || ''}
-                          onChange={(e) => 
+                          onChange={(e) =>
                             setNewUser({ ...newUser, salarioBruto: e.target.value })
                           }
                           isInvalid={!!errors.salarioBruto}
@@ -790,7 +791,7 @@ function Step1Form({
                       {renderValidationFeedback('salarioBruto')}
                     </Form.Group>
                   </Col>
-                  
+
                   <Col md={6}>
                     <Form.Group controlId="formFuncaoTemporario">
                       <Form.Label>Função <span className="text-danger">*</span></Form.Label>
@@ -798,7 +799,7 @@ function Step1Form({
                         type="text"
                         placeholder="Digite a função"
                         value={newUser.funcao || ''}
-                        onChange={(e) => 
+                        onChange={(e) =>
                           setNewUser({ ...newUser, funcao: e.target.value })
                         }
                         isInvalid={!!errors.funcao}
@@ -806,14 +807,14 @@ function Step1Form({
                       {renderValidationFeedback('funcao')}
                     </Form.Group>
                   </Col>
-                  
+
                   <Col md={6}>
                     <Form.Group controlId="formInicioContrato">
                       <Form.Label>Início do Contrato <span className="text-danger">*</span></Form.Label>
                       <Form.Control
                         type="date"
                         value={newUser.inicioContrato || ''}
-                        onChange={(e) => 
+                        onChange={(e) =>
                           setNewUser({ ...newUser, inicioContrato: e.target.value })
                         }
                         isInvalid={!!errors.inicioContrato}
@@ -821,23 +822,62 @@ function Step1Form({
                       {renderValidationFeedback('inicioContrato')}
                     </Form.Group>
                   </Col>
-                  
+
                   <Col md={6}>
                     <Form.Group controlId="formFimContrato">
-                      <Form.Label>Fim do Contrato <span className="text-danger">*</span></Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={newUser.fimContrato || ''}
-                        onChange={(e) => 
-                          setNewUser({ ...newUser, fimContrato: e.target.value })
-                        }
-                        isInvalid={!!errors.fimContrato}
-                        min={newUser.inicioContrato || ''}
-                      />
+                      <Form.Label>
+                        Fim do Contrato
+                        {!contratoIndeterminado && <span className="text-danger">*</span>}
+                      </Form.Label>
+
+                      {/* Container principal - layout em coluna */}
+                      <div className="d-flex flex-column gap-2">
+                        {/* Linha para o campo de data */}
+                        <div className="d-flex align-items-center">
+                          <Form.Control
+                            type="date"
+                            value={contratoIndeterminado ? '' : (newUser.fimContrato || '')}
+                            onChange={(e) => setNewUser({ ...newUser, fimContrato: e.target.value })}
+                            isInvalid={!!errors.fimContrato}
+                            min={newUser.inicioContrato || ''}
+                            disabled={contratoIndeterminado}
+                            className="me-2"  // Adiciona margem à direita
+                          />
+                        </div>
+
+                        {/* Linha para o switch - agora em uma linha separada */}
+                        <div className="d-flex align-items-center">
+                          <Form.Check
+                            type="switch"
+                            id="contrato-indeterminado"
+                            label="Contrato Indeterminado"
+                            checked={contratoIndeterminado}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              setContratoIndeterminado(isChecked);
+                              if (isChecked) {
+                                setNewUser({ ...newUser, fimContrato: 'indeterminado' });
+                                setErrors(prev => ({ ...prev, fimContrato: null }));
+                              } else {
+                                setNewUser({ ...newUser, fimContrato: '' });
+                              }
+                            }}
+                            
+                          />
+                        </div>
+                      </div>
+
                       {renderValidationFeedback('fimContrato')}
-                      {newUser.inicioContrato && newUser.fimContrato && (
+
+                      {newUser.inicioContrato && newUser.fimContrato && !contratoIndeterminado && (
                         <Form.Text className="text-muted">
                           Duração: {Math.floor((new Date(newUser.fimContrato) - new Date(newUser.inicioContrato)) / (1000 * 60 * 60 * 24))} dias
+                        </Form.Text>
+                      )}
+
+                      {contratoIndeterminado && (
+                        <Form.Text className="text-muted">
+                          Contrato sem data de término definida
                         </Form.Text>
                       )}
                     </Form.Group>
@@ -858,7 +898,7 @@ function Step1Form({
             >
               Cancelar
             </Button>
-            
+
             <Button
               variant="primary"
               onClick={handleSubmit}

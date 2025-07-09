@@ -27,6 +27,7 @@ function FilterModal({
   handleSalarioBrutoChange,
   handleInicioContratoChange,
   handleFimContratoChange,
+  handleIndeterminadoChange,
   onClearAllFilters,
 }) {
   const [salariosBrutos, setSalariosBrutos] = useState([]);
@@ -37,6 +38,7 @@ function FilterModal({
   const [salarioSearchMax, setSalarioSearchMax] = useState("");
   const [dateRange, setDateRange] = useState([null, null]);
   const [startDate, endDate] = dateRange;
+  const [contratoIndeterminado, setContratoIndeterminado] = useState(false);
 
   const handleClearAll = () => {
     setFuncaoSearch("");
@@ -45,6 +47,7 @@ function FilterModal({
     setSalarioSearchMin("");
     setSalarioSearchMax("");
     setDateRange([null, null]);
+    setContratoIndeterminado(false);
     onClearAllFilters();
   };
 
@@ -104,6 +107,7 @@ function FilterModal({
         activeFilters.inicioContrato ? new Date(activeFilters.inicioContrato) : null,
         activeFilters.fimContrato ? new Date(activeFilters.fimContrato) : null
       ]);
+      setContratoIndeterminado(activeFilters.contratoIndeterminado || false);
     }
   }, [show]);
 
@@ -111,6 +115,10 @@ function FilterModal({
     setDateRange(update);
     if (update[0]) handleInicioContratoChange(update[0]);
     if (update[1]) handleFimContratoChange(update[1]);
+    if (update[0] || update[1]) {
+      setContratoIndeterminado(false);
+      handleIndeterminadoChange(false);
+    }
   };
 
   const handleClearDates = () => {
@@ -264,7 +272,7 @@ function FilterModal({
             {/* Seção Salário Bruto */}
             <div className="mb-4">
               <h5 className="fw-bold mb-3">Salário Bruto</h5>
-              <div className="d-flex gap-2 align-items-center">
+              <div className="d-flex gap-2 align-items-center flex-wrap">
                 <DropdownButton
                   id="dropdown-salario-bruto-min"
                   title={`Mín: R$ ${activeFilters.salarioBruto.min.toLocaleString('pt-BR')}`}
@@ -300,8 +308,6 @@ function FilterModal({
                     )}
                   </div>
                 </DropdownButton>
-
-                <span className="text-muted">a</span>
 
                 <DropdownButton
                   id="dropdown-salario-bruto-max"
@@ -392,8 +398,12 @@ function FilterModal({
                 <Button
                   variant="link"
                   size="sm"
-                  onClick={handleClearDates}
-                  disabled={!activeFilters.inicioContrato && !activeFilters.fimContrato}
+                  onClick={() => {
+                    handleClearDates();
+                    setContratoIndeterminado(false);
+                    handleIndeterminadoChange(false);
+                  }}
+                  disabled={!activeFilters.inicioContrato && !activeFilters.fimContrato && !activeFilters.contratoIndeterminado}
                   className="text-decoration-none p-0"
                 >
                   Limpar
@@ -413,6 +423,7 @@ function FilterModal({
                   dateFormat="dd/MM/yyyy"
                   minDate={subYears(new Date(), 5)}
                   maxDate={addYears(new Date(), 1)}
+                  disabled={contratoIndeterminado}
                   customInput={
                     <CustomDateInput
                       placeholder="Selecione o período"
@@ -441,7 +452,7 @@ function FilterModal({
                     customInput={
                       <CustomDateInput
                         placeholder="Data inicial"
-                        value={startDate ? format(startDate, "dd/MM/yyyy") : "dd/MM/yyyy"}
+                        value={startDate ? format(startDate, "dd/MM/yyyy") : ""}
                       />
                     }
                   />
@@ -459,23 +470,48 @@ function FilterModal({
                     dateFormat="dd/MM/yyyy"
                     className="form-control"
                     locale={ptBR}
+                    disabled={contratoIndeterminado}
                     customInput={
                       <CustomDateInput
                         placeholder="Data final"
-                        value={endDate ? format(endDate, "dd/MM/yyyy") : "dd/MM/yyyy"}
+                        value={endDate ? format(endDate, "dd/MM/yyyy") : ""}
                       />
                     }
                   />
                 </div>
               </div>
 
-              {startDate && endDate && (
+              {/* Switch para contrato indeterminado - MOVIDO PARA ABAIXO DO CAMPO DE DATA DE TÉRMINO */}
+              <Form.Check
+                type="switch"
+                id="contrato-indeterminado-filter"
+                label="Contrato Indeterminado"
+                checked={activeFilters.contratoIndeterminado || false}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  setContratoIndeterminado(isChecked);
+                  handleIndeterminadoChange(isChecked);
+                  if (isChecked) {
+                    handleFimContratoChange(null); // Limpa apenas a data de fim
+                    setDateRange([startDate, null]); // Mantém a data de início
+                  }
+                }}
+                className="mt-3 mb-3 bg-light p-2 rounded"
+              />
+
+              {activeFilters.contratoIndeterminado ? (
+                <div className="mt-3 p-2 bg-light rounded text-center">
+                  <small className="text-muted fw-medium">
+                    Contrato selecionado como Indeterminado
+                  </small>
+                </div>
+              ) : startDate && endDate ? (
                 <div className="mt-3 p-2 bg-light rounded text-center">
                   <small className="text-muted fw-medium">
                     Período selecionado: {format(startDate, "dd/MM/yyyy")} - {format(endDate, "dd/MM/yyyy")}
                   </small>
                 </div>
-              )}
+              ) : null}
             </div>
           </Col>
         </Row>
