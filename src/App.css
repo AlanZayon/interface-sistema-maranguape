@@ -267,6 +267,24 @@
     border-left: 4px solid #be2f2f;
 }
 
+/* Adicione no seu arquivo CSS */
+.report-type-option {
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.report-type-option:hover {
+  background-color: #f8f9fa;
+}
+
+.report-type-option.selected {
+  background-color: #e9ecef;
+  font-weight: bold;
+}
+
 
 @media (max-width: 768px) {
     .info-card {

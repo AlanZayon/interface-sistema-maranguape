@@ -25,6 +25,7 @@ import { FixedSizeGrid as Grid } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { useAuth } from "./AuthContext"; // Importa o contexto
 import FilterModal from "./FilterModal";
+import RelatorioTypeModal from "./RelatorioTypeModal";
 import ObservationHistoryButton from "./ObservationHistoryButton";
 import ObservationHistoryModal from "./ObservationHistoryModal";
 import CoordEdit from "./CoordEdit";
@@ -75,6 +76,8 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
   const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
   const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showReportTypeModal, setShowReportTypeModal] = useState(false);
+  const [selectedReportType, setSelectedReportType] = useState('geral');
   const {
     role,
     funcionarios,
@@ -519,23 +522,39 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
   };
 
   const handleReportSelected = async () => {
+    // Mostra o modal para seleção do tipo de relatório
+    setShowReportTypeModal(true);
+  };
+
+  const confirmReportGeneration = async () => {
+    setShowReportTypeModal(false);
+
+    if (selectedUsers.length === 0) {
+      alert("Selecione pelo menos um funcionário para gerar o relatório.");
+      return;
+    }
+
     try {
-      // Envia os IDs dos usuários selecionados para o backend
+      // Envia os IDs dos usuários selecionados e o tipo de relatório para o backend
       const response = await axios.post(
         `${API_BASE_URL}/api/funcionarios/relatorio-funcionarios/gerar`,
-        { ids: selectedUsers },
+        {
+          ids: selectedUsers,
+          tipo: selectedReportType
+        },
         { responseType: "blob" }
       );
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const a = document.createElement("a");
       a.href = url;
-      a.download = "relatorio.pdf";
+      a.download = `relatorio_${selectedReportType}_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
     } catch (error) {
       console.error("Erro ao gerar o relatório:", error);
+      alert("Erro ao gerar o relatório. Por favor, tente novamente.");
     }
   };
 
@@ -890,6 +909,14 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
         handleFimContratoChange={handleFimContratoChange}
         onClearAllFilters={handleClearAllFilters}
         handleIndeterminadoChange={handleIndeterminadoChange}
+      />
+
+      <RelatorioTypeModal
+        show={showReportTypeModal}
+        onHide={() => setShowReportTypeModal(false)}
+        onConfirm={confirmReportGeneration}
+        selectedType={selectedReportType}
+        setSelectedType={setSelectedReportType}
       />
 
       <div className="d-flex justify-content-between mx-3">

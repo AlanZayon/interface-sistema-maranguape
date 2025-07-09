@@ -100,7 +100,17 @@ function Header() {
       axios
         .get(`${API_BASE_URL}/api/search/autocomplete?q=${searchQuery}`)
         .then((res) => {
-          setAutocompleteResults(res.data);
+          // Verifica se os resultados já estão no novo formato
+          const results = Array.isArray(res.data) 
+            ? res.data.map(item => {
+                if (typeof item === 'string') {
+                  return { nome: item, tipo: '' };
+                }
+                return item;
+              })
+            : [];
+          
+          setAutocompleteResults(results);
           setShowSuggestions(true);
         })
         .catch((err) => {
@@ -119,8 +129,23 @@ function Header() {
     axios
       .get(`${API_BASE_URL}/api/search/search-funcionarios?q=${searchQuery}`)
       .then((response) => {
-        console.log("Search results:", response.data);
-        setFuncionariosPath(response.data);
+        // Verifica se a resposta tem a nova estrutura
+        const results = response.data.funcionarios || response.data;
+        const setoresInfo = response.data.setoresEncontrados || [];
+        
+        // Mapeia os nomes dos setores para substituir "Coordenadoria" por "Divisão"
+        const setoresFormatados = setoresInfo.map(setor => ({
+          ...setor,
+          tipo: setor.tipo === 'Coordenadoria' ? 'Divisão' : setor.tipo
+        }));
+        
+        console.log("Search results:", results);
+        console.log("Setores encontrados:", setoresFormatados);
+        
+        setFuncionariosPath({
+          funcionarios: results,
+          setoresEncontrados: setoresFormatados
+        });
         navigate(`/search/${searchQuery}`);
       })
       .catch((error) => {
@@ -129,7 +154,10 @@ function Header() {
       .finally(() => setSearchLoading(false));
   };
 
-  const handleSuggestionSelect = (term) => {
+  const handleSuggestionSelect = (item) => {
+    // Se for uma string (para compatibilidade com versão antiga)
+    const term = typeof item === 'string' ? item : item.nome;
+    
     setSearchQuery(term);
     setShowSuggestions(false);
     setSearchLoading(true);
@@ -137,7 +165,18 @@ function Header() {
     axios
       .get(`${API_BASE_URL}/api/search/search-funcionarios?q=${term}`)
       .then((response) => {
-        setFuncionariosPath(response.data);
+        const results = response.data.funcionarios || response.data;
+        const setoresInfo = response.data.setoresEncontrados || [];
+        
+        const setoresFormatados = setoresInfo.map(setor => ({
+          ...setor,
+          tipo: setor.tipo === 'Coordenadoria' ? 'Divisão' : setor.tipo
+        }));
+        
+        setFuncionariosPath({
+          funcionarios: results,
+          setoresEncontrados: setoresFormatados
+        });
         navigate(`/search/${term}`);
       })
       .catch((error) => {
@@ -232,55 +271,70 @@ function Header() {
         </div>
 
         {/* Center - Search (desktop) */}
-{/* Center - Search (desktop) */}
-{!isMobile && (
-  <div className="mx-4 flex-grow-1 position-relative" style={{ maxWidth: "500px" }} ref={searchRef}>
-    <Form onSubmit={handleSearch}>
-      <InputGroup>
-        <Form.Control
-          type="search"
-          placeholder="Pesquisar funcionários..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-          onFocus={() => searchQuery && setShowSuggestions(true)}
-          className="border-end-0"
-        />
-        <Button 
-          variant="light" 
-          type="submit"
-          disabled={searchLoading}
-        >
-          {searchLoading ? (
-            <Spinner animation="border" size="sm" />
-          ) : (
-            <FaSearch />
-          )}
-        </Button>
-      </InputGroup>
-      
-      {showSuggestions && autocompleteResults.length > 0 && (
-        <ListGroup className="position-absolute w-100 mt-1 shadow" style={{ 
-          zIndex: 1000,
-          left: 0,
-          right: 0
-        }}>
-          {autocompleteResults.map((term, idx) => (
-            <ListGroup.Item
-              key={idx}
-              action
-              onClick={() => handleSuggestionSelect(term)}
-              className="d-flex justify-content-between align-items-center"
-            >
-              {term}
-              <FaChevronRight size={12} className="text-muted" />
-            </ListGroup.Item>
-          ))}
-        </ListGroup>
-      )}
-    </Form>
-  </div>
-)}
+        {!isMobile && (
+          <div className="mx-4 flex-grow-1 position-relative" style={{ maxWidth: "500px" }} ref={searchRef}>
+            <Form onSubmit={handleSearch}>
+              <InputGroup>
+                <Form.Control
+                  type="search"
+                  placeholder="Pesquisar funcionários..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onFocus={() => searchQuery && setShowSuggestions(true)}
+                  className="border-end-0"
+                />
+                <Button 
+                  variant="light" 
+                  type="submit"
+                  disabled={searchLoading}
+                >
+                  {searchLoading ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : (
+                    <FaSearch />
+                  )}
+                </Button>
+              </InputGroup>
+              
+              {showSuggestions && autocompleteResults.length > 0 && (
+                <ListGroup className="position-absolute w-100 mt-1 shadow" style={{ 
+                  zIndex: 1000,
+                  left: 0,
+                  right: 0
+                }}>
+                  {autocompleteResults.map((item, idx) => {
+                    // Se o item for uma string (para compatibilidade com versão antiga)
+                    const term = typeof item === 'string' ? item : item.nome;
+                    const type = typeof item === 'string' ? '' : item.tipo;
+                    
+                    // Mostrar "Divisão" quando o tipo for "Coordenadoria"
+                    const displayType = type === 'Coordenadoria' ? 'Divisão' : type;
+                    
+                    return (
+                      <ListGroup.Item
+                        key={idx}
+                        action
+                        onClick={() => handleSuggestionSelect(item)}
+                        className="d-flex justify-content-between align-items-center"
+                      >
+                        <div>
+                          {term}
+                          {displayType && (
+                            <Badge bg="secondary" className="ms-2">
+                              {displayType}
+                            </Badge>
+                          )}
+                        </div>
+                        <FaChevronRight size={12} className="text-muted" />
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              )}
+            </Form>
+          </div>
+        )}
 
         {/* Right side - Action buttons */}
         <div className="d-flex align-items-center gap-2">
@@ -366,17 +420,30 @@ function Header() {
 
             {showSuggestions && autocompleteResults.length > 0 && (
               <ListGroup className="mt-2 shadow">
-                {autocompleteResults.map((term, idx) => (
-                  <ListGroup.Item
-                    key={idx}
-                    action
-                    onClick={() => handleSuggestionSelect(term)}
-                    className="d-flex justify-content-between align-items-center"
-                  >
-                    {term}
-                    <FaChevronRight size={12} className="text-muted" />
-                  </ListGroup.Item>
-                ))}
+                {autocompleteResults.map((item, idx) => {
+                  const term = typeof item === 'string' ? item : item.nome;
+                  const type = typeof item === 'string' ? '' : item.tipo;
+                  const displayType = type === 'Coordenadoria' ? 'Divisão' : type;
+                  
+                  return (
+                    <ListGroup.Item
+                      key={idx}
+                      action
+                      onClick={() => handleSuggestionSelect(item)}
+                      className="d-flex justify-content-between align-items-center"
+                    >
+                      <div>
+                        {term}
+                        {displayType && (
+                          <Badge bg="secondary" className="ms-2">
+                            {displayType}
+                          </Badge>
+                        )}
+                      </div>
+                      <FaChevronRight size={12} className="text-muted" />
+                    </ListGroup.Item>
+                  );
+                })}
               </ListGroup>
             )}
           </div>
