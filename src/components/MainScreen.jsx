@@ -1,12 +1,12 @@
 // components/MainScreen.js
 import React, { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Card, Button, Modal, Form, Dropdown, Container, Spinner, Alert } from 'react-bootstrap';
+import { Row, Col, Card, Button, Modal, Form, Dropdown, Container, Spinner, Alert, InputGroup, FormControl } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/apiConfig';
-import { FaFolderPlus, FaEllipsisV, FaEdit, FaTrash, FaFolder } from 'react-icons/fa';
+import { FaFolderPlus, FaEllipsisV, FaEdit, FaTrash, FaFolder, FaSearch } from 'react-icons/fa';
 
 function MainScreen() {
   const [setores, setSetores] = useState([]);
@@ -19,12 +19,17 @@ function MainScreen() {
   const [editedName, setEditedName] = useState('');
   const [setorToDelete, setSetorToDelete] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
-  // Função para ordenar os setores por nome
-  const sortedSetores = useMemo(() => {
-    return [...setores].sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [setores]);
+  // Função para filtrar e ordenar os setores
+  const filteredAndSortedSetores = useMemo(() => {
+    return [...setores]
+      .filter(setor => 
+        setor.nome.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [setores, searchTerm]);
 
   const fetchSetoresData = async () => {
     try {
@@ -40,8 +45,7 @@ function MainScreen() {
       try {
         setLoading(true);
         const data = await fetchSetoresData();
-        const setoresOrdenados = data.setores.sort((a, b) => a.nome.localeCompare(b.nome));
-        setSetores(setoresOrdenados);
+        setSetores(data.setores);
         setError(null);
       } catch (error) {
         console.error('Erro ao buscar os dados:', error);
@@ -193,16 +197,34 @@ function MainScreen() {
         </Button>
       </div>
 
-      {sortedSetores.length === 0 && !loading && (
+      {/* Barra de pesquisa */}
+      <div className="mb-4">
+        <InputGroup>
+          <InputGroup.Text>
+            <FaSearch />
+          </InputGroup.Text>
+          <FormControl
+            placeholder="Pesquisar setores..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </InputGroup>
+      </div>
+
+      {filteredAndSortedSetores.length === 0 && !loading && (
         <div className="text-center py-5">
           <FaFolder size={48} className="text-muted mb-3" />
           <h4>Nenhum setor encontrado</h4>
-          <p className="text-muted">Clique no botão acima para criar seu primeiro setor</p>
+          <p className="text-muted">
+            {searchTerm ? 
+              "Nenhum setor corresponde à sua pesquisa" : 
+              "Clique no botão acima para criar seu primeiro setor"}
+          </p>
         </div>
       )}
 
       <Row xs={1} sm={2} md={3} lg={4} className="g-4">
-        {sortedSetores.map((setor) => (
+        {filteredAndSortedSetores.map((setor) => (
           <Col key={setor._id}>
             {editingSetorId !== setor._id ? (
               <Card className="h-100 shadow-sm">
