@@ -33,7 +33,7 @@ import UserEdit from "./userEdit";
 import { API_BASE_URL } from "../utils/apiConfig";
 import { set } from "lodash";
 
-function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
+function FuncionairosList({ coordenadoriaId, setorPathId, departmentName, idsDivisoes }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchTermFromURL, setSearchTermFromURL] = useState("");
@@ -89,30 +89,37 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
   } = useAuth(); // Usar o contexto de autenticação
   const searchRef = useRef(null);
 
-  const fetchSetoresData = async () => {
-    setLoading(true);
-    let page = 1;
-    const limit = 1000;
-    let totalPages = 1;
-    let allFuncionarios = [];
-    try {
-      while (page <= totalPages) {
-        const res = await axios.get(
-          `${API_BASE_URL}/api/funcionarios/setores/${setorPathId}/funcionarios?page=${page}&limit=${limit}`
-        );
-        allFuncionarios = [...allFuncionarios, ...res.data.funcionarios];
-        totalPages = res.data.pages;
-        page++;
-      }
-    } catch (error) {
-      console.error("Erro ao buscar os dados:", error);
-      return [];
-    } finally {
-      setLoading(false);
-    }
+const fetchFuncionariosPorDivisoes = async (idsDivisoes) => {
+  setLoading(true);
+  let page = 1;
+  const limit = 1000; // Mantenha alto para reduzir chamadas (ajuste conforme necessário)
+  let totalPages = 1;
+  let allFuncionarios = [];
 
-    return allFuncionarios;
-  };
+  try {
+    while (page <= totalPages) {
+      const res = await axios.get(`${API_BASE_URL}/api/funcionarios/por-divisoes`, {
+        params: {
+          ids: idsDivisoes.join(','), // Envia como "ids=1,2,3"
+          page,
+          limit
+        }
+      });
+
+
+      allFuncionarios = [...allFuncionarios, ...res.data.funcionarios];
+      totalPages = res.data.pages;
+      page++;
+    }
+  } catch (error) {
+    console.error("Erro ao buscar funcionários:", error);
+    return [];
+  } finally {
+    setLoading(false);
+  }
+
+  return allFuncionarios;
+};
 
   const fetchFuncionariosData = async () => {
     setLoading(true);
@@ -281,7 +288,7 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     ) {
       const fetchData = async () => {
         try {
-          const data = await fetchSetoresData();
+          const data = await fetchFuncionariosPorDivisoes(idsDivisoes);
           setFuncionariosPath(data);
         } catch (error) {
           console.error("Erro ao buscar os dados:");
@@ -359,16 +366,25 @@ function FuncionairosList({ coordenadoriaId, setorPathId, departmentName }) {
     }
   }, [setorPathId, funcionariosPath, funcionarios, activeFilters]);
 
-  useEffect(() => {
-    // Filtra funcionários pelo nome e aplica outros filtros
-    const filtered = (
-      (setorPathId ? funcionariosPath : funcionarios[coordenadoriaId]) || []
-    ).filter((user) =>
-      user.nome.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+useEffect(() => {
+  let baseFuncionarios = [];
 
-    setFilteredFuncionarios(applyFilters(filtered));
-  }, [setorPathId, funcionariosPath, funcionarios, activeFilters, searchTerm]);
+  if (setorPathId && funcionariosPath?.funcionarios) {
+    baseFuncionarios = funcionariosPath.funcionarios;
+  } else if (Array.isArray(funcionarios[coordenadoriaId])) {
+    baseFuncionarios = funcionarios[coordenadoriaId];
+  }else if(setorPathId === 'selected') {
+    baseFuncionarios = funcionariosPath || [];
+  }
+
+  const filtered = baseFuncionarios.filter((user) =>
+    user.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  setFilteredFuncionarios(applyFilters(filtered));
+}, [setorPathId, funcionariosPath, funcionarios, activeFilters, searchTerm]);
+
+
 
   const buscarFuncionario = (userId) => {
     const funcionario =

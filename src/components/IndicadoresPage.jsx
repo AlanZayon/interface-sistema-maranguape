@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import IndicadorForm from "./IndicadorForm";
 import IndicadorList from "./IndicadorList";
 import axios from "axios";
-import { Container, Tabs, Tab } from "react-bootstrap";
+import { Container, Tabs, Tab, Button } from "react-bootstrap";
+import { FiArrowLeft } from "react-icons/fi";
 import { API_BASE_URL } from '../utils/apiConfig';
 
 const IndicadoresPage = () => {
   const [indicadores, setIndicadores] = useState([]);
   const [key, setKey] = useState("list");
+  const navigate = useNavigate();
 
   const handleIndicadorCriado = () => {
     setKey("list");
@@ -23,7 +26,6 @@ const IndicadoresPage = () => {
     }
   };
 
-
   useEffect(() => {
     if (key === "list") {
       fetchIndicadores();
@@ -32,7 +34,18 @@ const IndicadoresPage = () => {
 
   return (
     <Container>
-      <h2 className="mt-4 mb-4 text-center">Gerenciamento de Referências</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <Button
+          variant="light"
+          onClick={() => navigate(-1)}
+          className="rounded-circle p-2 d-flex align-items-center justify-content-center back-button"
+        >
+          <FiArrowLeft size={20} style={{ color: "#495057" }} />
+        </Button>
+        <h2 className="mt-4 mb-4 text-center flex-grow-1">Gerenciamento de Referências</h2>
+        <div style={{ width: "42px" }}></div>
+      </div>
+
       <Tabs
         id="indicadores-tabs"
         activeKey={key}
@@ -40,7 +53,7 @@ const IndicadoresPage = () => {
         className="mb-4"
       >
         <Tab eventKey="list" title="Lista de Referências">
-          <IndicadorList indicadores={indicadores} setIndicadores={setIndicadores}/>
+          <IndicadorList indicadores={indicadores} setIndicadores={setIndicadores} />
         </Tab>
         <Tab eventKey="form" title="Cadastrar Referências">
           <IndicadorForm onIndicadorCriado={handleIndicadorCriado} />

@@ -139,9 +139,6 @@ function Header() {
           tipo: setor.tipo === 'Coordenadoria' ? 'Divisão' : setor.tipo
         }));
         
-        console.log("Search results:", results);
-        console.log("Setores encontrados:", setoresFormatados);
-        
         setFuncionariosPath({
           funcionarios: results,
           setoresEncontrados: setoresFormatados

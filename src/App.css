@@ -285,6 +285,24 @@
   font-weight: bold;
 }
 
+.back-button {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #f8f9fa;
+  transform: translateX(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.back-button:active {
+  transform: translateX(0);
+}
+
+
 
 @media (max-width: 768px) {
     .info-card {

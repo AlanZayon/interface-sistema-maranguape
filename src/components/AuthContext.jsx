@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../utils/apiConfig";
+import { use } from "react";
 
 // Criação do contexto de autenticação
 const AuthContext = createContext();

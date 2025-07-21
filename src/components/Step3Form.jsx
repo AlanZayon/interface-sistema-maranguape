@@ -30,6 +30,7 @@ function Step2Form({
 
   const fetchSetoresData = async () => {
     const response = await axios.get(`${API_BASE_URL}/api/setores/setoresOrganizados`);
+    console.log('Setores data fetched:', response.data);
     return response.data;
   };
 
@@ -581,7 +582,7 @@ function Step2Form({
     if (newUser.foto) formData.append("foto", newUser.foto);
     formData.append("secretaria", setorSelecionado?.nome || '');
     formData.append("natureza", newUser.natureza);
-    formData.append("referencia", newUser.referencia ||'');
+    formData.append("referencia", newUser.referencia || '');
     formData.append("salarioBruto", newUser.salarioBruto || 0);
     formData.append("salarioLiquido", Number(newUser.salarioLiquido || 0));
     formData.append("funcao", newUser.funcao);
