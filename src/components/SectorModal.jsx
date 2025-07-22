@@ -30,57 +30,67 @@ const SectorModal = ({ show, onHide, onConfirm, initialSelected = [] }) => {
   const [hierarchyData, setHierarchyData] = useState(null);
   const searchTimeoutRef = useRef();
 
+  // Reset all states when modal is closed
+  const resetStates = useCallback(() => {
+    setSearchQuery('');
+    setSelectedNodes(new Map());
+    setNavigationPath([]);
+    setIsSearching(false);
+    setExpandedNodes(new Set());
+    setIsLoading(true);
+    setError(null);
+    setHierarchyData(null);
+  }, []);
+
   // Initialize with initial selected nodes
-useEffect(() => {
-  if (!initialSelected || initialSelected.length === 0) return;
+  useEffect(() => {
+    if (!initialSelected || initialSelected.length === 0) return;
 
-  const newIds = initialSelected.map(node => node.id).sort();
-  const currentIds = Array.from(selectedNodes.keys()).sort();
+    const newIds = initialSelected.map(node => node.id).sort();
+    const currentIds = Array.from(selectedNodes.keys()).sort();
 
-  const isDifferent =
-    newIds.length !== currentIds.length ||
-    newIds.some((id, i) => id !== currentIds[i]);
+    const isDifferent =
+      newIds.length !== currentIds.length ||
+      newIds.some((id, i) => id !== currentIds[i]);
 
-  if (isDifferent) {
-    const initialMap = new Map();
-    initialSelected.forEach(node => initialMap.set(node.id, node));
-    setSelectedNodes(initialMap);
-  }
-}, [initialSelected]);
-
-
+    if (isDifferent) {
+      const initialMap = new Map();
+      initialSelected.forEach(node => initialMap.set(node.id, node));
+      setSelectedNodes(initialMap);
+    }
+  }, [initialSelected]);
 
   // Transform data from API to expected structure
-const transformData = useCallback((data) => {
-  const transformNode = (node) => {
-    const transformedNode = {
-      id: node._id,
-      name: node.nome,
-      type: node.tipo?.toLowerCase() || 'divisao',
-      employees: node.funcionarios?.length || node.quantidadeFuncionarios || 0
+  const transformData = useCallback((data) => {
+    const transformNode = (node) => {
+      const transformedNode = {
+        id: node._id,
+        name: node.nome,
+        type: node.tipo?.toLowerCase() || 'divisao',
+        employees: node.funcionarios?.length || node.quantidadeFuncionarios || 0
+      };
+
+      // Process children (subsetores and coordenadorias)
+      const children = [
+        ...(node.subsetores || []).map(transformNode),
+        ...(node.coordenadorias || []).map(coord => ({
+          id: coord._id,
+          name: coord.nome,
+          type: 'divisao',
+          employees: coord.quantidadeFuncionarios || 0
+        }))
+      ];
+
+      // Only add children if they exist
+      if (children.length > 0) {
+        transformedNode.children = children;
+      }
+
+      return transformedNode;
     };
 
-    // Process children (subsetores and coordenadorias)
-    const children = [
-      ...(node.subsetores || []).map(transformNode),
-      ...(node.coordenadorias || []).map(coord => ({
-        id: coord._id,
-        name: coord.nome,
-        type: 'divisao',
-        employees: coord.quantidadeFuncionarios || 0
-      }))
-    ];
-
-    // Only add children if they exist
-    if (children.length > 0) {
-      transformedNode.children = children;
-    }
-
-    return transformedNode;
-  };
-
-  return data.setores.map(transformNode);
-}, []);
+    return data.setores.map(transformNode);
+  }, []);
 
   // Fetch hierarchy data from backend
   useEffect(() => {
@@ -269,12 +279,17 @@ const transformData = useCallback((data) => {
     return labels[type] || type;
   }, []);
 
+  const handleConfirmSelection = () => {
+    const idsDivisoes = Array.from(selectedNodes.values()).map(n => n.id);
+    onConfirm(idsDivisoes);
+    resetStates();
+    onHide();
+  };
 
-const handleConfirmSelection = () => {
-  const idsDivisoes = Array.from(selectedNodes.values()).map(n => n.id);
-  onConfirm(idsDivisoes); // Agora envia apenas IDs
-  onHide();
-};
+  const handleCloseModal = () => {
+    resetStates();
+    onHide();
+  };
 
   // Keyboard navigation
   useEffect(() => {
@@ -282,7 +297,7 @@ const handleConfirmSelection = () => {
       if (!show) return;
       
       if (e.key === 'Escape') {
-        onHide();
+        handleCloseModal();
       } else if (e.key === 'Enter' && e.ctrlKey) {
         handleConfirmSelection();
       }
@@ -290,7 +305,7 @@ const handleConfirmSelection = () => {
 
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [show, selectedNodes, onHide, handleConfirmSelection]);
+  }, [show, selectedNodes, handleCloseModal, handleConfirmSelection]);
 
   const TreeItem = ({ node }) => {
     const hasChildren = node.children && node.children.length > 0;
@@ -392,7 +407,7 @@ const handleConfirmSelection = () => {
   if (!show) return null;
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" centered>
+    <Modal show={show} onHide={handleCloseModal} size="xl" centered>
       <Modal.Header closeButton>
         <Modal.Title>Selecionar Setores e Divisões</Modal.Title>
       </Modal.Header>
@@ -547,37 +562,43 @@ const handleConfirmSelection = () => {
           </div>
 
           {/* Right Panel - Selected Items */}
-          <div className="flex-shrink-0 p-3 bg-light" style={{ width: '30%' }}>
+          <div className="flex-shrink-0 p-3 bg-light d-flex flex-column" style={{ width: '30%' }}>
             <h5 className="mb-3">
               Divisões Selecionadas <Badge bg="primary">{selectedNodes.size}</Badge>
             </h5>
             
             {selectedNodes.size === 0 ? (
               <p className="text-muted text-center py-4">
-                Nenhuma divisões selecionada
+                Nenhuma divisão selecionada
               </p>
             ) : (
-              <ListGroup variant="flush">
-                {Array.from(selectedNodes.values()).map(node => (
-                  <ListGroup.Item key={node.id} className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">{node.name}</div>
-                      <small className="text-muted d-flex align-items-center">
-                        <Users size={12} className="me-1" />
-                        {node.employees} funcionários
-                      </small>
-                    </div>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="text-danger p-0"
-                      onClick={() => toggleSelection(node, false)}
+              <div className="flex-grow-1 overflow-auto" style={{ maxHeight: 'calc(60vh - 100px)' }}>
+                <ListGroup variant="flush">
+                  {Array.from(selectedNodes.values()).map(node => (
+                    <ListGroup.Item 
+                      key={node.id} 
+                      className="d-flex justify-content-between align-items-center"
+                      style={{ minHeight: '60px' }}
                     >
-                      <X size={16} />
-                    </Button>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
+                      <div className="flex-grow-1 overflow-hidden">
+                        <div className="fw-medium text-truncate">{node.name}</div>
+                        <small className="text-muted d-flex align-items-center">
+                          <Users size={12} className="me-1" />
+                          {node.employees} funcionários
+                        </small>
+                      </div>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-danger p-0 flex-shrink-0"
+                        onClick={() => toggleSelection(node, false)}
+                      >
+                        <X size={16} />
+                      </Button>
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </div>
             )}
           </div>
         </div>
@@ -587,7 +608,7 @@ const handleConfirmSelection = () => {
         <small className="text-muted me-auto">
           Pressione Ctrl + Enter para confirmar
         </small>
-        <Button variant="secondary" onClick={onHide}>
+        <Button variant="secondary" onClick={handleCloseModal}>
           Cancelar
         </Button>
         <Button 
