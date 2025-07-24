@@ -171,6 +171,7 @@ function Step1Form({
         (cargo) => cargo.aDefinir === Number(newUser.salarioBruto)
       );
       setCargos(filteredCargos);
+      setNewUser(prevState => ({ ...prevState, funcao: "", tipo: "" }));
     }
   }, [newUser.salarioBruto, cargosComissionados]);
 
@@ -698,9 +699,12 @@ function Step1Form({
                                         setShowCargoDropdown(false);
                                       }}
                                       active={newUser.funcao === cargo.cargo}
+                                      disabled={grupo.limite === 0}
                                       style={{
                                         ...customStyles.dropdownItem,
-                                        whiteSpace: 'normal'
+                                        whiteSpace: 'normal',
+                                        opacity: grupo.limite === 0 ? 0.5 : 1,
+                                        cursor: grupo.limite === 0 ? 'not-allowed' : 'pointer',
                                       }}
                                     >
                                       <div className="d-flex flex-column">
@@ -862,7 +866,7 @@ function Step1Form({
                                 setNewUser({ ...newUser, fimContrato: '' });
                               }
                             }}
-                            
+
                           />
                         </div>
                       </div>

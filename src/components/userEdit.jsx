@@ -95,6 +95,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
   const { addFuncionarios, addFuncionariosPath } = useAuth();
   const prevNatureza = useRef(funcionario?.natureza || null);
   const fileInputRef = useRef(null);
+  const prevSalario = useRef(null);
   const queryClient = useQueryClient();
   const [nameAvailable, setNameAvailable] = useState(true);
   const [nameCheckLoading, setNameCheckLoading] = useState(false);
@@ -104,6 +105,7 @@ function UserEdit({ funcionario, handleCloseModal }) {
     funcionario?.fimContrato === 'indeterminado'
   );
   const [dataAnteriorFimContrato, setDataAnteriorFimContrato] = useState(null);
+  const [salarioFuncaoMap, setSalarioFuncaoMap] = useState({});
 
 
   const checkNameAvailability = useCallback(async (name) => {
@@ -130,6 +132,35 @@ function UserEdit({ funcionario, handleCloseModal }) {
       setNameCheckLoading(false);
     }
   }, [funcionario?.nome]);
+
+  useEffect(() => {
+    if (newUser.natureza === "COMISSIONADO" && newUser.salarioBruto) {
+      // Quando o salário muda, armazenamos a função atual no mapa antes de limpá-la
+      if (prevSalario.current && newUser.funcao) {
+        setSalarioFuncaoMap(prev => ({
+          ...prev,
+          [prevSalario.current]: newUser.funcao
+        }));
+      }
+
+      // Limpa a função quando o salário muda
+      setNewUser(prev => ({
+        ...prev,
+        funcao: ""
+      }));
+
+      // Atualiza a referência do salário anterior
+      prevSalario.current = newUser.salarioBruto;
+
+      // Se voltamos para um salário que tinha uma função armazenada, restaurá-la
+      if (salarioFuncaoMap[newUser.salarioBruto]) {
+        setNewUser(prev => ({
+          ...prev,
+          funcao: salarioFuncaoMap[newUser.salarioBruto]
+        }));
+      }
+    }
+  }, [newUser.salarioBruto, newUser.natureza]);
 
   // Debounce para verificação do nome
   useEffect(() => {
@@ -520,105 +551,105 @@ function UserEdit({ funcionario, handleCloseModal }) {
   };
 
   // Adicionar campos de data para temporários
-const renderTemporaryFields = () => {
-  if (newUser.natureza !== "TEMPORARIO") return null;
+  const renderTemporaryFields = () => {
+    if (newUser.natureza !== "TEMPORARIO") return null;
 
-  return (
-    <Row>
-      <Col md={6}>
-        <Form.Group className="mb-3" controlId="formInicioContrato">
-          <Form.Label>
-            <FaCalendarAlt style={iconStyle} />
-            Início do Contrato
-          </Form.Label>
-          <Form.Control
-            type="date"
-            value={newUser.inicioContrato ? new Date(newUser.inicioContrato).toISOString().split('T')[0] : ''}
-            onChange={(e) =>
-              setNewUser({ ...newUser, inicioContrato: e.target.value })
-            }
-            isInvalid={!!errors.inicioContrato}
-          />
-          <Form.Control.Feedback type="invalid" style={errorStyle}>
-            {errors.inicioContrato}
-          </Form.Control.Feedback>
-        </Form.Group>
-      </Col>
-      <Col md={6}>
-        <Form.Group className="mb-3" controlId="formFimContrato">
-          <Form.Label>
-            <FaCalendarAlt style={iconStyle} />
-            Término do Contrato
-          </Form.Label>
-          
-          {/* Layout modificado para melhor organização */}
-          <div className="d-flex flex-column gap-2">
-            <div className="d-flex align-items-center gap-2">
-              <Form.Control
-                type="date"
-                value={
-                  contratoIndeterminado || 
-                  !newUser.fimContrato || 
-                  newUser.fimContrato === 'indeterminado' 
-                    ? '' 
-                    : new Date(newUser.fimContrato).toISOString().split('T')[0]
-                }
-                onChange={(e) =>
-                  setNewUser({ ...newUser, fimContrato: e.target.value })
-                }
-                isInvalid={!!errors.fimContrato}
-                disabled={contratoIndeterminado}
-                className="flex-grow-1"
-              />
-            </div>
-            
-            <div className="d-flex align-items-center">
-              <Form.Check
-                type="switch"
-                id="contrato-indeterminado"
-                label="Contrato Indeterminado"
-                checked={contratoIndeterminado}
-                onChange={(e) => {
-                  const isIndeterminado = e.target.checked;
-                  setContratoIndeterminado(isIndeterminado);
+    return (
+      <Row>
+        <Col md={6}>
+          <Form.Group className="mb-3" controlId="formInicioContrato">
+            <Form.Label>
+              <FaCalendarAlt style={iconStyle} />
+              Início do Contrato
+            </Form.Label>
+            <Form.Control
+              type="date"
+              value={newUser.inicioContrato ? new Date(newUser.inicioContrato).toISOString().split('T')[0] : ''}
+              onChange={(e) =>
+                setNewUser({ ...newUser, inicioContrato: e.target.value })
+              }
+              isInvalid={!!errors.inicioContrato}
+            />
+            <Form.Control.Feedback type="invalid" style={errorStyle}>
+              {errors.inicioContrato}
+            </Form.Control.Feedback>
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3" controlId="formFimContrato">
+            <Form.Label>
+              <FaCalendarAlt style={iconStyle} />
+              Término do Contrato
+            </Form.Label>
 
-                  if (isIndeterminado) {
-                    if (newUser.fimContrato && newUser.fimContrato !== 'indeterminado') {
-                      setDataAnteriorFimContrato(newUser.fimContrato);
-                    }
-                    setNewUser(prev => ({ ...prev, fimContrato: 'indeterminado' }));
-                    setErrors(prev => ({ ...prev, fimContrato: null }));
-                  } else {
-                    setNewUser(prev => ({
-                      ...prev,
-                      fimContrato: dataAnteriorFimContrato || ''
-                    }));
+            {/* Layout modificado para melhor organização */}
+            <div className="d-flex flex-column gap-2">
+              <div className="d-flex align-items-center gap-2">
+                <Form.Control
+                  type="date"
+                  value={
+                    contratoIndeterminado ||
+                      !newUser.fimContrato ||
+                      newUser.fimContrato === 'indeterminado'
+                      ? ''
+                      : new Date(newUser.fimContrato).toISOString().split('T')[0]
                   }
-                }}
-              />
-            </div>
-          </div>
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, fimContrato: e.target.value })
+                  }
+                  isInvalid={!!errors.fimContrato}
+                  disabled={contratoIndeterminado}
+                  className="flex-grow-1"
+                />
+              </div>
 
-          <Form.Control.Feedback type="invalid" style={errorStyle}>
-            {errors.fimContrato}
-          </Form.Control.Feedback>
-          
-          {newUser.inicioContrato && !contratoIndeterminado && newUser.fimContrato && newUser.fimContrato !== 'indeterminado' && (
-            <Form.Text className="text-muted">
-              Duração: {Math.floor((new Date(newUser.fimContrato) - new Date(newUser.inicioContrato)) / (1000 * 60 * 60 * 24))} dias
-            </Form.Text>
-          )}
-          
-          {contratoIndeterminado && (
-            <Form.Text className="text-muted">
-              Contrato sem data de término definida
-            </Form.Text>
-          )}
-        </Form.Group>
-      </Col>
-    </Row>
-  );
-};
+              <div className="d-flex align-items-center">
+                <Form.Check
+                  type="switch"
+                  id="contrato-indeterminado"
+                  label="Contrato Indeterminado"
+                  checked={contratoIndeterminado}
+                  onChange={(e) => {
+                    const isIndeterminado = e.target.checked;
+                    setContratoIndeterminado(isIndeterminado);
+
+                    if (isIndeterminado) {
+                      if (newUser.fimContrato && newUser.fimContrato !== 'indeterminado') {
+                        setDataAnteriorFimContrato(newUser.fimContrato);
+                      }
+                      setNewUser(prev => ({ ...prev, fimContrato: 'indeterminado' }));
+                      setErrors(prev => ({ ...prev, fimContrato: null }));
+                    } else {
+                      setNewUser(prev => ({
+                        ...prev,
+                        fimContrato: dataAnteriorFimContrato || ''
+                      }));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <Form.Control.Feedback type="invalid" style={errorStyle}>
+              {errors.fimContrato}
+            </Form.Control.Feedback>
+
+            {newUser.inicioContrato && !contratoIndeterminado && newUser.fimContrato && newUser.fimContrato !== 'indeterminado' && (
+              <Form.Text className="text-muted">
+                Duração: {Math.floor((new Date(newUser.fimContrato) - new Date(newUser.inicioContrato)) / (1000 * 60 * 60 * 24))} dias
+              </Form.Text>
+            )}
+
+            {contratoIndeterminado && (
+              <Form.Text className="text-muted">
+                Contrato sem data de término definida
+              </Form.Text>
+            )}
+          </Form.Group>
+        </Col>
+      </Row>
+    );
+  };
 
   // Renderização do campo de referência condicional
   const renderReferenceField = () => {
@@ -925,9 +956,20 @@ const renderTemporaryFields = () => {
                               <Dropdown.Item
                                 key={`${index}-${cargoIndex}`}
                                 title={cargo.cargo}
+                                disabled={grupo.limite === 0}
+
                                 className="d-flex justify-content-between align-items-center"
                                 onClick={() => {
-                                  setNewUser({ ...newUser, funcao: cargo.cargo });
+                                  const updatedFuncao = cargo.cargo;
+                                  setNewUser(prev => ({
+                                    ...prev,
+                                    funcao: updatedFuncao
+                                  }));
+                                  // Atualiza o mapa com a nova função para o salário atual
+                                  setSalarioFuncaoMap(prev => ({
+                                    ...prev,
+                                    [newUser.salarioBruto]: updatedFuncao
+                                  }));
                                   setShowCargoDropdown(false);
                                 }}
                               >
