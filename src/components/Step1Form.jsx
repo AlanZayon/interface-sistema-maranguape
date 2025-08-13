@@ -601,37 +601,37 @@ function Step1Form({
                             <span className="text-muted">Selecione o salário</span>
                           )}
                         </Dropdown.Toggle>
-                        <Dropdown.Menu className="w-100 p-2">
-                          <div className="mb-2">
-                            <InputGroup>
-                              <Form.Control
-                                type="text"
-                                placeholder="Pesquisar salário"
-                                value={searchSalario}
-                                onChange={(e) => setSearchSalario(e.target.value)}
-                                autoFocus
-                              />
-                              <InputGroup.Text>
-                                <FaSearch />
-                              </InputGroup.Text>
-                            </InputGroup>
-                          </div>
-                          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                            {filteredSalarios.map((salarioBruto, index) => (
-                              <Dropdown.Item
-                                key={index}
-                                onClick={() => {
-                                  setNewUser({ ...newUser, salarioBruto });
-                                  setShowSalarioDropdown(false);
-                                }}
-                                active={newUser.salarioBruto === salarioBruto}
-                                style={customStyles.dropdownItem}
-                              >
-                                R$ {Number(salarioBruto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </Dropdown.Item>
-                            ))}
-                          </div>
-                        </Dropdown.Menu>
+<Dropdown.Menu className="w-100 p-2" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+  <div className="mb-2 sticky-top bg-white" style={{ zIndex: 1 }}>
+    <InputGroup>
+      <Form.Control
+        type="text"
+        placeholder="Pesquisar salário"
+        value={searchSalario}
+        onChange={(e) => setSearchSalario(e.target.value)}
+        autoFocus
+      />
+      <InputGroup.Text>
+        <FaSearch />
+      </InputGroup.Text>
+    </InputGroup>
+  </div>
+  <div>
+    {filteredSalarios.map((salarioBruto, index) => (
+      <Dropdown.Item
+        key={index}
+        onClick={() => {
+          setNewUser({ ...newUser, salarioBruto });
+          setShowSalarioDropdown(false);
+        }}
+        active={newUser.salarioBruto === salarioBruto}
+        style={customStyles.dropdownItem}
+      >
+        R$ {Number(salarioBruto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+      </Dropdown.Item>
+    ))}
+  </div>
+</Dropdown.Menu>
                       </Dropdown>
                       {renderValidationFeedback('salarioBruto')}
                     </Form.Group>
