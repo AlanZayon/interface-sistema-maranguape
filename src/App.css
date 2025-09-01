@@ -302,6 +302,252 @@
   transform: translateX(0);
 }
 
+/* OrganogramModal.css */
+.organogram-modal .modal-content {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.organogram-modal-dialog {
+  max-width: 95vw;
+  height: 95vh;
+}
+
+.organogram-modal .modal-body {
+  overflow: hidden;
+}
+
+.organogram-viewport {
+  background-color: #f8f9fa;
+  position: relative;
+  overflow: auto;
+  min-height: 400px;
+}
+
+.organogram-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  min-width: fit-content;
+  transition: transform 0.1s ease;
+}
+
+.organogram-level {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 40px;
+  flex-wrap: nowrap;
+}
+
+.organogram-level:last-child {
+  margin-bottom: 0;
+}
+
+.organogram-node-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  margin: 0 15px;
+  flex-shrink: 0;
+}
+
+.organogram-node {
+  width: 200px;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.organogram-node:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.org-node-setor {
+  border-top: 4px solid #0d6efd;
+}
+
+.org-node-subsetor {
+  border-top: 4px solid #198754;
+}
+
+.org-node-divisao {
+  border-top: 4px solid #ffc107;
+}
+
+.org-node-default {
+  border-top: 4px solid #6c757d;
+}
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.node-type-badge {
+  font-size: 0.7em;
+}
+
+.node-actions {
+  padding: 0 4px;
+  border: none;
+}
+
+.node-content {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.node-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+  word-break: break-word;
+}
+
+.node-employees {
+  font-size: 0.85em;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.node-expand {
+  display: flex;
+  justify-content: center;
+}
+
+/* Conectores do organograma */
+.node-connector-vertical {
+  width: 2px;
+  height: 20px;
+  background-color: #adb5bd;
+  margin: 5px 0;
+}
+
+.node-connector-horizontal {
+  position: absolute;
+  top: 50%;
+  right: -15px;
+  width: 15px;
+  height: 2px;
+  background-color: #adb5bd;
+  z-index: 1;
+}
+
+/* Linhas de conexão entre níveis */
+.organogram-level::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #adb5bd;
+  z-index: 1;
+}
+
+.organogram-level.level-0::before {
+  display: none;
+}
+
+/* Barra de ferramentas de zoom */
+.zoom-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  padding: 5px;
+}
+
+/* Indicador de zoom */
+.zoom-indicator {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 10;
+  background: rgba(255,255,255,0.9);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.9em;
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+  .organogram-level {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .organogram-node-container {
+    margin: 10px 0;
+  }
+  
+  .node-connector-horizontal {
+    display: none;
+  }
+  
+  .organogram-level::before {
+    display: none;
+  }
+
+  .organogram-container {
+    padding: 20px 10px;
+  }
+}
+
+/* Animações */
+@keyframes nodeAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.organogram-node {
+  animation: nodeAppear 0.3s ease-out;
+}
+
+/* Scrollbar personalizada para o viewport */
+.organogram-viewport::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.organogram-viewport::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.organogram-viewport::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 5px;
+}
+
+.organogram-viewport::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.organogram-node:has(.dropdown-menu.show) {
+  z-index: 1000 !important;
+}
 
 
 @media (max-width: 768px) {

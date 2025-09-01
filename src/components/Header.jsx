@@ -26,8 +26,10 @@ import {
   FaUser,
   FaUserCog,
   FaTimes,
-  FaChevronRight
+  FaChevronRight,
+  FaSitemap // Ícone para organograma
 } from "react-icons/fa";
+import OrganogramModal from "./OrganogramModal"; // Importe o modal do organograma
 
 function Header() {
   const [newUser, setNewUser] = useState({
@@ -49,6 +51,7 @@ function Header() {
   });
 
   const [showModal, setShowModal] = useState(false);
+  const [showOrganogramModal, setShowOrganogramModal] = useState(false); // Estado para o modal do organograma
   const [currentStep, setCurrentStep] = useState(1);
   const { logout, username, role, setFuncionariosPath } = useAuth();
   const navigate = useNavigate();
@@ -100,7 +103,6 @@ function Header() {
       axios
         .get(`${API_BASE_URL}/api/search/autocomplete?q=${searchQuery}`)
         .then((res) => {
-          // Verifica se os resultados já estão no novo formato
           const results = Array.isArray(res.data) 
             ? res.data.map(item => {
                 if (typeof item === 'string') {
@@ -129,11 +131,9 @@ function Header() {
     axios
       .get(`${API_BASE_URL}/api/search/search-funcionarios?q=${searchQuery}`)
       .then((response) => {
-        // Verifica se a resposta tem a nova estrutura
         const results = response.data.funcionarios || response.data;
         const setoresInfo = response.data.setoresEncontrados || [];
         
-        // Mapeia os nomes dos setores para substituir "Coordenadoria" por "Divisão"
         const setoresFormatados = setoresInfo.map(setor => ({
           ...setor,
           tipo: setor.tipo === 'Coordenadoria' ? 'Divisão' : setor.tipo
@@ -152,7 +152,6 @@ function Header() {
   };
 
   const handleSuggestionSelect = (item) => {
-    // Se for uma string (para compatibilidade com versão antiga)
     const term = typeof item === 'string' ? item : item.nome;
     
     setSearchQuery(term);
@@ -217,6 +216,16 @@ function Header() {
     setShowModal(false);
   };
 
+  // Função para abrir o modal do organograma
+  const handleShowOrganogramModal = () => {
+    setShowOrganogramModal(true);
+  };
+
+  // Função para fechar o modal do organograma
+  const handleCloseOrganogramModal = () => {
+    setShowOrganogramModal(false);
+  };
+
   const nextStep = () => setCurrentStep(currentStep + 1);
   const prevStep = () => setCurrentStep(currentStep - 1);
 
@@ -235,77 +244,200 @@ function Header() {
   };
 
   return (
-    <Navbar bg="dark" variant="dark" expand="md" sticky="top" className="px-3 shadow-sm">
-      <Container fluid>
-        {/* Left side - User dropdown */}
-        <div className="d-flex align-items-center">
-          {role === "admin" ? (
-            <Dropdown align="end">
-              <Dropdown.Toggle
-                variant="outline-light"
-                className="d-flex align-items-center gap-2"
-                title={username}
-              >
-                <FaUserCog size={18} />
-                <span className="d-none d-md-inline">{username}</span>
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="shadow">
-                <Dropdown.Item 
-                  onClick={() => navigate("/indicadores")}
+    <>
+      <Navbar bg="dark" variant="dark" expand="md" sticky="top" className="px-3 shadow-sm">
+        <Container fluid>
+          {/* Left side - User dropdown */}
+          <div className="d-flex align-items-center">
+            {role === "admin" ? (
+              <Dropdown align="end">
+                <Dropdown.Toggle
+                  variant="outline-light"
                   className="d-flex align-items-center gap-2"
+                  title={username}
                 >
-                  <FaUserCog className="text-primary" />
-                  Painel de Referências
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          ) : (
-            <Button variant="outline-light" title={username}>
-              <FaUser size={18} />
-              <span className="d-none d-md-inline ms-2">{username}</span>
-            </Button>
-          )}
-        </div>
+                  <FaUserCog size={18} />
+                  <span className="d-none d-md-inline">{username}</span>
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="shadow">
+                  <Dropdown.Item 
+                    onClick={() => navigate("/indicadores")}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    <FaUserCog className="text-primary" />
+                    Painel de Referências
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            ) : (
+              <Button variant="outline-light" title={username}>
+                <FaUser size={18} />
+                <span className="d-none d-md-inline ms-2">{username}</span>
+              </Button>
+            )}
+          </div>
 
-        {/* Center - Search (desktop) */}
-        {!isMobile && (
-          <div className="mx-4 flex-grow-1 position-relative" style={{ maxWidth: "500px" }} ref={searchRef}>
-            <Form onSubmit={handleSearch}>
-              <InputGroup>
-                <Form.Control
-                  type="search"
-                  placeholder="Pesquisar funcionários..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  onFocus={() => searchQuery && setShowSuggestions(true)}
-                  className="border-end-0"
-                />
-                <Button 
-                  variant="light" 
-                  type="submit"
-                  disabled={searchLoading}
-                >
-                  {searchLoading ? (
-                    <Spinner animation="border" size="sm" />
-                  ) : (
-                    <FaSearch />
-                  )}
-                </Button>
-              </InputGroup>
-              
+          {/* Center - Search (desktop) */}
+          {!isMobile && (
+            <div className="mx-4 flex-grow-1 position-relative" style={{ maxWidth: "500px" }} ref={searchRef}>
+              <Form onSubmit={handleSearch}>
+                <InputGroup>
+                  <Form.Control
+                    type="search"
+                    placeholder="Pesquisar funcionários..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    onFocus={() => searchQuery && setShowSuggestions(true)}
+                    className="border-end-0"
+                  />
+                  <Button 
+                    variant="light" 
+                    type="submit"
+                    disabled={searchLoading}
+                  >
+                    {searchLoading ? (
+                      <Spinner animation="border" size="sm" />
+                    ) : (
+                      <FaSearch />
+                    )}
+                  </Button>
+                </InputGroup>
+                
+                {showSuggestions && autocompleteResults.length > 0 && (
+                  <ListGroup className="position-absolute w-100 mt-1 shadow" style={{ 
+                    zIndex: 1000,
+                    left: 0,
+                    right: 0
+                  }}>
+                    {autocompleteResults.map((item, idx) => {
+                      const term = typeof item === 'string' ? item : item.nome;
+                      const type = typeof item === 'string' ? '' : item.tipo;
+                      const displayType = type === 'Coordenadoria' ? 'Divisão' : type;
+                      
+                      return (
+                        <ListGroup.Item
+                          key={idx}
+                          action
+                          onClick={() => handleSuggestionSelect(item)}
+                          className="d-flex justify-content-between align-items-center"
+                        >
+                          <div>
+                            {term}
+                            {displayType && (
+                              <Badge bg="secondary" className="ms-2">
+                                {displayType}
+                              </Badge>
+                            )}
+                          </div>
+                          <FaChevronRight size={12} className="text-muted" />
+                        </ListGroup.Item>
+                      );
+                    })}
+                  </ListGroup>
+                )}
+              </Form>
+            </div>
+          )}
+
+          {/* Right side - Action buttons */}
+          <div className="d-flex align-items-center gap-2">
+            {/* Mobile search toggle */}
+            {isMobile && (
+              <Button
+                variant="outline-light"
+                onClick={toggleSearch}
+                className="d-md-none"
+              >
+                <FaSearch />
+              </Button>
+            )}
+
+            {/* Botão do Organograma */}
+            <Button
+              variant="outline-light"
+              onClick={handleShowOrganogramModal}
+              title="Visualizar organograma"
+              className="d-flex align-items-center"
+            >
+              <FaSitemap />
+              <span className="d-none d-md-inline ms-2">Orgonograma</span>
+            </Button>
+
+            <Button
+              variant="outline-light"
+              onClick={handleShowModal}
+              title="Adicionar funcionário"
+            >
+              <FaPlus />
+              <span className="d-none d-md-inline ms-2">Novo</span>
+            </Button>
+
+            <Button
+              onClick={() => navigate("/mainscreen")}
+              variant="outline-light"
+              title="Página inicial"
+            >
+              <FaHome />
+              <span className="d-none d-md-inline ms-2">Início</span>
+            </Button>
+
+            <Button
+              onClick={logoutUser}
+              variant="outline-light"
+              title="Sair"
+            >
+              <FaSignOutAlt />
+              <span className="d-none d-md-inline ms-2">Sair</span>
+            </Button>
+          </div>
+
+          {/* Mobile search overlay */}
+          {isMobile && showSearch && (
+            <div 
+              className="position-fixed top-0 start-0 w-100 bg-dark p-3 d-md-none"
+              style={{
+                zIndex: 1050,
+                marginTop: "56px",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.2)"
+              }}
+              ref={searchRef}
+            >
+              <Form onSubmit={handleSearch} className="d-flex">
+                <InputGroup>
+                  <Form.Control
+                    type="search"
+                    placeholder="Pesquisar funcionários..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
+                    className="mobile-search-input"
+                  />
+                  <Button 
+                    variant="light" 
+                    type="submit"
+                    disabled={searchLoading}
+                  >
+                    {searchLoading ? (
+                      <Spinner animation="border" size="sm" />
+                    ) : (
+                      <FaSearch />
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline-light"
+                    onClick={() => setShowSearch(false)}
+                  >
+                    <FaTimes />
+                  </Button>
+                </InputGroup>
+              </Form>
+
               {showSuggestions && autocompleteResults.length > 0 && (
-                <ListGroup className="position-absolute w-100 mt-1 shadow" style={{ 
-                  zIndex: 1000,
-                  left: 0,
-                  right: 0
-                }}>
+                <ListGroup className="mt-2 shadow">
                   {autocompleteResults.map((item, idx) => {
-                    // Se o item for uma string (para compatibilidade com versão antiga)
                     const term = typeof item === 'string' ? item : item.nome;
                     const type = typeof item === 'string' ? '' : item.tipo;
-                    
-                    // Mostrar "Divisão" quando o tipo for "Coordenadoria"
                     const displayType = type === 'Coordenadoria' ? 'Divisão' : type;
                     
                     return (
@@ -329,169 +461,62 @@ function Header() {
                   })}
                 </ListGroup>
               )}
-            </Form>
-          </div>
-        )}
-
-        {/* Right side - Action buttons */}
-        <div className="d-flex align-items-center gap-2">
-          {/* Mobile search toggle */}
-          {isMobile && (
-            <Button
-              variant="outline-light"
-              onClick={toggleSearch}
-              className="d-md-none"
-            >
-              <FaSearch />
-            </Button>
+            </div>
           )}
+        </Container>
 
-          <Button
-            variant="outline-light"
-            onClick={handleShowModal}
-            title="Adicionar funcionário"
-          >
-            <FaPlus />
-            <span className="d-none d-md-inline ms-2">Novo</span>
-          </Button>
+        {/* New Employee Modal */}
+        <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
+          <Modal.Header closeButton className="border-0 pb-0">
+            <Modal.Title>Registrar Novo Funcionário</Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="pt-0">
+            <div className="d-flex mb-3">
+              <Badge bg={currentStep >= 1 ? "primary" : "secondary"} className="d-flex align-items-center me-2">
+                {currentStep > 1 ? "✓" : "1"}
+              </Badge>
+              <Badge bg={currentStep >= 2 ? "primary" : "secondary"} className="d-flex align-items-center me-2">
+                {currentStep > 2 ? "✓" : "2"}
+              </Badge>
+              <Badge bg={currentStep >= 3 ? "primary" : "secondary"} className="d-flex align-items-center">
+                3
+              </Badge>
+            </div>
 
-          <Button
-            onClick={() => navigate("/mainscreen")}
-            variant="outline-light"
-            title="Página inicial"
-          >
-            <FaHome />
-            <span className="d-none d-md-inline ms-2">Início</span>
-          </Button>
-
-          <Button
-            onClick={logoutUser}
-            variant="outline-light"
-            title="Sair"
-          >
-            <FaSignOutAlt />
-            <span className="d-none d-md-inline ms-2">Sair</span>
-          </Button>
-        </div>
-
-        {/* Mobile search overlay */}
-        {isMobile && showSearch && (
-          <div 
-            className="position-fixed top-0 start-0 w-100 bg-dark p-3 d-md-none"
-            style={{
-              zIndex: 1050,
-              marginTop: "56px",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.2)"
-            }}
-            ref={searchRef}
-          >
-            <Form onSubmit={handleSearch} className="d-flex">
-              <InputGroup>
-                <Form.Control
-                  type="search"
-                  placeholder="Pesquisar funcionários..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus
-                  className="mobile-search-input"
-                />
-                <Button 
-                  variant="light" 
-                  type="submit"
-                  disabled={searchLoading}
-                >
-                  {searchLoading ? (
-                    <Spinner animation="border" size="sm" />
-                  ) : (
-                    <FaSearch />
-                  )}
-                </Button>
-                <Button
-                  variant="outline-light"
-                  onClick={() => setShowSearch(false)}
-                >
-                  <FaTimes />
-                </Button>
-              </InputGroup>
-            </Form>
-
-            {showSuggestions && autocompleteResults.length > 0 && (
-              <ListGroup className="mt-2 shadow">
-                {autocompleteResults.map((item, idx) => {
-                  const term = typeof item === 'string' ? item : item.nome;
-                  const type = typeof item === 'string' ? '' : item.tipo;
-                  const displayType = type === 'Coordenadoria' ? 'Divisão' : type;
-                  
-                  return (
-                    <ListGroup.Item
-                      key={idx}
-                      action
-                      onClick={() => handleSuggestionSelect(item)}
-                      className="d-flex justify-content-between align-items-center"
-                    >
-                      <div>
-                        {term}
-                        {displayType && (
-                          <Badge bg="secondary" className="ms-2">
-                            {displayType}
-                          </Badge>
-                        )}
-                      </div>
-                      <FaChevronRight size={12} className="text-muted" />
-                    </ListGroup.Item>
-                  );
-                })}
-              </ListGroup>
+            {currentStep === 1 && (
+              <Step1Form
+                nextStep={nextStep}
+                newUser={newUser}
+                setNewUser={setNewUser}
+                handleCloseModal={handleCloseModal}
+              />
             )}
-          </div>
-        )}
-      </Container>
+            {currentStep === 2 && (
+              <Step2Form
+                newUser={newUser}
+                setNewUser={setNewUser}
+                nextStep={nextStep}
+                previousStep={prevStep}
+                handleCloseModal={handleCloseModal}
+              />
+            )}
+            {currentStep === 3 && (
+              <Step3Form
+                newUser={newUser}
+                previousStep={prevStep}
+                handleCloseModal={handleCloseModal}
+              />
+            )}
+          </Modal.Body>
+        </Modal>
+      </Navbar>
 
-      {/* New Employee Modal */}
-      <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
-        <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title>Registrar Novo Funcionário</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="pt-0">
-          <div className="d-flex mb-3">
-            <Badge bg={currentStep >= 1 ? "primary" : "secondary"} className="d-flex align-items-center me-2">
-              {currentStep > 1 ? "✓" : "1"}
-            </Badge>
-            <Badge bg={currentStep >= 2 ? "primary" : "secondary"} className="d-flex align-items-center me-2">
-              {currentStep > 2 ? "✓" : "2"}
-            </Badge>
-            <Badge bg={currentStep >= 3 ? "primary" : "secondary"} className="d-flex align-items-center">
-              3
-            </Badge>
-          </div>
-
-          {currentStep === 1 && (
-            <Step1Form
-              nextStep={nextStep}
-              newUser={newUser}
-              setNewUser={setNewUser}
-              handleCloseModal={handleCloseModal}
-            />
-          )}
-          {currentStep === 2 && (
-            <Step2Form
-              newUser={newUser}
-              setNewUser={setNewUser}
-              nextStep={nextStep}
-              previousStep={prevStep}
-              handleCloseModal={handleCloseModal}
-            />
-          )}
-          {currentStep === 3 && (
-            <Step3Form
-              newUser={newUser}
-              previousStep={prevStep}
-              handleCloseModal={handleCloseModal}
-            />
-          )}
-        </Modal.Body>
-      </Modal>
-    </Navbar>
+      {/* Modal do Organograma */}
+      <OrganogramModal 
+        show={showOrganogramModal}
+        onHide={handleCloseOrganogramModal}
+      />
+    </>
   );
 }
 

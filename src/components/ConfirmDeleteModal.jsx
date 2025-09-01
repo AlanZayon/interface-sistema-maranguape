@@ -4,12 +4,12 @@ import { FaExclamationTriangle, FaUsers } from 'react-icons/fa';
 import axios from "axios";
 import { API_BASE_URL } from "../utils/apiConfig";
 
-function ConfirmDeleteModal({ 
-    showModal, 
-    handleClose, 
-    handleConfirmDelete, 
+function ConfirmDeleteModal({
+    showModal,
+    handleClose,
+    handleConfirmDelete,
     entityId,
-    entityType 
+    entityType
 }) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [hasEmployees, setHasEmployees] = useState(false);
@@ -42,11 +42,11 @@ function ConfirmDeleteModal({
 
     const handleConfirmClick = async () => {
         const employeesExist = await checkForEmployees();
-        
+
         if (employeesExist) {
             return; // Não prossegue com a exclusão
         }
-        
+
         setIsDeleting(true);
         try {
             await handleConfirmDelete();
@@ -68,10 +68,10 @@ function ConfirmDeleteModal({
                 </Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <p>Atenção: Ao excluir este {entityType.toLowerCase()}, todos os subsetores e coordenadorias vinculados serão
+                <p>Atenção: Ao excluir este {entityType}, todos os subsetores e coordenadorias vinculados serão
                     permanentemente apagados. Além disso, os funcionários associados não poderão mais ser
                     acessados através dele. Esta ação não pode ser desfeita. Você tem certeza de que deseja continuar?</p>
-                
+
                 {checkingEmployees && (
                     <div className="text-center my-3">
                         <Spinner animation="border" size="sm" className="me-2" />
@@ -94,20 +94,20 @@ function ConfirmDeleteModal({
                 )}
             </Modal.Body>
             <Modal.Footer>
-                <Button 
-                    variant="secondary" 
+                <Button
+                    variant="secondary"
                     onClick={handleClose}
                     disabled={isDeleting || checkingEmployees}
                 >
                     Cancelar
                 </Button>
-                <Button 
-                    variant="danger" 
+                <Button
+                    variant="danger"
                     onClick={handleConfirmClick}
                     disabled={isDeleting || checkingEmployees || hasEmployees}
                 >
-                    {isDeleting ? 'Excluindo...' : 
-                     checkingEmployees ? 'Verificando...' : 'Prosseguir'}
+                    {isDeleting ? 'Excluindo...' :
+                        checkingEmployees ? 'Verificando...' : 'Prosseguir'}
                 </Button>
             </Modal.Footer>
         </Modal>
