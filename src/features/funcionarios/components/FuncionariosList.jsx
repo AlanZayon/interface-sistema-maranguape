@@ -1,21 +1,23 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Button,
   Form,
-  FormControl,
   InputGroup,
-  Overlay,
-  Popover,
   ButtonGroup,
   Table,
   Badge,
+  Dropdown,
 } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { FixedSizeGrid as Grid } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { useAuth } from '@features/auth';
-import { FilterModal } from '@features/funcionarios';
+import FilterModal, {
+  countActiveFilters,
+  createEmptyFilters,
+} from "./FilterModal";
 import { RelatorioTypeModal } from '@features/funcionarios';
 import { ObservationHistoryModal } from '@features/funcionarios';
 import { CoordEdit } from '@features/funcionarios';
@@ -37,6 +39,36 @@ import {
 
 const VIEW_MODE_KEY = "funcionarios.viewMode";
 
+/**
+ * Busca local na lista: todos os termos (espaço) precisam aparecer em algum campo.
+ */
+function matchesListSearch(user, term) {
+  const q = String(term || "").trim().toLowerCase();
+  if (!q) return true;
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const hay = [
+    user?.nome,
+    user?.funcao,
+    user?.referencia,
+    user?.natureza,
+    user?.secretaria,
+    user?.bairro,
+    user?.cidade,
+    user?.telefone,
+    user?.tipo,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return tokens.every((token) => {
+    const t = token.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return hay.includes(t);
+  });
+}
+
 function FuncionairosList({
   coordenadoriaId,
   setorPathId,
@@ -48,11 +80,14 @@ function FuncionairosList({
   const location = useLocation();
   const navigate = useNavigate();
   const [searchTermFromURL, setSearchTermFromURL] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showModalEdit, setShowModalEdit] = useState(false);
   const [showModalSingleEdit, setShowModalSingleEdit] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editDirty, setEditDirty] = useState(false);
+  const [pendingDiscardEdit, setPendingDiscardEdit] = useState(false);
+  const [pendingTransferConfirm, setPendingTransferConfirm] = useState(false);
   const [viewMode, setViewMode] = useState(() => {
     try {
       return localStorage.getItem(VIEW_MODE_KEY) || "card";
@@ -82,6 +117,8 @@ function FuncionairosList({
   const [showSelectionControlsReport, setShowSelectionControlsReport] =
     useState(false);
   const [showSelectionControlsEdit, setShowSelectionControlsEdit] =
+    useState(false);
+  const [showSelectionControlsCsv, setShowSelectionControlsCsv] =
     useState(false);
   const [detailUser, setDetailUser] = useState(null);
   const [observations, setObservations] = useState({});
@@ -128,7 +165,6 @@ function FuncionairosList({
   useEffect(() => {
     if (useLocalCoordQuery) setLoading(coordFetching);
   }, [useLocalCoordQuery, coordFetching]);
-  const searchRef = useRef(null);
   const [exportingCsv, setExportingCsv] = useState(false);
 
   const changeViewMode = (mode) => {
@@ -141,10 +177,17 @@ function FuncionairosList({
   };
 
   const handleExportCsv = async () => {
+    if (selectedUsers.length === 0) {
+      toast.warn("Selecione pelo menos um funcionário para exportar.");
+      return;
+    }
+
     try {
       setExportingCsv(true);
-      const response = await funcionariosApi.exportCsv();
-      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+      const response = await funcionariosApi.exportCsv(selectedUsers);
+      const blob = new Blob([response.data], {
+        type: "text/csv;charset=utf-8;",
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -153,7 +196,12 @@ function FuncionairosList({
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      toast.success("CSV exportado");
+      toast.success(
+        `${selectedUsers.length} funcionário(s) exportado(s) em CSV`
+      );
+      setShowSelectionControlsCsv(false);
+      setSelectedUsers([]);
+      setSelectAll(false);
     } catch (error) {
       console.error("Erro ao exportar CSV:", error);
       toast.error("Falha ao exportar CSV");
@@ -222,65 +270,70 @@ function FuncionairosList({
       setShowSelectionControlsEdit(false);
     }
   };
-  const handleCloseModalSingleEdit = () => {
+  const handleCloseModalSingleEdit = (options = {}) => {
+    const force = options === true || options?.force === true;
+    if (editSubmitting && !force) return;
+    if (editDirty && !force) {
+      setPendingDiscardEdit(true);
+      return;
+    }
     setShowModalSingleEdit(false);
+    setEditDirty(false);
+    setEditSubmitting(false);
+    setPendingDiscardEdit(false);
   };
 
-  const handleInicioContratoChange = (date) => {
-    setActiveFilters(prev => {
-      const newInicio = date ? new Date(date.setHours(0, 0, 0, 0)).toISOString() : null;
+  const confirmDiscardEdit = () => {
+    setPendingDiscardEdit(false);
+    setShowModalSingleEdit(false);
+    setEditDirty(false);
+    setEditSubmitting(false);
+  };
 
-      // Validação para garantir que a data inicial não seja depois da data final
-      const newFim = prev.fimContrato && newInicio > prev.fimContrato ? null : prev.fimContrato;
+  const handleRequestTransferFromEdit = () => {
+    if (!funcionarioEncontrado?._id) return;
+    if (editDirty) {
+      setPendingTransferConfirm(true);
+      return;
+    }
+    proceedTransferFromEdit();
+  };
 
-      return {
-        ...prev,
-        inicioContrato: newInicio,
-        fimContrato: newFim
-      };
+  const proceedTransferFromEdit = () => {
+    if (!funcionarioEncontrado?._id) return;
+    setPendingTransferConfirm(false);
+    setSelectedUsers([funcionarioEncontrado._id]);
+    setShowModalSingleEdit(false);
+    setEditDirty(false);
+    setShowSelectionControlsEdit(true);
+    setShowModalEdit(true);
+  };
+
+  const handleApplyFilters = (filters) => {
+    const normalizeInicio = (date) => {
+      if (!date) return null;
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString();
+    };
+    const normalizeFim = (date) => {
+      if (!date) return null;
+      const d = new Date(date);
+      d.setHours(23, 59, 59, 999);
+      return d.toISOString();
+    };
+
+    setActiveFilters({
+      ...filters,
+      inicioContrato: normalizeInicio(filters.inicioContrato),
+      fimContrato: filters.contratoIndeterminado
+        ? null
+        : normalizeFim(filters.fimContrato),
     });
-  };
-
-  const handleFimContratoChange = (date) => {
-    setActiveFilters(prev => {
-      const newFim = date ? new Date(date.setHours(23, 59, 59, 999)).toISOString() : null;
-
-      // Validação para garantir que a data final não seja antes da data inicial
-      const newInicio = prev.inicioContrato && newFim < prev.inicioContrato ? null : prev.inicioContrato;
-
-      return {
-        ...prev,
-        fimContrato: newFim,
-        inicioContrato: newInicio
-      };
-    });
-  };
-
-  const handleIndeterminadoChange = (isIndeterminado) => {
-    setActiveFilters(prev => ({
-      ...prev,
-      contratoIndeterminado: isIndeterminado,
-      ...(isIndeterminado && {
-        fimContrato: null
-      })
-    }));
   };
 
   const handleClearAllFilters = () => {
-    setActiveFilters({
-      natureza: [],
-      funcao: [],
-      bairro: [],
-      referencia: [],
-      salarioBruto: {
-        min: Math.min(...todosSalariosBrutos),
-        max: Math.max(...todosSalariosBrutos),
-      },
-      inicioContrato: null,
-      fimContrato: null,
-      contratoIndeterminado: false,
-
-    });
+    setActiveFilters(createEmptyFilters(todosSalariosBrutos));
   };
 
   const sortFuncionariosAlphabetically = (funcionarios) => {
@@ -312,18 +365,33 @@ function FuncionairosList({
         Number.MAX_SAFE_INTEGER
       );
 
-      // Verifica filtros de contrato (apenas para temporários)
-      const contratoFilter = funcionario.natureza !== "TEMPORARIO" || (
-        (!activeFilters.inicioContrato || new Date(funcionario.inicioContrato) >= new Date(activeFilters.inicioContrato)) &&
-        (
-          !activeFilters.fimContrato ||
-          (
-            funcionario.fimContrato &&
-            funcionario.fimContrato.toUpperCase() !== "INDETERMINADO" &&
-            new Date(funcionario.fimContrato) <= new Date(activeFilters.fimContrato)
-          )
-        )
-      );
+      const isFimIndeterminado = (fim) =>
+        String(fim || "").toUpperCase() === "INDETERMINADO";
+
+      const inicioOk =
+        !activeFilters.inicioContrato ||
+        (funcionario.inicioContrato &&
+          new Date(funcionario.inicioContrato) >=
+            new Date(activeFilters.inicioContrato));
+
+      let contratoFilter = true;
+
+      if (activeFilters.contratoIndeterminado) {
+        // "Somente" = exclusivo: apenas contratos com fim indeterminado
+        contratoFilter =
+          isFimIndeterminado(funcionario.fimContrato) && inicioOk;
+      } else if (activeFilters.inicioContrato || activeFilters.fimContrato) {
+        // Datas restringem só temporários; demais naturezas passam
+        if (funcionario.natureza === "TEMPORARIO") {
+          const fimOk =
+            !activeFilters.fimContrato ||
+            (funcionario.fimContrato &&
+              !isFimIndeterminado(funcionario.fimContrato) &&
+              new Date(funcionario.fimContrato) <=
+                new Date(activeFilters.fimContrato));
+          contratoFilter = inicioOk && fimOk;
+        }
+      }
 
 
       return (
@@ -463,7 +531,7 @@ function FuncionairosList({
     }
 
     const filtered = baseFuncionarios.filter((user) =>
-      user.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+      matchesListSearch(user, searchTerm)
     );
 
     setFilteredFuncionarios(applyFilters(filtered));
@@ -485,50 +553,6 @@ function FuncionairosList({
     const funcionario = buscarFuncionario(id);
     setFuncionarioEncontrado(funcionario);
     setShowModalSingleEdit(true);
-  };
-
-  // Função para alternar os filtros de natureza com checkboxes
-  const toggleNatureza = (value) => {
-    setActiveFilters((prevFilters) => {
-      const updatedNaturezas = prevFilters.natureza.includes(value)
-        ? prevFilters.natureza.filter((n) => n !== value) // Remove se já estiver selecionado
-        : [...prevFilters.natureza, value]; // Adiciona se não estiver selecionado
-      return { ...prevFilters, natureza: updatedNaturezas };
-    });
-  };
-
-  // Função para alternar múltiplas funções no filtro
-  const toggleFuncao = (funcao) => {
-    setActiveFilters((prevFilters) => {
-      const updatedFuncoes = prevFilters.funcao.includes(funcao)
-        ? prevFilters.funcao.filter((f) => f !== funcao)
-        : [...prevFilters.funcao, funcao];
-      return { ...prevFilters, funcao: updatedFuncoes };
-    });
-  };
-
-  const toggleBairro = (bairro) => {
-    setActiveFilters((prev) => {
-      const isSelected = prev.bairro.includes(bairro);
-      const newBairros = isSelected
-        ? prev.bairro.filter((item) => item !== bairro)
-        : [...prev.bairro, bairro];
-      return { ...prev, bairro: newBairros };
-    });
-  };
-
-  const toggleReferencia = (referencia) => {
-    setActiveFilters((prev) => {
-      const isSelected = prev.referencia.includes(referencia);
-      const newReferencias = isSelected
-        ? prev.referencia.filter((item) => item !== referencia)
-        : [...prev.referencia, referencia];
-      return { ...prev, referencia: newReferencias };
-    });
-  };
-
-  const handleSalarioBrutoChange = (salarioBruto) => {
-    setActiveFilters((prev) => ({ ...prev, salarioBruto }));
   };
 
   const validateBounds = (value, fallback) => {
@@ -617,7 +641,7 @@ function FuncionairosList({
     setShowReportTypeModal(true);
   };
 
-  const confirmReportGeneration = async () => {
+  const confirmReportGeneration = () => {
     setShowReportTypeModal(false);
 
     if (selectedUsers.length === 0) {
@@ -625,47 +649,49 @@ function FuncionairosList({
       return;
     }
 
-    try {
-      const response = await funcionariosApi.gerarRelatorio({
+    navigate("/relatorios/preview", {
+      state: {
         ids: selectedUsers,
         tipo: selectedReportType,
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `relatorio_${selectedReportType}_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (error) {
-      console.error("Erro ao gerar o relatório:", error);
-      toast.error("Erro ao gerar o relatório. Tente novamente.");
-    }
+        returnTo: `${location.pathname}${location.search}`,
+      },
+    });
   };
 
   const toggleSelectionControlsDelete = () => {
     setShowSelectionControlsDelete(!showSelectionControlsDelete);
     setShowSelectionControlsReport(false);
     setShowSelectionControlsEdit(false);
-    setSelectedUsers([]); // Limpa qualquer seleção existente
-    setSelectAll(false); // Reseta a seleção global
+    setShowSelectionControlsCsv(false);
+    setSelectedUsers([]);
+    setSelectAll(false);
   };
 
   const toggleSelectionControlsEdit = () => {
     setShowSelectionControlsEdit(!showSelectionControlsEdit);
     setShowSelectionControlsReport(false);
     setShowSelectionControlsDelete(false);
-    setSelectedUsers([]); // Limpa qualquer seleção existente
-    setSelectAll(false); // Reseta a seleção global
+    setShowSelectionControlsCsv(false);
+    setSelectedUsers([]);
+    setSelectAll(false);
   };
 
   const toggleSelectionControlsReport = () => {
     setShowSelectionControlsReport(!showSelectionControlsReport);
     setShowSelectionControlsDelete(false);
     setShowSelectionControlsEdit(false);
-    setSelectedUsers([]); // Limpa qualquer seleção existente
-    setSelectAll(false); // Reseta a seleção global
+    setShowSelectionControlsCsv(false);
+    setSelectedUsers([]);
+    setSelectAll(false);
+  };
+
+  const toggleSelectionControlsCsv = () => {
+    setShowSelectionControlsCsv(!showSelectionControlsCsv);
+    setShowSelectionControlsDelete(false);
+    setShowSelectionControlsEdit(false);
+    setShowSelectionControlsReport(false);
+    setSelectedUsers([]);
+    setSelectAll(false);
   };
 
   const handleViewObservations = (userId) => {
@@ -683,13 +709,19 @@ function FuncionairosList({
   const selectionActive =
     showSelectionControlsDelete ||
     showSelectionControlsEdit ||
-    showSelectionControlsReport;
+    showSelectionControlsReport ||
+    showSelectionControlsCsv;
 
   const getColumnCount = (width) => {
     if (width < 768) return 1;
     if (width < 992) return 2;
     return 3;
   };
+
+  const activeFilterCount = countActiveFilters(
+    activeFilters,
+    todosSalariosBrutos
+  );
 
   if (loading && !pendingDeleteIds) {
     return <LoadingState label="Carregando funcionários..." minHeight="16rem" />;
@@ -703,13 +735,56 @@ function FuncionairosList({
         : departmentName;
 
   const showPageChrome = Boolean(setorPathId);
+  const searchActive = Boolean(String(searchTerm || "").trim());
+
+  const listSearchField = (
+    <div className="funcionarios-list-search">
+      <InputGroup size="sm">
+        <InputGroup.Text className="funcionarios-list-search__icon">
+          <i className="bi bi-search" aria-hidden="true" />
+        </InputGroup.Text>
+        <Form.Control
+          type="search"
+          placeholder="Buscar por nome, função, referência, natureza…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          aria-label="Buscar na lista de funcionários"
+          autoComplete="off"
+        />
+        {searchActive ? (
+          <Button
+            type="button"
+            variant="outline-secondary"
+            size="sm"
+            onClick={() => setSearchTerm("")}
+            aria-label="Limpar busca"
+            title="Limpar busca"
+          >
+            <i className="bi bi-x-lg" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </InputGroup>
+      {searchActive ? (
+        <p className="funcionarios-list-search__hint mb-0">
+          {filteredFuncionarios.length === 0
+            ? "Nenhum resultado para esta busca"
+            : `${filteredFuncionarios.length} resultado${
+                filteredFuncionarios.length === 1 ? "" : "s"
+              }`}
+        </p>
+      ) : null}
+    </div>
+  );
 
   const toolbar = (
-    <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <div className="funcionarios-list__toolbar mb-3">
+      {listSearchField}
+
+      <div className="d-flex flex-wrap align-items-center gap-2">
       {role === "admin" ? (
         <>
           <Button
-            variant="outline-primary"
+            variant={activeFilterCount > 0 ? "primary" : "outline-primary"}
             size="sm"
             onClick={() => setShowModal(true)}
             aria-label="Filtros"
@@ -717,13 +792,32 @@ function FuncionairosList({
           >
             <i className="bi bi-funnel me-1" aria-hidden="true" />
             Filtros
+            {activeFilterCount > 0 ? (
+              <Badge bg="light" text="primary" pill className="ms-1">
+                {activeFilterCount}
+              </Badge>
+            ) : null}
           </Button>
+          {activeFilterCount > 0 ? (
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={handleClearAllFilters}
+              title="Limpar filtros"
+              aria-label="Limpar filtros"
+            >
+              <i className="bi bi-x-circle me-1" aria-hidden="true" />
+              Limpar
+            </Button>
+          ) : null}
           <Button
             variant={showSelectionControlsEdit ? "secondary" : "outline-secondary"}
             size="sm"
             onClick={toggleSelectionControlsEdit}
             className={
-              showSelectionControlsDelete || showSelectionControlsReport
+              showSelectionControlsDelete ||
+              showSelectionControlsReport ||
+              showSelectionControlsCsv
                 ? "d-none"
                 : ""
             }
@@ -737,7 +831,9 @@ function FuncionairosList({
             size="sm"
             onClick={toggleSelectionControlsDelete}
             className={
-              showSelectionControlsEdit || showSelectionControlsReport
+              showSelectionControlsEdit ||
+              showSelectionControlsReport ||
+              showSelectionControlsCsv
                 ? "d-none"
                 : ""
             }
@@ -753,7 +849,9 @@ function FuncionairosList({
             }
             size="sm"
             className={
-              showSelectionControlsDelete || showSelectionControlsEdit
+              showSelectionControlsDelete ||
+              showSelectionControlsEdit ||
+              showSelectionControlsCsv
                 ? "d-none"
                 : ""
             }
@@ -763,53 +861,49 @@ function FuncionairosList({
             <i className="bi bi-file-earmark-text" aria-hidden="true" />
           </Button>
           <Button
-            variant="outline-success"
+            variant={showSelectionControlsCsv ? "success" : "outline-success"}
             size="sm"
-            onClick={handleExportCsv}
-            disabled={exportingCsv}
+            onClick={toggleSelectionControlsCsv}
+            className={
+              showSelectionControlsDelete ||
+              showSelectionControlsEdit ||
+              showSelectionControlsReport
+                ? "d-none"
+                : ""
+            }
             title="Exportar CSV"
-            aria-label="Exportar CSV"
+            aria-label="Selecionar para exportar CSV"
           >
             <i className="bi bi-filetype-csv" aria-hidden="true" />
-          </Button>
-          <Overlay target={searchRef.current} show={showSearch} placement="bottom">
-            {(props) => (
-              <Popover {...props}>
-                <Popover.Body>
-                  <InputGroup size="sm">
-                    <FormControl
-                      type="text"
-                      placeholder="Nome do servidor..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      aria-label="Filtrar por nome"
-                    />
-                  </InputGroup>
-                </Popover.Body>
-              </Popover>
-            )}
-          </Overlay>
-          <Button
-            ref={searchRef}
-            variant="outline-secondary"
-            size="sm"
-            onClick={() => setShowSearch(!showSearch)}
-            aria-label="Buscar na lista"
-            title="Buscar na lista"
-          >
-            <i className="bi bi-search" aria-hidden="true" />
           </Button>
         </>
       ) : (
         <Button
-          variant="outline-primary"
+          variant={activeFilterCount > 0 ? "primary" : "outline-primary"}
           size="sm"
           onClick={() => setShowModal(true)}
         >
           <i className="bi bi-funnel me-1" aria-hidden="true" />
           Filtros
+          {activeFilterCount > 0 ? (
+            <Badge bg="light" text="primary" pill className="ms-1">
+              {activeFilterCount}
+            </Badge>
+          ) : null}
         </Button>
       )}
+
+      {role !== "admin" && activeFilterCount > 0 ? (
+        <Button
+          variant="outline-secondary"
+          size="sm"
+          onClick={handleClearAllFilters}
+          title="Limpar filtros"
+        >
+          <i className="bi bi-x-circle me-1" aria-hidden="true" />
+          Limpar
+        </Button>
+      ) : null}
 
       <ButtonGroup size="sm" className="ms-auto" aria-label="Modo de visualização">
         <Button
@@ -834,7 +928,8 @@ function FuncionairosList({
 
       {showSelectionControlsDelete &&
         !showSelectionControlsEdit &&
-        !showSelectionControlsReport && (
+        !showSelectionControlsReport &&
+        !showSelectionControlsCsv && (
           <div className="d-flex align-items-center gap-2">
             <Form.Check
               type="checkbox"
@@ -856,7 +951,8 @@ function FuncionairosList({
 
       {showSelectionControlsEdit &&
         !showSelectionControlsDelete &&
-        !showSelectionControlsReport && (
+        !showSelectionControlsReport &&
+        !showSelectionControlsCsv && (
           <div className="d-flex align-items-center gap-2">
             <Form.Check
               type="checkbox"
@@ -878,7 +974,8 @@ function FuncionairosList({
 
       {showSelectionControlsReport &&
         !showSelectionControlsEdit &&
-        !showSelectionControlsDelete && (
+        !showSelectionControlsDelete &&
+        !showSelectionControlsCsv && (
           <div className="d-flex align-items-center gap-2">
             <Form.Check
               type="checkbox"
@@ -897,6 +994,30 @@ function FuncionairosList({
             </Button>
           </div>
         )}
+
+      {showSelectionControlsCsv &&
+        !showSelectionControlsEdit &&
+        !showSelectionControlsDelete &&
+        !showSelectionControlsReport && (
+          <div className="d-flex align-items-center gap-2">
+            <Form.Check
+              type="checkbox"
+              label="Todos"
+              checked={selectAll}
+              onChange={handleSelectAll}
+              className="checkbox-container"
+            />
+            <Button
+              size="sm"
+              variant="success"
+              onClick={handleExportCsv}
+              disabled={selectedUsers.length === 0 || exportingCsv}
+            >
+              {exportingCsv ? "Exportando…" : "Exportar CSV"}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -907,14 +1028,17 @@ function FuncionairosList({
           <tr>
             {(showSelectionControlsDelete ||
               showSelectionControlsEdit ||
-              showSelectionControlsReport) && <th style={{ width: 40 }} />}
+              showSelectionControlsReport ||
+              showSelectionControlsCsv) && <th style={{ width: 40 }} />}
             <th style={{ width: 56 }} />
             <th>Nome</th>
             <th>Função</th>
             <th>Secretaria</th>
             <th>Natureza</th>
             <th>Referência</th>
-            {role === "admin" && <th className="text-end">Ações</th>}
+            <th className="text-end" style={{ width: 56 }}>
+              <span className="visually-hidden">Ações</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -922,7 +1046,8 @@ function FuncionairosList({
             <tr key={user._id}>
               {(showSelectionControlsDelete ||
                 showSelectionControlsEdit ||
-                showSelectionControlsReport) && (
+                showSelectionControlsReport ||
+                showSelectionControlsCsv) && (
                 <td>
                   <Form.Check
                     type="checkbox"
@@ -955,27 +1080,48 @@ function FuncionairosList({
                 )}
               </td>
               <td>{user.referencia || "—"}</td>
-              {role === "admin" && (
-                <td className="text-end text-nowrap">
-                  <Button
-                    size="sm"
+              <td className="text-end">
+                <Dropdown align="end" className="funcionarios-row-actions">
+                  <Dropdown.Toggle
                     variant="outline-secondary"
-                    className="me-1"
-                    onClick={() => handleClick(user._id)}
-                    aria-label={`Editar ${user.nome}`}
-                  >
-                    <i className="bi bi-pencil" aria-hidden="true" />
-                  </Button>
-                  <Button
                     size="sm"
-                    variant="outline-danger"
-                    onClick={() => handleDeleteSelected(user._id)}
-                    aria-label={`Excluir ${user.nome}`}
+                    id={`acoes-${user._id}`}
+                    className="funcionarios-row-actions__toggle"
+                    aria-label={`Ações de ${user.nome}`}
                   >
-                    <i className="bi bi-trash" aria-hidden="true" />
-                  </Button>
-                </td>
-              )}
+                    <i className="bi bi-three-dots-vertical" aria-hidden="true" />
+                  </Dropdown.Toggle>
+                  {createPortal(
+                    <Dropdown.Menu
+                      className="shadow-sm funcionarios-row-actions__menu"
+                      popperConfig={{ strategy: "fixed" }}
+                      renderOnMount
+                    >
+                      <Dropdown.Item onClick={() => setDetailUser(user)}>
+                        <i className="bi bi-info-circle me-2" aria-hidden="true" />
+                        Ver detalhes
+                      </Dropdown.Item>
+                      {role === "admin" && (
+                        <>
+                          <Dropdown.Item onClick={() => handleClick(user._id)}>
+                            <i className="bi bi-pencil me-2" aria-hidden="true" />
+                            Editar
+                          </Dropdown.Item>
+                          <Dropdown.Divider />
+                          <Dropdown.Item
+                            className="text-danger"
+                            onClick={() => handleDeleteSelected(user._id)}
+                          >
+                            <i className="bi bi-trash me-2" aria-hidden="true" />
+                            Excluir
+                          </Dropdown.Item>
+                        </>
+                      )}
+                    </Dropdown.Menu>,
+                    document.body
+                  )}
+                </Dropdown>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -1042,7 +1188,13 @@ function FuncionairosList({
           />
           <PageHeader
             title={listTitle || "Funcionários"}
-            subtitle={`${filteredFuncionarios.length} registro(s)`}
+            subtitle={
+              searchActive
+                ? `${filteredFuncionarios.length} resultado${
+                    filteredFuncionarios.length === 1 ? "" : "s"
+                  } para “${searchTerm.trim()}”`
+                : `${filteredFuncionarios.length} registro(s)`
+            }
           />
         </>
       )}
@@ -1056,15 +1208,7 @@ function FuncionairosList({
         todosBairros={todosBairros}
         todasReferencias={todasReferencias}
         todosSalariosBrutos={todosSalariosBrutos}
-        toggleNatureza={toggleNatureza}
-        toggleFuncao={toggleFuncao}
-        toggleBairro={toggleBairro}
-        toggleReferencia={toggleReferencia}
-        handleSalarioBrutoChange={handleSalarioBrutoChange}
-        handleInicioContratoChange={handleInicioContratoChange}
-        handleFimContratoChange={handleFimContratoChange}
-        onClearAllFilters={handleClearAllFilters}
-        handleIndeterminadoChange={handleIndeterminadoChange}
+        onApply={handleApplyFilters}
       />
 
       <RelatorioTypeModal
@@ -1079,9 +1223,28 @@ function FuncionairosList({
 
       {filteredFuncionarios.length === 0 ? (
         <EmptyState
-          icon="bi-people"
-          title="Nenhum funcionário encontrado"
-          description="Ajuste os filtros ou a busca, ou selecione outras divisões."
+          icon={searchActive ? "bi-search" : "bi-people"}
+          title={
+            searchActive
+              ? "Nenhum resultado na busca"
+              : "Nenhum funcionário encontrado"
+          }
+          description={
+            searchActive
+              ? `Não há coincidências para “${searchTerm.trim()}”. Tente outro termo ou limpe a busca.`
+              : "Ajuste os filtros ou a busca, ou selecione outras divisões."
+          }
+          action={
+            searchActive ? (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={() => setSearchTerm("")}
+              >
+                Limpar busca
+              </Button>
+            ) : null
+          }
         />
       ) : viewMode === "table" ? (
         tableView
@@ -1102,6 +1265,30 @@ function FuncionairosList({
         loading={loading}
       />
 
+      <ConfirmDialog
+        show={pendingDiscardEdit}
+        onHide={() => setPendingDiscardEdit(false)}
+        onConfirm={confirmDiscardEdit}
+        title="Descartar alterações"
+        message="Há alterações não salvas. Deseja descartá-las?"
+        confirmLabel="Descartar"
+        cancelLabel="Continuar editando"
+        variant="warning"
+        icon="bi-exclamation-circle"
+      />
+
+      <ConfirmDialog
+        show={pendingTransferConfirm}
+        onHide={() => setPendingTransferConfirm(false)}
+        onConfirm={proceedTransferFromEdit}
+        title="Transferir lotação"
+        message="Há alterações não salvas na edição. Continuar para transferir lotação? As alterações do formulário serão descartadas."
+        confirmLabel="Transferir"
+        cancelLabel="Voltar"
+        variant="warning"
+        icon="bi-arrow-left-right"
+      />
+
       <CoordEdit
         show={showModalEdit}
         onHide={handleCloseModal}
@@ -1115,17 +1302,25 @@ function FuncionairosList({
 
       <AppModal
         show={showModalSingleEdit}
-        onHide={() => setShowModalSingleEdit(false)}
+        onHide={handleCloseModalSingleEdit}
         title="Editar funcionário"
-        subtitle="Atualize os dados cadastrais"
+        subtitle={
+          funcionarioEncontrado?.nome
+            ? funcionarioEncontrado.nome
+            : "Atualize os dados cadastrais"
+        }
         icon="bi-pencil-square"
         size="lg"
         scrollable
+        preventClose={editSubmitting}
       >
-          <UserEdit
-            funcionario={funcionarioEncontrado}
-            handleCloseModal={handleCloseModalSingleEdit}
-          />
+        <UserEdit
+          funcionario={funcionarioEncontrado}
+          handleCloseModal={handleCloseModalSingleEdit}
+          onSubmittingChange={setEditSubmitting}
+          onDirtyChange={setEditDirty}
+          onRequestTransferLotacao={handleRequestTransferFromEdit}
+        />
       </AppModal>
 
       <FuncionarioDetailModal

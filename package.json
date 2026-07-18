@@ -25,7 +25,8 @@
     "react-router-dom": "^6.27.0",
     "react-toastify": "^11.0.5",
     "react-virtualized-auto-sizer": "^1.0.26",
-    "react-window": "^1.8.11"
+    "react-window": "^1.8.11",
+    "recharts": "^3.9.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

@@ -306,6 +306,23 @@
     font-size: var(--font-size-sm);
 }
 
+.funcionarios-row-actions__toggle {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.funcionarios-row-actions__toggle::after {
+    display: none;
+}
+
+.funcionarios-row-actions__menu {
+    z-index: 1080;
+}
+
 .func-detail__hero {
     display: flex;
     align-items: center;

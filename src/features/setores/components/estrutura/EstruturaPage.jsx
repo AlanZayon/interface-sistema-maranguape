@@ -16,7 +16,31 @@ import OrganogramaWorkspace from "./OrganogramaWorkspace";
 
 const VIEW_KEY = "estrutura.viewMode";
 const TREE_WIDTH_KEY = "estrutura.painel.treeWidth";
+const FUNCIONARIOS_IDS_KEY = "estrutura.funcionariosIds";
 const VIEWS = ["lista", "organograma", "funcionarios"];
+
+function readStoredFuncionariosIds() {
+  try {
+    const raw = sessionStorage.getItem(FUNCIONARIOS_IDS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistFuncionariosIds(ids) {
+  try {
+    if (Array.isArray(ids) && ids.length > 0) {
+      sessionStorage.setItem(FUNCIONARIOS_IDS_KEY, JSON.stringify(ids));
+    } else {
+      sessionStorage.removeItem(FUNCIONARIOS_IDS_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
 /**
  * Unified workspace with three toolbar views:
@@ -47,8 +71,8 @@ export default function EstruturaPage() {
   const [selectedSetorIds, setSelectedSetorIds] = useState(() => new Set());
   /** IDs confirmados no Painel via "Ver selecionados" (lista no painel direito). */
   const [painelSelecionadosIds, setPainelSelecionadosIds] = useState([]);
-  /** IDs confirmados na aba Funcionários (picker embutido). */
-  const [funcionariosIds, setFuncionariosIds] = useState([]);
+  /** IDs confirmados na aba Funcionários (picker embutido). Persistidos para sobreviver à navegação (ex.: preview de relatório). */
+  const [funcionariosIds, setFuncionariosIds] = useState(readStoredFuncionariosIds);
 
   const {
     width: treeWidth,
@@ -70,6 +94,10 @@ export default function EstruturaPage() {
 
   const showTree = viewMode === "lista";
   const isOrganograma = viewMode === "organograma";
+
+  useEffect(() => {
+    persistFuncionariosIds(funcionariosIds);
+  }, [funcionariosIds]);
 
   useEffect(() => {
     if (!selectedId || !nodes.length || !showTree) return;

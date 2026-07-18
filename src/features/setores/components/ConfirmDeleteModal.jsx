@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Alert, Spinner } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
 import * as funcionariosApi from "@shared/api/funcionarios";
-import { AppModal, AppModalFooter } from "@shared/ui";
+import { AppModal, AppModalFooter, AppNotice } from "@shared/ui";
 
 function ConfirmDeleteModal({
   showModal,
@@ -92,10 +92,9 @@ function ConfirmDeleteModal({
         Ao excluir este <strong>{typeLabel}</strong>, toda a subárvore
         (subsetores filhos) será removida permanentemente.
       </p>
-      <Alert variant="warning" className="py-2 small mb-0">
-        <i className="bi bi-info-circle me-1" aria-hidden="true" />
+      <AppNotice variant="warning" className="small mb-0" icon="bi-info-circle">
         Esta ação não pode ser desfeita.
-      </Alert>
+      </AppNotice>
 
       {checkingEmployees && (
         <div className="text-center my-3 text-muted small">
@@ -105,17 +104,20 @@ function ConfirmDeleteModal({
       )}
 
       {hasEmployees && (
-        <Alert variant="danger" className="mt-3 mb-0 py-2">
-          <i className="bi bi-people-fill me-2" aria-hidden="true" />
+        <AppNotice
+          variant="danger"
+          className="mt-3 mb-0"
+          icon="bi-people-fill"
+        >
           Não é possível excluir: há funcionários lotados neste nó ou na
           subárvore. Realoque-os em outra unidade antes de continuar.
-        </Alert>
+        </AppNotice>
       )}
 
       {error && (
-        <Alert variant="danger" className="mt-3 mb-0 py-2">
+        <AppNotice variant="danger" className="mt-3 mb-0">
           {error}
-        </Alert>
+        </AppNotice>
       )}
     </AppModal>
   );

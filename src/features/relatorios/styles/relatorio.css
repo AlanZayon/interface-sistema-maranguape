@@ -1,0 +1,377 @@
+:root {
+  --relatorio-brand: #115488;
+  --relatorio-ink: #1a1a1a;
+  --relatorio-muted: #5c6570;
+  --relatorio-border: #d0d7de;
+  --relatorio-surface: #f4f6f8;
+  --relatorio-paper: #ffffff;
+}
+
+.relatorio-preview {
+  min-height: 100vh;
+  background: var(--relatorio-surface);
+  color: var(--relatorio-ink);
+}
+
+.relatorio-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--relatorio-border);
+  backdrop-filter: blur(8px);
+}
+
+.relatorio-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.relatorio-toolbar__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.relatorio-toolbar__title {
+  font-weight: 650;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.relatorio-toolbar__hint {
+  font-size: 0.78rem;
+  color: var(--relatorio-muted);
+}
+
+.relatorio-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.relatorio-preview__stage {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.relatorio-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+  min-height: 50vh;
+  max-width: 28rem;
+  margin: 0 auto;
+  color: var(--relatorio-muted);
+}
+
+.relatorio-state h2 {
+  margin: 0.5rem 0 0;
+  font-size: 1.15rem;
+  color: var(--relatorio-ink);
+}
+
+.relatorio-state__icon {
+  font-size: 2rem;
+}
+
+/* —— Documento A4 —— */
+.relatorio-document {
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 14mm 15mm 16mm;
+  background: var(--relatorio-paper);
+  box-shadow: 0 8px 28px rgba(17, 84, 136, 0.12);
+  border: 1px solid var(--relatorio-border);
+  box-sizing: border-box;
+}
+
+.relatorio-doc-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 2px solid var(--relatorio-brand);
+  margin-bottom: 1rem;
+}
+
+.relatorio-doc-header__brand {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.relatorio-doc-header__logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.relatorio-doc-header__logo-fallback {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--relatorio-brand) 12%, white);
+  color: var(--relatorio-brand);
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.relatorio-doc-header__orgao {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--relatorio-brand);
+  letter-spacing: 0.01em;
+}
+
+.relatorio-doc-header__sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--relatorio-muted);
+}
+
+.relatorio-doc-header__meta {
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--relatorio-muted);
+  flex-shrink: 0;
+}
+
+.relatorio-doc-header__meta p {
+  margin: 0 0 0.2rem;
+}
+
+.relatorio-doc-title {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--relatorio-ink);
+  letter-spacing: 0.01em;
+}
+
+.relatorio-avisos {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #f0c36d;
+  background: #fff8e8;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #7a5a10;
+}
+
+.relatorio-avisos p {
+  margin: 0;
+}
+
+.relatorio-avisos p + p {
+  margin-top: 0.35rem;
+}
+
+.relatorio-section {
+  margin-bottom: 1.25rem;
+}
+
+.relatorio-section__title {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--relatorio-brand);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--relatorio-border);
+  padding-bottom: 0.35rem;
+}
+
+.relatorio-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin-bottom: 0.35rem;
+}
+
+.relatorio-kpi {
+  border: 1px solid var(--relatorio-border);
+  border-radius: 4px;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, var(--relatorio-brand) 5%, white);
+}
+
+.relatorio-kpi__label {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--relatorio-muted);
+  margin-bottom: 0.2rem;
+}
+
+.relatorio-kpi__value {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--relatorio-brand);
+}
+
+.relatorio-meta-line {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: var(--relatorio-muted);
+}
+
+.relatorio-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.relatorio-table th,
+.relatorio-table td {
+  border: 1px solid var(--relatorio-border);
+  padding: 0.35rem 0.45rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+.relatorio-table th {
+  background: color-mix(in srgb, var(--relatorio-brand) 10%, white);
+  color: var(--relatorio-brand);
+  font-weight: 650;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.relatorio-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.relatorio-table .is-right {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.relatorio-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--relatorio-muted);
+  font-style: italic;
+}
+
+.relatorio-doc-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--relatorio-border);
+  font-size: 0.7rem;
+  color: var(--relatorio-muted);
+}
+
+@media (max-width: 720px) {
+  .relatorio-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .relatorio-doc-header {
+    flex-direction: column;
+  }
+
+  .relatorio-doc-header__meta {
+    text-align: left;
+  }
+
+  .relatorio-document {
+    padding: 1rem;
+    min-height: auto;
+  }
+}
+
+/* —— Print / Salvar como PDF —— */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 14mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print,
+  .relatorio-toolbar {
+    display: none !important;
+  }
+
+  .relatorio-preview {
+    background: white;
+    min-height: auto;
+  }
+
+  .relatorio-preview__stage {
+    display: block;
+    padding: 0;
+  }
+
+  .relatorio-document {
+    max-width: none;
+    width: 100%;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .relatorio-section--break {
+    break-before: page;
+  }
+
+  .relatorio-section,
+  .relatorio-kpi,
+  .relatorio-avisos,
+  .relatorio-doc-header {
+    break-inside: avoid;
+  }
+
+  .relatorio-table thead {
+    display: table-header-group;
+  }
+
+  .relatorio-table tr {
+    break-inside: avoid;
+  }
+
+  .relatorio-doc-header {
+    border-bottom-color: var(--relatorio-brand);
+  }
+
+  .relatorio-kpi,
+  .relatorio-table th {
+    background: color-mix(in srgb, var(--relatorio-brand) 8%, white) !important;
+  }
+}

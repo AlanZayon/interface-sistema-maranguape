@@ -1,0 +1,50 @@
+.dashboard-stat--alert {
+  border-color: var(--bs-warning) !important;
+}
+
+.dashboard-stat--clickable {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.dashboard-stat--clickable:hover {
+  border-color: var(--bs-primary) !important;
+  box-shadow: 0 0.25rem 0.75rem rgba(13, 110, 253, 0.12);
+}
+
+.dashboard-card--compact .empty-state {
+  padding: 1.25rem 1rem;
+}
+
+.dashboard-card--compact .empty-state__icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-attention {
+  border-left-width: 4px;
+}
+
+.dashboard-estrutura-tabs .nav-link {
+  cursor: pointer;
+  color: var(--bs-secondary);
+  border: none;
+}
+
+.dashboard-estrutura-tabs .nav-link.active {
+  color: var(--bs-body-color);
+  font-weight: 600;
+  border-bottom: 2px solid var(--bs-primary);
+  background: transparent;
+}
+
+.dashboard-page .spin {
+  display: inline-block;
+  animation: dashboard-spin 0.8s linear infinite;
+}
+
+@keyframes dashboard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

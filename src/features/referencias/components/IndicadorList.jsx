@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Table, Button, Alert, Pagination, Card } from "react-bootstrap";
+import { Table, Button, Pagination, Card } from "react-bootstrap";
 import * as referenciasApi from "@shared/api/referencias";
-import { EmptyState, ConfirmDialog } from "@shared/ui";
+import { EmptyState, ConfirmDialog, AppNotice } from "@shared/ui";
 
 const IndicadorList = ({ indicadores, setIndicadores }) => {
   const [erro, setErro] = useState("");
@@ -42,14 +42,14 @@ const IndicadorList = ({ indicadores, setIndicadores }) => {
       <EmptyState
         icon="bi-sliders"
         title="Nenhuma referência cadastrada"
-        description="Use a aba Cadastrar para adicionar a primeira referência."
+        description="Cadastre um funcionário existente ou uma referência externa."
       />
     );
   }
 
   return (
     <div>
-      {erro && <Alert variant="danger">{erro}</Alert>}
+      {erro ? <AppNotice variant="danger">{erro}</AppNotice> : null}
 
       <Card className="border">
         <Card.Body className="p-0">
@@ -57,6 +57,7 @@ const IndicadorList = ({ indicadores, setIndicadores }) => {
             <thead className="table-light">
               <tr>
                 <th>Nome</th>
+                <th>Origem</th>
                 <th>Cargo</th>
                 <th>Telefone</th>
                 <th className="text-end">Ações</th>
@@ -65,9 +66,14 @@ const IndicadorList = ({ indicadores, setIndicadores }) => {
             <tbody>
               {currentItems.map((indicador) => (
                 <tr key={indicador._id}>
-                  <td>{`${indicador.name}`.trim()}</td>
-                  <td>{indicador.cargo}</td>
-                  <td>{indicador.telefone}</td>
+                  <td>{`${indicador.name || ""}`.trim()}</td>
+                  <td>
+                    {indicador.origem === "funcionario" || indicador.funcionarioId
+                      ? "Funcionário"
+                      : "Externa"}
+                  </td>
+                  <td>{indicador.cargo || "—"}</td>
+                  <td>{indicador.telefone || "—"}</td>
                   <td className="text-end">
                     <Button
                       variant="outline-danger"

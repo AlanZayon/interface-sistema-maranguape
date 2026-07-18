@@ -44,6 +44,7 @@ function findTransformed(nodes, id) {
 
 /**
  * Interactive organogram canvas: select, expand, drag-to-reparent, zoom/pan.
+ * Expansion is controlled by the parent so the side tree stays in sync.
  */
 export default function EstruturaOrganogramView({
   nodes = [],
@@ -53,8 +54,10 @@ export default function EstruturaOrganogramView({
   onCreateRoot,
   onMove,
   focusBranchId = null,
+  expandedIds,
+  onExpandedChange,
 }) {
-  const [expandedNodes, setExpandedNodes] = useState(() => new Set());
+  const [localExpanded, setLocalExpanded] = useState(() => new Set());
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -64,6 +67,11 @@ export default function EstruturaOrganogramView({
   const [dropInvalid, setDropInvalid] = useState(false);
   const viewportRef = useRef(null);
   const selectedRef = useRef(null);
+  const didInitExpand = useRef(false);
+
+  const isControlled = expandedIds != null && typeof onExpandedChange === "function";
+  const expandedNodes = isControlled ? expandedIds : localExpanded;
+  const setExpandedNodes = isControlled ? onExpandedChange : setLocalExpanded;
 
   const tree = useMemo(() => transformApiNodes(nodes), [nodes]);
 
@@ -84,12 +92,14 @@ export default function EstruturaOrganogramView({
   );
 
   useEffect(() => {
-    if (!displayTree.length) return;
-    setExpandedNodes((prev) => {
-      if (prev.size) return prev;
-      return new Set(displayTree.map((n) => n.id));
-    });
-  }, [displayTree]);
+    if (!displayTree.length || didInitExpand.current) return;
+    if (expandedNodes.size > 0) {
+      didInitExpand.current = true;
+      return;
+    }
+    didInitExpand.current = true;
+    setExpandedNodes(new Set(displayTree.map((n) => n.id)));
+  }, [displayTree, expandedNodes.size, setExpandedNodes]);
 
   useEffect(() => {
     if (!selectedId || !selectedRef.current) return;
@@ -98,7 +108,7 @@ export default function EstruturaOrganogramView({
       block: "nearest",
       inline: "nearest",
     });
-  }, [selectedId]);
+  }, [selectedId, expandedNodes]);
 
   const invalidDropTargets = useMemo(() => {
     if (!dragId) return new Set();
@@ -108,14 +118,15 @@ export default function EstruturaOrganogramView({
     return set;
   }, [dragId, tree]);
 
-  const toggleExpanded = useCallback((id) => {
-    setExpandedNodes((prev) => {
-      const next = new Set(prev);
+  const toggleExpanded = useCallback(
+    (id) => {
+      const next = new Set(expandedNodes);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      return next;
-    });
-  }, []);
+      setExpandedNodes(next);
+    },
+    [expandedNodes, setExpandedNodes]
+  );
 
   const expandAll = useCallback(() => {
     const ids = new Set();
@@ -129,11 +140,11 @@ export default function EstruturaOrganogramView({
     };
     walk(displayTree);
     setExpandedNodes(ids);
-  }, [displayTree]);
+  }, [displayTree, setExpandedNodes]);
 
   const collapseAll = useCallback(() => {
     setExpandedNodes(new Set());
-  }, []);
+  }, [setExpandedNodes]);
 
   const fitView = useCallback(() => {
     setZoomLevel(1);

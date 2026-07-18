@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Button, Form, Spinner, Alert } from "react-bootstrap";
+import { Button, Form, Spinner } from "react-bootstrap";
 import * as funcionariosApi from "@shared/api/funcionarios";
-import { AppModal, AppModalFooter, EmptyState } from "@shared/ui";
+import { AppModal, AppModalFooter, EmptyState, AppNotice } from "@shared/ui";
 
 function getObsTexto(obs) {
   if (obs == null) return "";
@@ -178,11 +178,11 @@ function ObservationHistoryModal({
         />
       }
     >
-      {error && (
-        <Alert variant="danger" className="py-2 mb-3">
+      {error ? (
+        <AppNotice variant="danger" className="mb-3">
           {error}
-        </Alert>
-      )}
+        </AppNotice>
+      ) : null}
 
       <Form.Group controlId="novaObservacao" className="obs-composer mb-3">
         <Form.Label>Nova observação</Form.Label>

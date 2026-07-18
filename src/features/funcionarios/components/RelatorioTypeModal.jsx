@@ -36,14 +36,14 @@ const RelatorioTypeModal = ({
       show={show}
       onHide={onHide}
       title="Tipo de relatório"
-      subtitle="Escolha o formato do documento a gerar"
+      subtitle="Escolha o formato e abra a pré-visualização para conferir ou gerar o PDF"
       icon="bi-file-earmark-text"
       footer={
         <AppModalFooter
           onCancel={onHide}
           onConfirm={onConfirm}
           cancelLabel="Cancelar"
-          confirmLabel="Gerar relatório"
+          confirmLabel="Abrir pré-visualização"
           disableConfirm={!selectedType}
         />
       }

@@ -56,7 +56,12 @@ function formatPath(path = []) {
   return path.map((p) => p.nome).join(" › ");
 }
 
-function Step3Form({ newUser, previousStep, handleCloseModal }) {
+function Step3Form({
+  newUser,
+  previousStep,
+  handleCloseModal,
+  onSubmittingChange,
+}) {
   const queryClient = useQueryClient();
   const { addFuncionarios, addFuncionariosPath } = useAuth();
   const searchRef = useRef(null);
@@ -65,6 +70,11 @@ function Step3Form({ newUser, previousStep, handleCloseModal }) {
   const [stack, setStack] = useState([]);
   const [destino, setDestino] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const setSubmitting = (v) => {
+    setIsLoading(v);
+    onSubmittingChange?.(v);
+  };
 
   const { data, isLoading: loadingSetores, isError, refetch, isFetching } =
     useQuery({
@@ -149,7 +159,7 @@ function Step3Form({ newUser, previousStep, handleCloseModal }) {
       return;
     }
 
-    setIsLoading(true);
+    setSubmitting(true);
 
     const redes = (newUser.redesSociais || []).filter(
       (item) => item.link && item.nome
@@ -159,7 +169,7 @@ function Step3Form({ newUser, previousStep, handleCloseModal }) {
 
     const formData = new FormData();
     formData.append("nome", newUser.nome);
-    if (newUser.foto) formData.append("foto", newUser.foto);
+    if (newUser.foto instanceof File) formData.append("foto", newUser.foto);
     formData.append("secretaria", secretaria);
     formData.append("natureza", newUser.natureza);
     formData.append("referencia", newUser.referencia || "");
@@ -176,7 +186,9 @@ function Step3Form({ newUser, previousStep, handleCloseModal }) {
     formData.append("cidade", newUser.cidade || "");
     formData.append("inicioContrato", newUser.inicioContrato || "");
     formData.append("fimContrato", newUser.fimContrato || "");
-    if (newUser.arquivo) formData.append("arquivo", newUser.arquivo);
+    if (newUser.arquivo instanceof File) {
+      formData.append("arquivo", newUser.arquivo);
+    }
     formData.append("redesSociais", JSON.stringify(redes));
 
     try {
@@ -185,16 +197,17 @@ function Step3Form({ newUser, previousStep, handleCloseModal }) {
       queryClient.invalidateQueries({ queryKey: ["setores"] });
       addFuncionarios(created);
       addFuncionariosPath(created);
-      handleCloseModal();
+      handleCloseModal({ force: true });
       toast.success("Funcionário cadastrado com sucesso");
     } catch (error) {
       console.error("Erro ao cadastrar funcionário:", error);
-      toast.error(
+      const msg =
         error.response?.data?.message ||
-          "Ocorreu um erro ao cadastrar. Tente novamente."
-      );
+        error.response?.data?.error ||
+        "Ocorreu um erro ao cadastrar. Tente novamente.";
+      toast.error(typeof msg === "string" ? msg : "Erro ao cadastrar");
     } finally {
-      setIsLoading(false);
+      setSubmitting(false);
     }
   };
 

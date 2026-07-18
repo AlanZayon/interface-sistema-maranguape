@@ -6,6 +6,7 @@ export { default as AppBreadcrumb } from "./AppBreadcrumb";
 export { default as EmptyState } from "./EmptyState";
 export { default as LoadingState } from "./LoadingState";
 export { default as ConfirmDialog } from "./ConfirmDialog";
+export { default as AppNotice } from "./AppNotice";
 export { default as AppModal, AppModalFooter, ModalActions, FormSection } from "./AppModal";
 export { default as CreateFuncionarioModal } from "./CreateFuncionarioModal";
 export { default as PanelResizeHandle } from "./PanelResizeHandle";

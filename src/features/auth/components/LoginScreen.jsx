@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
-import { Form, Button, Card, Alert, Collapse } from "react-bootstrap";
+import { Form, Button, Card, Collapse } from "react-bootstrap";
+import { AppNotice } from "@shared/ui";
 import { useNavigate } from "react-router-dom";
 import * as authApi from "@shared/api/auth";
 
@@ -22,7 +23,7 @@ function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/estrutura");
+      navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
@@ -30,7 +31,7 @@ function Login() {
     mutationFn: ({ id, password }) => authApi.login(id, password),
     onSuccess: (data) => {
       login(data);
-      navigate("/estrutura");
+      navigate("/dashboard");
     },
     onError: (err) => {
       const apiMessage = err.response?.data?.message;
@@ -122,7 +123,7 @@ function Login() {
               </Button>
               <Collapse in={showTestInfo}>
                 <div>
-                  <Alert variant="warning" className="py-2 small mb-0 mt-2">
+                  <AppNotice variant="warning" className="small mb-0 mt-2">
                     <div className="mb-1">
                       <strong>ID:</strong> <code>{TEST_ID}</code>
                     </div>
@@ -132,16 +133,16 @@ function Login() {
                     <div className="text-danger mb-0">
                       Apenas para desenvolvimento
                     </div>
-                  </Alert>
+                  </AppNotice>
                 </div>
               </Collapse>
             </div>
           )}
 
           {error && (
-            <Alert variant="danger" role="alert" className="py-2">
+            <AppNotice variant="danger" className="py-2">
               {error}
-            </Alert>
+            </AppNotice>
           )}
 
           <Form onSubmit={handleLogin}>

@@ -4,7 +4,6 @@ import {
   Table,
   Button,
   Form,
-  Alert,
   Badge,
 } from "react-bootstrap";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +19,7 @@ import {
   ConfirmDialog,
   AppModal,
   AppModalFooter,
+  AppNotice,
 } from "@shared/ui";
 
 const usersKeys = {
@@ -71,7 +71,7 @@ function UsersPage() {
   });
 
   if (role !== "admin" && role !== "superadmin") {
-    return <Navigate to="/estrutura" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const users = Array.isArray(data) ? data : data?.users || data?.data || [];
@@ -111,9 +111,9 @@ function UsersPage() {
       />
 
       {error && (
-        <Alert variant="danger">
+        <AppNotice variant="danger">
           {error.response?.data?.message || "Falha ao carregar usuários"}
-        </Alert>
+        </AppNotice>
       )}
 
       <Card className="border">

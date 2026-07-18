@@ -19,7 +19,7 @@ export default function Sidebar({
 }) {
   const { role } = useAuth();
   const { branding } = useTenant();
-  const isAdmin = role === "admin";
+  const isAdmin = role === "admin" || role === "superadmin";
   const displayName = branding?.displayName || branding?.name || "Sistema";
   const logoUrl = branding?.logoUrl;
   const initial = displayName.charAt(0).toUpperCase();
@@ -43,7 +43,7 @@ export default function Sidebar({
     >
       <div className="sidebar">
         <NavLink
-          to="/estrutura"
+          to="/dashboard"
           className="sidebar__brand"
           onClick={handleNav}
           title={displayName}
@@ -61,6 +61,11 @@ export default function Sidebar({
         <nav className="sidebar__nav">
           <div className="sidebar__section-label">Principal</div>
 
+          <NavLink to="/dashboard" className={linkClass} onClick={handleNav}>
+            <i className="bi bi-bar-chart-line" aria-hidden="true" />
+            <span className="sidebar__label">Dashboard</span>
+          </NavLink>
+
           <NavLink
             to="/estrutura"
             className={estruturaActive}
@@ -69,11 +74,6 @@ export default function Sidebar({
           >
             <i className="bi bi-diagram-3" aria-hidden="true" />
             <span className="sidebar__label">Estrutura</span>
-          </NavLink>
-
-          <NavLink to="/dashboard" className={linkClass} onClick={handleNav}>
-            <i className="bi bi-bar-chart-line" aria-hidden="true" />
-            <span className="sidebar__label">Dashboard</span>
           </NavLink>
 
           <button
@@ -94,6 +94,14 @@ export default function Sidebar({
               <NavLink to="/usuarios" className={linkClass} onClick={handleNav}>
                 <i className="bi bi-people-fill" aria-hidden="true" />
                 <span className="sidebar__label">Usuários</span>
+              </NavLink>
+              <NavLink
+                to="/cargos-comissionados"
+                className={linkClass}
+                onClick={handleNav}
+              >
+                <i className="bi bi-briefcase" aria-hidden="true" />
+                <span className="sidebar__label">Cargos comissionados</span>
               </NavLink>
               <NavLink to="/indicadores" className={linkClass} onClick={handleNav}>
                 <i className="bi bi-sliders" aria-hidden="true" />

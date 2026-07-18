@@ -5,5 +5,7 @@ export * as funcionariosApi from "./funcionarios";
 export * as referenciasApi from "./referencias";
 export * as searchApi from "./search";
 export * as dashboardApi from "./dashboard";
+export * as auditApi from "./audit";
 export * as tenantsApi from "./tenants";
 export * as usersApi from "./users";
+export * as cargosApi from "./cargos";

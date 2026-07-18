@@ -5,9 +5,9 @@ import React, {
   useRef,
   useEffect,
 } from "react";
-import { Form, InputGroup, Button, Spinner, Alert } from "react-bootstrap";
+import { Form, InputGroup, Button, Spinner } from "react-bootstrap";
 import * as setoresApi from "@shared/api/setores";
-import { AppModal, AppModalFooter, EmptyState } from "@shared/ui";
+import { AppModal, AppModalFooter, EmptyState, AppNotice } from "@shared/ui";
 
 const TYPE_LABELS = {
   root: "Raiz",
@@ -488,9 +488,9 @@ const SectorModal = ({
               </div>
             ) : error ? (
               <div className="sector-picker__state sector-picker__state--error">
-                <Alert variant="danger" className="mb-0 w-100">
+                <AppNotice variant="danger" className="mb-0 w-100">
                   {error}
-                </Alert>
+                </AppNotice>
               </div>
             ) : displayNodes.length === 0 ? (
               <EmptyState

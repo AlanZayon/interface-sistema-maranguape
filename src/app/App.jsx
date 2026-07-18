@@ -18,6 +18,8 @@ import { FuncionariosList } from "@features/funcionarios";
 import { IndicadoresPage } from "@features/referencias";
 import { DashboardPage } from "@features/dashboard";
 import { UsersPage } from "@features/users";
+import { CargosPage } from "@features/cargos";
+import { RelatorioPreviewPage } from "@features/relatorios";
 import "@shared/styles/shell.css";
 import "@shared/styles/App.css";
 
@@ -87,6 +89,14 @@ function App() {
             }
           />
           <Route
+            path="/cargos-comissionados"
+            element={
+              <ProtectedShell>
+                <CargosPage />
+              </ProtectedShell>
+            }
+          />
+          <Route
             path="/estrutura"
             element={
               <ProtectedShell>
@@ -104,7 +114,7 @@ function App() {
           />
           <Route
             path="/mainscreen"
-            element={<Navigate to="/estrutura" replace />}
+            element={<Navigate to="/dashboard" replace />}
           />
           <Route
             path="/search/:searchTerm"
@@ -120,6 +130,14 @@ function App() {
               <ProtectedShell>
                 <FunListSelectedWrapper />
               </ProtectedShell>
+            }
+          />
+          <Route
+            path="/relatorios/preview"
+            element={
+              <ProtectedRoute>
+                <RelatorioPreviewPage />
+              </ProtectedRoute>
             }
           />
           <Route

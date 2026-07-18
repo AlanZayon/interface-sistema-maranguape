@@ -172,6 +172,15 @@ export default function OrganogramaWorkspace({
     [onSelect]
   );
 
+  const handleCanvasSelect = useCallback(
+    (id) => {
+      onSelect?.(id);
+      setTreeDrawerOpen(false);
+      openInspector();
+    },
+    [onSelect, openInspector]
+  );
+
   const handleCreateRoot = () => {
     if (!createRootName.trim()) {
       toast.warn("Informe um nome");
@@ -421,7 +430,7 @@ export default function OrganogramaWorkspace({
           <EstruturaOrganogramView
             nodes={nodes}
             selectedId={selectedId}
-            onSelect={handleSelect}
+            onSelect={handleCanvasSelect}
             onCreateChild={() => {
               setFocusCreate(true);
               openInspector();
@@ -432,6 +441,8 @@ export default function OrganogramaWorkspace({
             }}
             onMove={handleMove}
             focusBranchId={focusBranchId}
+            expandedIds={expandedIds}
+            onExpandedChange={setExpandedIds}
           />
         </section>
 

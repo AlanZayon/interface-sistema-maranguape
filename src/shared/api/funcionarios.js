@@ -3,6 +3,25 @@ import apiClient from "./client";
 export const buscarFuncionarios = (params = {}) =>
   apiClient.get("/api/funcionarios/buscarFuncionarios", { params }).then((r) => r.data);
 
+/**
+ * Listagem paginada para seleção (referências, etc.).
+ * @param {{ q?: string, natureza?: string, secretaria?: string, funcao?: string, page?: number, limit?: number, incluirFiltros?: boolean|string }} params
+ */
+export const buscarParaSelecao = (params = {}) =>
+  apiClient
+    .get("/api/funcionarios/para-selecao", {
+      params: {
+        ...params,
+        incluirFiltros:
+          params.incluirFiltros === true || params.incluirFiltros === "1"
+            ? "1"
+            : params.incluirFiltros === false
+              ? undefined
+              : params.incluirFiltros,
+      },
+    })
+    .then((r) => r.data);
+
 export const buscarPorSetorId = (setorId) =>
   apiClient
     .get(`/api/funcionarios/buscarFuncionariosPorSetorId/${setorId}`)
@@ -68,10 +87,11 @@ export const updateObservacoes = (userId, observacoes) =>
     .put(`/api/funcionarios/observacoes/${userId}`, { observacoes })
     .then((r) => r.data);
 
-export const gerarRelatorio = (payload) =>
-  apiClient.post("/api/funcionarios/relatorio-funcionarios/gerar", payload, {
-    responseType: "blob",
-  });
+/** Payload JSON para a página de pré-visualização do relatório. */
+export const buscarDadosRelatorio = (payload) =>
+  apiClient
+    .post("/api/funcionarios/relatorio-funcionarios/dados", payload)
+    .then((r) => r.data);
 
 export const buscarCargos = () =>
   apiClient.get("/api/funcionarios/buscarCargos").then((r) => r.data);
@@ -82,7 +102,9 @@ export const checkName = (params) =>
 export const hasFuncionarios = (id) =>
   apiClient.get(`/api/funcionarios/${id}/has-funcionarios`).then((r) => r.data);
 
-export const exportCsv = () =>
-  apiClient.get("/api/funcionarios/export/csv", {
-    responseType: "blob",
-  });
+export const exportCsv = (ids = []) =>
+  apiClient.post(
+    "/api/funcionarios/export/csv",
+    { ids },
+    { responseType: "blob" }
+  );

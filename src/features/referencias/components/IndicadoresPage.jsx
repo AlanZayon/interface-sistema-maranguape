@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { IndicadorForm, IndicadorList } from "@features/referencias";
-import { Tabs, Tab, Button, Alert } from "react-bootstrap";
+import { Tabs, Tab, Button } from "react-bootstrap";
 import * as referenciasApi from "@shared/api/referencias";
-import { PageHeader, AppBreadcrumb, LoadingState } from "@shared/ui";
+import { PageHeader, AppBreadcrumb, LoadingState, AppNotice } from "@shared/ui";
 
 const IndicadoresPage = () => {
   const [indicadores, setIndicadores] = useState([]);
@@ -48,7 +48,7 @@ const IndicadoresPage = () => {
       />
       <PageHeader
         title="Referências"
-        subtitle="Cadastro e consulta de indicadores de referência"
+        subtitle="Pessoas que podem indicar candidatos a cargos comissionados"
         actions={
           key === "list" ? (
             <Button variant="primary" size="sm" onClick={() => setKey("form")}>
@@ -75,7 +75,7 @@ const IndicadoresPage = () => {
         className="mb-3"
       >
         <Tab eventKey="list" title="Lista">
-          {error && <Alert variant="danger">{error}</Alert>}
+          {error ? <AppNotice variant="danger">{error}</AppNotice> : null}
           {loading ? (
             <LoadingState label="Carregando referências..." />
           ) : (
