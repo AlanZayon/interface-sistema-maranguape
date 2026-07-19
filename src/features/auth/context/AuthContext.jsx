@@ -123,11 +123,17 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         setUsername("");
         setRole("");
+        sessionStorage.removeItem("isAuthenticated");
+        sessionStorage.removeItem("username");
+        sessionStorage.removeItem("role");
       }
     } catch {
       setIsAuthenticated(false);
       setUsername("");
       setRole("");
+      sessionStorage.removeItem("isAuthenticated");
+      sessionStorage.removeItem("username");
+      sessionStorage.removeItem("role");
     }
   };
 

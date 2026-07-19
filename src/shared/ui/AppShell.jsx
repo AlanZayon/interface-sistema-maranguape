@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import AppHeader from "./AppHeader";
 import CreateFuncionarioModal from "./CreateFuncionarioModal";
+import { useAuth } from "@features/auth";
+import { useTenant } from "@shared/context/TenantContext";
 
 const ShellActionsContext = createContext({
   openOrganogram: () => {},
@@ -21,6 +23,10 @@ export function useShellActions() {
 export default function AppShell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const { isPlatform } = useTenant();
+  const isPlatformConsole = isPlatform && role === "superadmin";
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showCreateFuncionario, setShowCreateFuncionario] = useState(false);
@@ -48,9 +54,14 @@ export default function AppShell({ children }) {
   };
 
   const actions = {
-    openOrganogram: () => navigate("/estrutura?view=organograma"),
-    openFuncionariosSelect: () => navigate("/estrutura?view=funcionarios"),
+    openOrganogram: () => {
+      if (!isPlatformConsole) navigate("/estrutura?view=organograma");
+    },
+    openFuncionariosSelect: () => {
+      if (!isPlatformConsole) navigate("/estrutura?view=funcionarios");
+    },
     openCreateFuncionario: (setorId = null, secretaria = "") => {
+      if (isPlatformConsole) return;
       setCreateCoordId(setorId || null);
       setCreateSecretaria(secretaria || "");
       setShowCreateFuncionario(true);
@@ -72,24 +83,35 @@ export default function AppShell({ children }) {
           collapsed={sidebarCollapsed}
           open={mobileOpen}
           onNavigate={() => setMobileOpen(false)}
-          onCreateFuncionario={() => actions.openCreateFuncionario()}
+          onCreateFuncionario={
+            isPlatformConsole ? undefined : () => actions.openCreateFuncionario()
+          }
         />
 
         <div className="app-shell__main">
           <AppHeader onToggleSidebar={toggleSidebar} />
+          {isPlatformConsole && (
+            <div
+              className="px-3 py-2 small"
+              style={{
+                background: "var(--brand-primary)",
+                color: "var(--brand-primary-contrast)",
+              }}
+            >
+              Console master — gestão de tenants da plataforma (sem dados municipais)
+            </div>
+          )}
           <main className="app-shell__content">{children}</main>
         </div>
 
-        <CreateFuncionarioModal
-          show={showCreateFuncionario}
-          onHide={() => {
-            setShowCreateFuncionario(false);
-            setCreateCoordId(null);
-            setCreateSecretaria("");
-          }}
-          setorId={createCoordId}
-          secretaria={createSecretaria}
-        />
+        {!isPlatformConsole && (
+          <CreateFuncionarioModal
+            show={showCreateFuncionario}
+            onHide={() => setShowCreateFuncionario(false)}
+            initialSetorId={createCoordId}
+            initialSecretaria={createSecretaria}
+          />
+        )}
       </div>
     </ShellActionsContext.Provider>
   );

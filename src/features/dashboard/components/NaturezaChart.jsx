@@ -11,7 +11,7 @@ import {
 import { EmptyState } from "@shared/ui";
 
 const COLORS = {
-  EFETIVO: "#0d6efd",
+  EFETIVO: "var(--brand-primary)",
   TEMPORARIO: "#ffc107",
   COMISSIONADO: "#198754",
   default: "#6c757d",

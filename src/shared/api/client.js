@@ -1,4 +1,8 @@
 import axios from "axios";
+import {
+  resolveTenantSlugFromLocation,
+  getActAsTenant,
+} from "@shared/lib/tenant";
 
 const AUTH_STORAGE_KEYS = ["isAuthenticated", "username", "role"];
 
@@ -9,20 +13,37 @@ function clearAuthStorage() {
   });
 }
 
+/**
+ * In DEV, call /api via Vite proxy (same origin as the page host).
+ * That keeps auth cookies working on master.localhost / slug.localhost.
+ * In production, use VITE_API_BASE_URL directly.
+ */
+function resolveApiBaseUrl() {
+  if (import.meta.env.DEV) {
+    return "";
+  }
+  return import.meta.env.VITE_API_BASE_URL || "";
+}
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: resolveApiBaseUrl(),
   withCredentials: true,
 });
 
 apiClient.interceptors.request.use((config) => {
-  const fromEnv = (import.meta.env.VITE_TENANT_SLUG || "").trim();
-  const fromQuery = new URLSearchParams(window.location.search)
-    .get("tenant")
-    ?.trim();
-  const slug = fromQuery || fromEnv;
-  if (slug) {
+  const { slug, isPlatform } = resolveTenantSlugFromLocation({
+    searchParams: new URLSearchParams(window.location.search),
+  });
+
+  if (slug && !isPlatform) {
     config.headers["X-Tenant-Slug"] = slug;
   }
+
+  const actAs = getActAsTenant();
+  if (actAs) {
+    config.headers["X-Act-As-Tenant"] = actAs;
+  }
+
   return config;
 });
 
@@ -36,7 +57,6 @@ apiClient.interceptors.response.use(
       url.includes("/api/usuarios/logout") ||
       url.includes("/api/usuarios/verify");
 
-    // Don't hijack failed login attempts — let the form show the API message
     if (status === 401 && !isAuthEndpoint) {
       clearAuthStorage();
       if (window.location.pathname !== "/") {
@@ -48,3 +68,4 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+export { clearAuthStorage };

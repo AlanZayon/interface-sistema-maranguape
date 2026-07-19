@@ -1,6 +1,7 @@
 :root {
   /* Brand */
   --brand-primary: #0d6efd;
+  --brand-secondary: #6c757d;
   --brand-primary-contrast: #ffffff;
   --brand-bg: #f3f4f6;
   --brand-surface: #ffffff;
@@ -13,6 +14,8 @@
   --brand-info: #0dcaf0;
   --brand-logo-url: none;
   --brand-display-name: "Sistema";
+  --font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
 
   /* Chrome */
   --header-bg: #1b1f24;
@@ -55,9 +58,21 @@
   --table-header-bg: #f8f9fa;
 }
 
+[data-theme="dark"] {
+  --brand-bg: #121417;
+  --brand-surface: #1b1f24;
+  --brand-text: #f8f9fa;
+  --brand-muted: #adb5bd;
+  --brand-border: #343a40;
+  --sidebar-bg: #1b1f24;
+  --sidebar-text: #f8f9fa;
+  --table-header-bg: #212529;
+}
+
 body {
   background-color: var(--brand-bg);
   color: var(--brand-text);
+  font-family: var(--font-family);
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
 }

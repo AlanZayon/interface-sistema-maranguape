@@ -11,6 +11,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "@features/auth";
+import { useTenant } from "@shared/context/TenantContext";
 import * as authApi from "@shared/api/auth";
 import * as searchApi from "@shared/api/search";
 
@@ -20,7 +21,9 @@ import * as searchApi from "@shared/api/search";
  * }} props
  */
 export default function AppHeader({ onToggleSidebar }) {
-  const { logout, username, setFuncionariosPath } = useAuth();
+  const { logout, username, setFuncionariosPath, role } = useAuth();
+  const { isPlatform } = useTenant();
+  const isPlatformConsole = isPlatform && role === "superadmin";
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [autocompleteResults, setAutocompleteResults] = useState([]);
@@ -43,7 +46,7 @@ export default function AppHeader({ onToggleSidebar }) {
   }, []);
 
   useEffect(() => {
-    if (!searchQuery) {
+    if (isPlatformConsole || !searchQuery) {
       setAutocompleteResults([]);
       return;
     }
@@ -70,7 +73,7 @@ export default function AppHeader({ onToggleSidebar }) {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [searchQuery]);
+  }, [searchQuery, isPlatformConsole]);
 
   const runSearch = (term) => {
     if (!term.trim()) return;
@@ -170,43 +173,49 @@ export default function AppHeader({ onToggleSidebar }) {
         <i className="bi bi-layout-sidebar-inset" aria-hidden="true" />
       </Button>
 
-      <div
-        className="flex-grow-1 position-relative d-none d-md-block"
-        style={{ maxWidth: 480 }}
-        ref={searchRef}
-      >
-        <Form onSubmit={handleSearch}>
-          <InputGroup size="sm">
-            <Form.Control
-              type="search"
-              placeholder="Pesquisar funcionários..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => searchQuery && setShowSuggestions(true)}
-              aria-label="Pesquisar funcionários"
-            />
-            <Button variant="light" type="submit" disabled={searchLoading} aria-label="Buscar">
-              {searchLoading ? (
-                <Spinner animation="border" size="sm" />
-              ) : (
-                <i className="bi bi-search" aria-hidden="true" />
-              )}
-            </Button>
-          </InputGroup>
-        </Form>
-        {suggestionsList}
-      </div>
+      {!isPlatformConsole && (
+        <div
+          className="flex-grow-1 position-relative d-none d-md-block"
+          style={{ maxWidth: 480 }}
+          ref={searchRef}
+        >
+          <Form onSubmit={handleSearch}>
+            <InputGroup size="sm">
+              <Form.Control
+                type="search"
+                placeholder="Pesquisar funcionários..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchQuery && setShowSuggestions(true)}
+                aria-label="Pesquisar funcionários"
+              />
+              <Button variant="light" type="submit" disabled={searchLoading} aria-label="Buscar">
+                {searchLoading ? (
+                  <Spinner animation="border" size="sm" />
+                ) : (
+                  <i className="bi bi-search" aria-hidden="true" />
+                )}
+              </Button>
+            </InputGroup>
+          </Form>
+          {suggestionsList}
+        </div>
+      )}
+
+      {isPlatformConsole && <div className="flex-grow-1" />}
 
       <div className="ms-auto d-flex align-items-center gap-2">
-        <Button
-          variant="outline-light"
-          size="sm"
-          className="d-md-none"
-          onClick={() => setShowMobileSearch((v) => !v)}
-          aria-label="Abrir busca"
-        >
-          <i className="bi bi-search" aria-hidden="true" />
-        </Button>
+        {!isPlatformConsole && (
+          <Button
+            variant="outline-light"
+            size="sm"
+            className="d-md-none"
+            onClick={() => setShowMobileSearch((v) => !v)}
+            aria-label="Abrir busca"
+          >
+            <i className="bi bi-search" aria-hidden="true" />
+          </Button>
+        )}
 
         <Dropdown align="end">
           <Dropdown.Toggle
@@ -233,7 +242,7 @@ export default function AppHeader({ onToggleSidebar }) {
         </Dropdown>
       </div>
 
-      {showMobileSearch && (
+      {!isPlatformConsole && showMobileSearch && (
         <div
           className="position-fixed start-0 end-0 bg-dark p-3 d-md-none"
           style={{ top: "var(--header-height)", zIndex: 1040 }}

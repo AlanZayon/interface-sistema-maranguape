@@ -1,63 +1,82 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
 import { useSearchParams } from "react-router-dom";
-import * as tenantsApi from '@shared/api/tenants';
+import * as tenantsApi from "@shared/api/tenants";
+import {
+  resolveTenantSlugFromLocation,
+  applyBrandingVars,
+  applyPlatformBranding,
+  resolveVocabulary,
+  getActAsTenant,
+} from "@shared/lib/tenant";
+import { useAuth } from "@features/auth";
 
 const TenantContext = createContext({
   tenant: null,
   branding: null,
+  vocabulary: {},
   loading: false,
   error: null,
+  slug: null,
+  isPlatform: false,
 });
 
 export const useTenant = () => useContext(TenantContext);
 
-function applyBrandingVars(branding) {
-  if (!branding) return;
-  const root = document.documentElement;
-
-  if (branding.primaryColor) {
-    root.style.setProperty("--brand-primary", branding.primaryColor);
-  }
-  if (branding.logoUrl) {
-    root.style.setProperty("--brand-logo-url", `url(${branding.logoUrl})`);
-  }
-  if (branding.displayName) {
-    root.style.setProperty("--brand-display-name", `"${branding.displayName}"`);
-    document.title = branding.displayName;
-  }
-}
-
-function resolveTenantSlug(searchParams) {
-  const fromQuery = searchParams.get("tenant")?.trim();
-  if (fromQuery) return fromQuery;
-  const fromEnv = (import.meta.env.VITE_TENANT_SLUG || "").trim();
-  return fromEnv || null;
+export function useVocabulary() {
+  const { vocabulary } = useTenant();
+  return vocabulary;
 }
 
 export function TenantProvider({ children }) {
   const [searchParams] = useSearchParams();
+  const { isAuthenticated, role } = useAuth();
   const [tenant, setTenant] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const slug = resolveTenantSlug(searchParams);
+  const { slug, isPlatform } = useMemo(
+    () => resolveTenantSlugFromLocation({ searchParams }),
+    [searchParams]
+  );
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      if (!slug) {
-        setTenant(null);
-        return;
-      }
-
       setLoading(true);
       setError(null);
+
       try {
-        const data = await tenantsApi.getBySlug(slug);
+        if (isPlatform) {
+          if (cancelled) return;
+          setTenant(null);
+          applyPlatformBranding();
+          return;
+        }
+
+        let data = null;
+
+        if (slug) {
+          data = await tenantsApi.getBySlug(slug);
+        } else if (isAuthenticated) {
+          try {
+            data = await tenantsApi.getMe();
+          } catch {
+            data = null;
+          }
+        }
+
         if (cancelled) return;
         setTenant(data);
-        applyBrandingVars(data?.branding || data);
+        if (data?.branding || data) {
+          applyBrandingVars(data?.branding || data);
+        }
       } catch (err) {
         if (cancelled) return;
         console.error("Erro ao carregar tenant:", err);
@@ -72,14 +91,44 @@ export function TenantProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, isPlatform, isAuthenticated]);
+
+  // After login on tenant host, refresh full /me payload (settings + branding)
+  useEffect(() => {
+    if (!isAuthenticated || isPlatform || !slug) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const me = await tenantsApi.getMe();
+        if (cancelled || !me) return;
+        setTenant(me);
+        applyBrandingVars(me.branding || me);
+      } catch {
+        // keep by-slug branding
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isPlatform, slug, role]);
 
   const branding = tenant?.branding || tenant || null;
+  const vocabulary = resolveVocabulary(tenant?.settings);
+
+  const value = {
+    tenant,
+    branding,
+    vocabulary,
+    loading,
+    error,
+    slug: slug || getActAsTenant(),
+    isPlatform,
+  };
 
   return (
-    <TenantContext.Provider value={{ tenant, branding, loading, error, slug }}>
-      {children}
-    </TenantContext.Provider>
+    <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
   );
 }
 

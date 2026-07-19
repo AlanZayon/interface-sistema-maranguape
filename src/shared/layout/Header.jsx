@@ -14,7 +14,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Step1Form, Step2Form, Step3Form } from '@features/funcionarios';
-import { useAuth } from '@features/auth';
+import { useAuth, isElevatedRole, canManageUsers } from '@features/auth';
 import * as authApi from '@shared/api/auth';
 import * as searchApi from '@shared/api/search';
 import {
@@ -251,7 +251,7 @@ function Header() {
         <Container fluid>
           {/* Left side - User dropdown */}
           <div className="d-flex align-items-center">
-            {role === "admin" ? (
+            {isElevatedRole(role) ? (
               <Dropdown align="end">
                 <Dropdown.Toggle
                   variant="outline-light"
@@ -269,13 +269,15 @@ function Header() {
                     <FaChartBar className="text-primary" />
                     Dashboard
                   </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() => navigate("/usuarios")}
-                    className="d-flex align-items-center gap-2"
-                  >
-                    <FaUsersCog className="text-primary" />
-                    Usuários
-                  </Dropdown.Item>
+                  {canManageUsers(role) && (
+                    <Dropdown.Item
+                      onClick={() => navigate("/usuarios")}
+                      className="d-flex align-items-center gap-2"
+                    >
+                      <FaUsersCog className="text-primary" />
+                      Usuários
+                    </Dropdown.Item>
+                  )}
                   <Dropdown.Item 
                     onClick={() => navigate("/indicadores")}
                     className="d-flex align-items-center gap-2"

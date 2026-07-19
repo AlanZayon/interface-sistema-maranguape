@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { Navigate } from "react-router-dom";
 import * as cargosApi from "@shared/api/cargos";
-import { useAuth } from "@features/auth";
+import { useAuth, isElevatedRole } from "@features/auth";
 import {
   PageHeader,
   AppBreadcrumb,
@@ -51,7 +51,7 @@ function CargosPage() {
   const { role } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
-  const isAdmin = role === "admin" || role === "superadmin";
+  const isAdmin = isElevatedRole(role);
 
   const [showModal, setShowModal] = useState(false);
   const [cargoToDelete, setCargoToDelete] = useState(null);
@@ -115,7 +115,7 @@ function CargosPage() {
   });
 
   if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/estrutura" replace />;
   }
 
   const cargos = Array.isArray(data) ? data : [];

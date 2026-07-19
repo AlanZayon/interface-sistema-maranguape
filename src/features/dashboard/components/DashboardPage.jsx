@@ -1,7 +1,7 @@
 import React from "react";
 import { Row, Col } from "react-bootstrap";
 import { format } from "date-fns";
-import { useAuth } from "@features/auth";
+import { useAuth, isElevatedRole } from "@features/auth";
 import {
   PageHeader,
   AppBreadcrumb,
@@ -29,7 +29,7 @@ import "./dashboard.css";
 
 function DashboardPage() {
   const { role } = useAuth();
-  const isAdmin = role === "admin" || role === "superadmin";
+  const isAdmin = isElevatedRole(role);
 
   const {
     data,

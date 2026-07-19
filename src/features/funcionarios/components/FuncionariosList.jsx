@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { FixedSizeGrid as Grid } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { useAuth } from '@features/auth';
+import { useAuth, isElevatedRole } from '@features/auth';
 import FilterModal, {
   countActiveFilters,
   createEmptyFilters,
@@ -781,7 +781,7 @@ function FuncionairosList({
       {listSearchField}
 
       <div className="d-flex flex-wrap align-items-center gap-2">
-      {role === "admin" ? (
+      {isElevatedRole(role) ? (
         <>
           <Button
             variant={activeFilterCount > 0 ? "primary" : "outline-primary"}
@@ -1101,7 +1101,7 @@ function FuncionairosList({
                         <i className="bi bi-info-circle me-2" aria-hidden="true" />
                         Ver detalhes
                       </Dropdown.Item>
-                      {role === "admin" && (
+                      {isElevatedRole(role) && (
                         <>
                           <Dropdown.Item onClick={() => handleClick(user._id)}>
                             <i className="bi bi-pencil me-2" aria-hidden="true" />

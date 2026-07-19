@@ -1,5 +1,5 @@
 :root {
-  --relatorio-brand: #115488;
+  --relatorio-brand: var(--brand-primary);
   --relatorio-ink: #1a1a1a;
   --relatorio-muted: #5c6570;
   --relatorio-border: #d0d7de;

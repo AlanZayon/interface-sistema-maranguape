@@ -1,5 +1,6 @@
 import React from "react";
 import { Badge, Button, Form } from "react-bootstrap";
+import { isElevatedRole } from "@features/auth";
 
 const PLACEHOLDER_PHOTO =
   "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
@@ -20,6 +21,8 @@ export default function UserCard({
   onDelete,
 }) {
   if (!user) return null;
+
+  const canManage = isElevatedRole(role);
 
   return (
     <div style={style} className="user-card-cell">
@@ -80,7 +83,7 @@ export default function UserCard({
             <i className="bi bi-info-circle me-1" aria-hidden="true" />
             Detalhes
           </Button>
-          {role === "admin" && (
+          {canManage && (
             <>
               <Button
                 variant="outline-secondary"

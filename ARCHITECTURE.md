@@ -14,14 +14,27 @@ src/
     referencias/
     dashboard/
     users/
+    cargos/
+    tenants/               # console master (superadmin)
   shared/                  # código transversal
     api/                   # HTTP client + endpoints
     layout/                # Header, shells
     context/               # TenantContext
     theme/                 # design tokens
     styles/
-    lib/
+    lib/                   # tenant subdomain helpers
 ```
+
+## Multi-tenant (frontend)
+
+- Slug: subdomínio (`{slug}.BASE_DOMAIN` / `{slug}.localhost`)
+- Master: `master.BASE_DOMAIN` → console `/tenants`
+- Header `X-Tenant-Slug` + opcional `X-Act-As-Tenant`
+- Branding via CSS variables em `TenantContext` / `applyBrandingVars` (`--brand-*`, `--header-*`, `--sidebar-*`, `--brand-secondary`)
+- Custom CSS injetado em `#tenant-custom-css` (sanitizado/limitado pela API)
+- Policy: `GET /api/tenants/branding-policy` — wizard/detail escondem campos conforme `TENANT_*` envs
+- Preview multi-superfície: Login / Shell / Dashboard em `features/tenants` (classes reais do shell)
+- Dev fallback: `?tenant=` ou `VITE_TENANT_SLUG`
 
 ## Aliases (vite.config.js)
 

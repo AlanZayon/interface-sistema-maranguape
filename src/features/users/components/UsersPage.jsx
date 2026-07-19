@@ -9,7 +9,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import * as usersApi from "@shared/api/users";
-import { useAuth } from "@features/auth";
+import { useAuth, canManageUsers, isElevatedRole } from "@features/auth";
 import { Navigate } from "react-router-dom";
 import {
   PageHeader,
@@ -21,6 +21,14 @@ import {
   AppModalFooter,
   AppNotice,
 } from "@shared/ui";
+
+const ROLE_LABELS = {
+  owner: "Dono",
+  admin: "Admin",
+  user: "Usuário",
+  readonly: "Somente leitura",
+  superadmin: "Superadmin",
+};
 
 const usersKeys = {
   all: ["users"],
@@ -39,10 +47,12 @@ function UsersPage() {
     role: "user",
   });
 
+  const canManage = canManageUsers(role);
+
   const { data, isLoading, error } = useQuery({
     queryKey: usersKeys.list(),
     queryFn: usersApi.listUsers,
-    enabled: role === "admin" || role === "superadmin",
+    enabled: canManage,
   });
 
   const createMutation = useMutation({
@@ -70,8 +80,8 @@ function UsersPage() {
     },
   });
 
-  if (role !== "admin" && role !== "superadmin") {
-    return <Navigate to="/dashboard" replace />;
+  if (!canManage) {
+    return <Navigate to="/estrutura" replace />;
   }
 
   const users = Array.isArray(data) ? data : data?.users || data?.data || [];
@@ -89,6 +99,12 @@ function UsersPage() {
       password: form.password,
       role: form.role,
     });
+  };
+
+  const badgeBg = (userRole) => {
+    if (userRole === "owner") return "success";
+    if (isElevatedRole(userRole)) return "primary";
+    return "secondary";
   };
 
   return (
@@ -145,14 +161,8 @@ function UsersPage() {
                   <tr key={user._id || user.id}>
                     <td>{user.id || user.username || user.login}</td>
                     <td>
-                      <Badge
-                        bg={
-                          user.role === "admin" || user.role === "superadmin"
-                            ? "primary"
-                            : "secondary"
-                        }
-                      >
-                        {user.role}
+                      <Badge bg={badgeBg(user.role)}>
+                        {ROLE_LABELS[user.role] || user.role}
                       </Badge>
                     </td>
                     <td className="text-end">
@@ -160,8 +170,15 @@ function UsersPage() {
                         size="sm"
                         variant="outline-danger"
                         onClick={() => setUserToDelete(user)}
-                        disabled={deleteMutation.isPending}
+                        disabled={
+                          deleteMutation.isPending || user.role === "owner"
+                        }
                         aria-label={`Remover ${user.id || user.username}`}
+                        title={
+                          user.role === "owner"
+                            ? "O dono do tenant não pode ser removido"
+                            : undefined
+                        }
                       >
                         Remover
                       </Button>
@@ -245,9 +262,12 @@ function UsersPage() {
                 value={form.role}
                 onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
               >
-                <option value="user">user</option>
-                <option value="admin">admin</option>
+                <option value="user">Usuário</option>
+                <option value="admin">Admin</option>
               </Form.Select>
+              <Form.Text muted>
+                O dono do tenant é o usuário criado no console master.
+              </Form.Text>
             </Form.Group>
         </Form>
       </AppModal>

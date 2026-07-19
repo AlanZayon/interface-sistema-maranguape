@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "@features/auth";
+import { useAuth, getHomePath } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
-import { Form, Button, Card, Collapse } from "react-bootstrap";
+import { Form, Button, Card } from "react-bootstrap";
 import { AppNotice } from "@shared/ui";
 import { useNavigate } from "react-router-dom";
 import * as authApi from "@shared/api/auth";
-
-const isDev = import.meta.env.DEV;
-const TEST_ID = "admin";
-const TEST_PASSWORD = "senha123";
 
 function Login() {
   const navigate = useNavigate();
@@ -17,21 +13,21 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTestInfo, setShowTestInfo] = useState(false);
-  const { login, isAuthenticated } = useAuth();
-  const { branding, loading: tenantLoading } = useTenant();
+  const { login, isAuthenticated, role } = useAuth();
+  const { branding, loading: tenantLoading, error: tenantError, slug, isPlatform } =
+    useTenant();
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard");
+      navigate(getHomePath({ isPlatform, role }));
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isPlatform, role, navigate]);
 
   const { mutate } = useMutation({
     mutationFn: ({ id, password }) => authApi.login(id, password),
     onSuccess: (data) => {
       login(data);
-      navigate("/dashboard");
+      navigate(getHomePath({ isPlatform, role: data.role }));
     },
     onError: (err) => {
       const apiMessage = err.response?.data?.message;
@@ -60,14 +56,10 @@ function Login() {
     mutate({ id, password });
   };
 
-  const fillTestCredentials = () => {
-    setId(TEST_ID);
-    setPassword(TEST_PASSWORD);
-    setError("");
-  };
-
-  const displayName = branding?.displayName || branding?.name || "Sistema";
-  const logoUrl = branding?.logoUrl;
+  const displayName = isPlatform
+    ? "Console Master"
+    : branding?.displayName || branding?.name || "Sistema";
+  const logoUrl = isPlatform ? null : branding?.logoUrl;
 
   return (
     <div className="login-page">
@@ -99,45 +91,17 @@ function Login() {
             {tenantLoading && (
               <small className="text-muted d-block mt-2">Carregando marca...</small>
             )}
+            {tenantError && slug && !isPlatform && (
+              <AppNotice variant="warning" className="mt-3 text-start">
+                Tenant indisponível — município inativo ou endereço incorreto.
+              </AppNotice>
+            )}
+            {isPlatform && (
+              <small className="text-muted d-block mt-2">
+                Console master da plataforma
+              </small>
+            )}
           </div>
-
-          {isDev && (
-            <div className="mb-3">
-              <Button
-                variant="outline-warning"
-                size="sm"
-                onClick={fillTestCredentials}
-                className="w-100"
-              >
-                <i className="bi bi-clipboard-check me-2" aria-hidden="true" />
-                Usar dados de teste
-              </Button>
-              <Button
-                variant="link"
-                size="sm"
-                className="w-100 text-decoration-none mt-1"
-                onClick={() => setShowTestInfo((v) => !v)}
-                aria-expanded={showTestInfo}
-              >
-                {showTestInfo ? "Ocultar credenciais" : "Mostrar credenciais"}
-              </Button>
-              <Collapse in={showTestInfo}>
-                <div>
-                  <AppNotice variant="warning" className="small mb-0 mt-2">
-                    <div className="mb-1">
-                      <strong>ID:</strong> <code>{TEST_ID}</code>
-                    </div>
-                    <div className="mb-1">
-                      <strong>Senha:</strong> <code>{TEST_PASSWORD}</code>
-                    </div>
-                    <div className="text-danger mb-0">
-                      Apenas para desenvolvimento
-                    </div>
-                  </AppNotice>
-                </div>
-              </Collapse>
-            </div>
-          )}
 
           {error && (
             <AppNotice variant="danger" className="py-2">

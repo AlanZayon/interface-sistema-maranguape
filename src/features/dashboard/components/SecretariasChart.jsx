@@ -66,7 +66,7 @@ export default function SecretariasChart({ data = [] }) {
                   ]}
                   labelFormatter={(label) => String(label)}
                 />
-                <Bar dataKey="count" fill="#0d6efd" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="count" fill="var(--brand-primary)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
