@@ -34,7 +34,7 @@ export default function CotasPanel({ cotas = [], isAdmin = false }) {
             }
           />
         ) : (
-          <ListGroup variant="flush">
+          <ListGroup variant="flush" className="dashboard-scroll-body">
             {cotas.map((cota) => {
               const limite = cota.limite ?? cota.vagas ?? 0;
               const ocupadas = cota.ocupadas ?? 0;

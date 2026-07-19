@@ -48,7 +48,7 @@ export default function PayrollPanel({ data, isLoading, error }) {
             description="Não há salários cadastrados para agregar."
           />
         ) : (
-          <div className="table-responsive">
+          <div className="table-responsive dashboard-scroll-body">
             <Table className="mb-0 align-middle">
               <thead className="table-light">
                 <tr>

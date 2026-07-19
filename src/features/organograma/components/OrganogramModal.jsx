@@ -35,7 +35,7 @@ export default function OrganogramModal({ show, onHide }) {
       }
     >
       <p className="mb-0 text-muted">
-        O organograma agora é gerenciado na vista Organograma da Estrutura.
+        O organograma agora é gerenciado na vista Organograma da Organização.
       </p>
     </AppModal>
   );

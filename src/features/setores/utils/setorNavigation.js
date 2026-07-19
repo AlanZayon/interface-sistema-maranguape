@@ -139,7 +139,7 @@ export function findAncestryInTree(setores, targetId) {
 
 export function buildBreadcrumbItems(ancestry, view = null) {
   const items = [
-    { label: "Estrutura", to: buildEstruturaUrl(null, view) },
+    { label: "Organização", to: buildEstruturaUrl(null, view) },
   ];
 
   if (!ancestry?.length) return items;

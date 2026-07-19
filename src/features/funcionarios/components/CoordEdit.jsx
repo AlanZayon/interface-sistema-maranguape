@@ -378,7 +378,7 @@ function LotacaoMover({
                   className="lotacao-mover__spinner lotacao-mover__spinner--muted"
                   aria-hidden="true"
                 />
-                Carregando estrutura…
+                Carregando organização…
               </div>
             ) : isError ? (
               <div className="lotacao-mover__empty">

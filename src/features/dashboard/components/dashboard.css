@@ -48,3 +48,18 @@
     transform: rotate(360deg);
   }
 }
+
+/* Keep list/table cards from growing the page indefinitely */
+.dashboard-page .card.h-100 {
+  display: flex;
+  flex-direction: column;
+  max-height: 28rem;
+}
+
+.dashboard-scroll-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

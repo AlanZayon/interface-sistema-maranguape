@@ -24,7 +24,7 @@ export default function QuickActions({ onRefresh, refreshing }) {
       </Button>
       <Button variant="outline-primary" onClick={() => navigate("/estrutura")}>
         <i className="bi bi-diagram-3" />
-        <span className="ms-1 d-none d-md-inline">Estrutura</span>
+        <span className="ms-1 d-none d-md-inline">Organização</span>
       </Button>
       <Button variant="outline-primary" onClick={() => openOrganogram()}>
         <i className="bi bi-bounding-box" />

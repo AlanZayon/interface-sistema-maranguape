@@ -101,7 +101,7 @@ export default function Sidebar({
                 end={false}
               >
                 <i className="bi bi-diagram-3" aria-hidden="true" />
-                <span className="sidebar__label">Estrutura</span>
+                <span className="sidebar__label">Organização</span>
               </NavLink>
 
               <button

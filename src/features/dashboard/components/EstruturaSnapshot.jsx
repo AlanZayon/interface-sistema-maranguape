@@ -21,7 +21,7 @@ export default function EstruturaSnapshot({ estrutura }) {
       <Card.Header className="bg-white fw-semibold py-2 d-flex justify-content-between align-items-center gap-2">
         <span>{tab === "vazios" ? "Setores sem lotação" : "Maiores setores"}</span>
         <Link to="/estrutura" className="small text-decoration-none">
-          Ver estrutura
+          Ver organização
         </Link>
       </Card.Header>
       {showTabs && (
@@ -60,12 +60,12 @@ export default function EstruturaSnapshot({ estrutura }) {
             }
             description={
               tab === "vazios"
-                ? "A estrutura está completa em termos de lotação."
+                ? "A organização está completa em termos de lotação."
                 : "Cadastre funcionários com lotação para ver o ranking."
             }
           />
         ) : (
-          <ListGroup variant="flush">
+          <ListGroup variant="flush" className="dashboard-scroll-body">
             {list.map((setor, idx) => (
               <ListGroup.Item
                 key={setor.id}

@@ -45,7 +45,7 @@ export default function AttentionBanner({ estrutura }) {
           variant="outline-dark"
           className="flex-shrink-0"
         >
-          Abrir estrutura
+          Abrir organização
         </Button>
       </div>
     </AppNotice>

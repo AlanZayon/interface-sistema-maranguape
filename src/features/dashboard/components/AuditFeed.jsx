@@ -58,7 +58,7 @@ export default function AuditFeed({ data, isLoading, error }) {
             description="Ainda não há eventos de auditoria registrados."
           />
         ) : (
-          <ListGroup variant="flush">
+          <ListGroup variant="flush" className="dashboard-scroll-body">
             {items.map((item) => {
               const when = item.createdAt
                 ? formatDistanceToNow(new Date(item.createdAt), {

@@ -71,8 +71,9 @@ export default function EstruturaPage() {
   const [selectedSetorIds, setSelectedSetorIds] = useState(() => new Set());
   /** IDs confirmados no Painel via "Ver selecionados" (lista no painel direito). */
   const [painelSelecionadosIds, setPainelSelecionadosIds] = useState([]);
-  /** IDs confirmados na aba Funcionários (picker embutido). Persistidos para sobreviver à navegação (ex.: preview de relatório). */
+  /** IDs opcionais da aba Funcionários (filtro por setor). Persistidos para sobreviver à navegação (ex.: preview de relatório). */
   const [funcionariosIds, setFuncionariosIds] = useState(readStoredFuncionariosIds);
+  const [showFuncionariosPicker, setShowFuncionariosPicker] = useState(false);
 
   const {
     width: treeWidth,
@@ -160,7 +161,14 @@ export default function EstruturaPage() {
     if (mode === "lista") next.delete("view");
     else next.set("view", mode);
     setSearchParams(next, { replace: true });
-    if (mode !== "funcionarios") setFuncionariosIds([]);
+    if (mode === "funcionarios" && viewMode !== "funcionarios") {
+      setFuncionariosIds([]);
+      setShowFuncionariosPicker(false);
+    }
+    if (mode !== "funcionarios") {
+      setFuncionariosIds([]);
+      setShowFuncionariosPicker(false);
+    }
     if (mode !== "lista") setPainelSelecionadosIds([]);
   };
 
@@ -209,7 +217,7 @@ export default function EstruturaPage() {
             aria-label="Abrir árvore"
           >
             <i className="bi bi-list-nested me-1" aria-hidden="true" />
-            Estrutura
+            Organização
           </button>
         )}
 
@@ -257,7 +265,7 @@ export default function EstruturaPage() {
 
       {isError && (
         <div className="alert alert-danger" role="alert">
-          {error?.message || "Falha ao carregar a estrutura."}
+          {error?.message || "Falha ao carregar a organização."}
         </div>
       )}
 
@@ -290,10 +298,10 @@ export default function EstruturaPage() {
                 treeOpen ? " estrutura-workspace__tree--open" : ""
               }`}
               style={{ width: treeWidth }}
-              aria-label="Árvore da estrutura"
+              aria-label="Árvore da organização"
             >
               <div className="estrutura-workspace__tree-header d-md-none">
-                <strong>Estrutura</strong>
+                <strong>Organização</strong>
                 <button
                   type="button"
                   className="btn btn-sm btn-link"
@@ -329,39 +337,61 @@ export default function EstruturaPage() {
 
           <section className="estrutura-workspace__panel" aria-label="Conteúdo">
             {viewMode === "funcionarios" ? (
-              funcionariosIds.length > 0 ? (
-                <div className="estrutura-funcionarios-view">
-                  <div className="estrutura-funcionarios-view__bar">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={() => setFuncionariosIds([])}
-                    >
-                      <i className="bi bi-arrow-left me-1" aria-hidden="true" />
-                      Alterar seleção
-                    </button>
+              <div className="estrutura-funcionarios-view">
+                <div className="estrutura-funcionarios-view__bar">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => setShowFuncionariosPicker(true)}
+                  >
+                    <i className="bi bi-diagram-3 me-1" aria-hidden="true" />
+                    Selecionar funcionários
+                  </button>
+                  {funcionariosIds.length > 0 ? (
+                    <>
+                      <span className="text-muted small">
+                        {funcionariosIds.length} setor(es)/subsetor(es) selecionado(s)
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-link text-muted px-1"
+                        onClick={() => {
+                          setFuncionariosIds([]);
+                          setSelectedSetorIds(new Set());
+                        }}
+                      >
+                        Ver todos
+                      </button>
+                    </>
+                  ) : (
                     <span className="text-muted small">
-                      {funcionariosIds.length} setor(es)/subsetor(es)
+                      Todos os funcionários · selecione setores para refinar a busca
                     </span>
-                  </div>
+                  )}
+                </div>
+                {funcionariosIds.length > 0 ? (
                   <FuncionariosList
                     setorPathId="selected"
                     departmentName="SELECIONADOS"
                     idsDivisoes={funcionariosIds}
                   />
-                </div>
-              ) : (
+                ) : (
+                  <FuncionariosList
+                    setorPathId="mainscreen"
+                    departmentName="mainscreen"
+                  />
+                )}
                 <SectorModal
-                  show
-                  embedded
-                  onHide={() => changeViewMode("lista")}
+                  show={showFuncionariosPicker}
+                  onHide={() => setShowFuncionariosPicker(false)}
                   onConfirm={(ids) => {
                     if (!ids?.length) return;
                     setFuncionariosIds(ids);
                     setSelectedSetorIds(new Set(ids));
+                    setShowFuncionariosPicker(false);
                   }}
                 />
-              )
+              </div>
             ) : (
               <EstruturaNodePanel
                 nodes={nodes}

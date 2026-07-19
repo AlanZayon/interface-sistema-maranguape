@@ -1182,7 +1182,7 @@ function FuncionairosList({
         <>
           <AppBreadcrumb
             items={[
-              { label: "Estrutura", to: "/estrutura" },
+              { label: "Organização", to: "/estrutura" },
               { label: listTitle || "Funcionários", active: true },
             ]}
           />

@@ -40,7 +40,7 @@ export default function ContratosTable({ items = [], buckets }) {
             description="Não há contratos TEMPORÁRIO nas janelas de 30, 60 ou 90 dias."
           />
         ) : (
-          <div className="table-responsive">
+          <div className="table-responsive dashboard-scroll-body">
             <Table hover className="mb-0 align-middle">
               <thead className="table-light">
                 <tr>

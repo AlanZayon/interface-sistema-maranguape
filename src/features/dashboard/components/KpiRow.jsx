@@ -75,7 +75,7 @@ export default function KpiRow({ data, payroll, isAdmin }) {
           icon="bi-diagram-3"
           title="Setores sem lotação"
           value={setoresSemLotacao}
-          subtitle={`de ${totalSetores} na estrutura`}
+          subtitle={`de ${totalSetores} na organização`}
           variant={setoresSemLotacao > 0 ? "warning" : "info"}
           alert={setoresSemLotacao > 0}
           hrefHash="#dashboard-estrutura"

@@ -53,7 +53,7 @@ export default function EstruturaNodePanel({
   };
 
   if (loading) {
-    return <LoadingState label="Carregando estrutura…" />;
+    return <LoadingState label="Carregando organização…" />;
   }
 
   if (showingMulti) {
@@ -119,7 +119,7 @@ export default function EstruturaNodePanel({
             className={`btn btn-outline-secondary${tab === "estrutura" ? " active" : ""}`}
             onClick={() => changeTab("estrutura")}
           >
-            Estrutura
+            Organização
           </button>
         </div>
       </div>
