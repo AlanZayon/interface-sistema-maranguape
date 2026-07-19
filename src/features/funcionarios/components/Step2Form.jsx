@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Button, Spinner } from "react-bootstrap";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import * as funcionariosApi from "@shared/api/funcionarios";
-import { useAuth } from "@features/auth";
 import { FormSection, AppNotice } from "@shared/ui";
 import { toast } from "react-toastify";
 import {
@@ -29,7 +28,6 @@ function Step2Form({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
-  const { addFuncionarios, addFuncionariosPath } = useAuth();
   const queryClient = useQueryClient();
   const setorId = coordenadoriaId;
 
@@ -77,8 +75,6 @@ function Step2Form({
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["funcionarios"] });
-      addFuncionarios(data);
-      addFuncionariosPath(data);
       handleCloseModal({ force: true });
       toast.success("Funcionário cadastrado com sucesso");
     },

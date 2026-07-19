@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Badge, Button } from "react-bootstrap";
 import { AppModal } from "@shared/ui";
 import ObservationHistoryButton from "./ObservationHistoryButton";
+import * as funcionariosApi from "@shared/api/funcionarios";
 
 const PLACEHOLDER_PHOTO =
   "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
@@ -45,12 +46,47 @@ export default function FuncionarioDetailModal({
   onViewObservations,
 }) {
   const [activeTab, setActiveTab] = useState("financeiro");
+  const [midia, setMidia] = useState({ fotoUrl: null, arquivoUrl: null });
 
   useEffect(() => {
     if (show) setActiveTab("financeiro");
   }, [show, user?._id]);
 
+  useEffect(() => {
+    if (!show || !user?._id) {
+      setMidia({ fotoUrl: null, arquivoUrl: null });
+      return;
+    }
+    if (user.fotoUrl || user.arquivoUrl) {
+      setMidia({
+        fotoUrl: user.fotoUrl || null,
+        arquivoUrl: user.arquivoUrl || null,
+      });
+      return;
+    }
+    let cancelled = false;
+    funcionariosApi
+      .buscarMidia(user._id)
+      .then((data) => {
+        if (!cancelled) {
+          setMidia({
+            fotoUrl: data?.fotoUrl || null,
+            arquivoUrl: data?.arquivoUrl || null,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMidia({ fotoUrl: null, arquivoUrl: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [show, user?._id, user?.fotoUrl, user?.arquivoUrl]);
+
   if (!user) return null;
+
+  const fotoSrc = midia.fotoUrl || user.fotoUrl || PLACEHOLDER_PHOTO;
+  const arquivoUrl = midia.arquivoUrl || user.arquivoUrl;
 
   const visibleTabs = TABS.filter(
     (tab) => !tab.onlyTemporario || user.natureza === "TEMPORARIO"
@@ -157,7 +193,7 @@ export default function FuncionarioDetailModal({
       <div className="func-detail">
         <div className="func-detail__hero">
           <img
-            src={user.fotoUrl || PLACEHOLDER_PHOTO}
+            src={fotoSrc}
             alt=""
             className="func-detail__photo"
           />
@@ -180,11 +216,12 @@ export default function FuncionarioDetailModal({
 
         <div className="func-detail__secondary-actions">
           <ObservationHistoryButton onClick={() => onViewObservations?.(user._id)} />
-          {user.arquivo ? (
+          {(arquivoUrl || user.arquivo) ? (
             <Button
               variant="outline-success"
               size="sm"
-              onClick={() => window.open(user.arquivoUrl, "_blank")}
+              disabled={!arquivoUrl}
+              onClick={() => window.open(arquivoUrl, "_blank")}
             >
               <i className="bi bi-download me-1" aria-hidden="true" />
               Baixar arquivo

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button, Spinner } from "react-bootstrap";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@features/auth";
 import * as funcionariosApi from "@shared/api/funcionarios";
 import { FormSection, AppNotice } from "@shared/ui";
 import { toast } from "react-toastify";
@@ -72,7 +71,6 @@ function UserEdit({
   const [initialNatureza, setInitialNatureza] = useState(null);
   const [dirty, setDirty] = useState(false);
   const prevNaturezaRef = useRef(null);
-  const { addFuncionarios, addFuncionariosPath } = useAuth();
   const queryClient = useQueryClient();
 
   const markDirty = useCallback(() => {
@@ -199,8 +197,6 @@ function UserEdit({
     },
     onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ["funcionarios"] });
-      addFuncionarios(updatedUser);
-      addFuncionariosPath(updatedUser);
       setDirty(false);
       onDirtyChange?.(false);
       handleCloseModal({ force: true });

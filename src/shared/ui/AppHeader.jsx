@@ -21,7 +21,7 @@ import * as searchApi from "@shared/api/search";
  * }} props
  */
 export default function AppHeader({ onToggleSidebar }) {
-  const { logout, username, setFuncionariosPath, role } = useAuth();
+  const { logout, username, role } = useAuth();
   const { isPlatform } = useTenant();
   const isPlatformConsole = isPlatform && role === "superadmin";
   const navigate = useNavigate();
@@ -77,26 +77,9 @@ export default function AppHeader({ onToggleSidebar }) {
 
   const runSearch = (term) => {
     if (!term.trim()) return;
-    setSearchLoading(true);
-    searchApi
-      .searchFuncionarios(term)
-      .then((data) => {
-        const results = data.funcionarios || data;
-        const setoresInfo = data.setoresEncontrados || [];
-        const setoresFormatados = setoresInfo.map((setor) => ({
-          ...setor,
-          tipo: setor.tipo === "Coordenadoria" ? "Divisão" : setor.tipo,
-        }));
-        setFuncionariosPath({
-          funcionarios: results,
-          setoresEncontrados: setoresFormatados,
-        });
-        navigate(`/search/${encodeURIComponent(term)}`);
-        setShowSuggestions(false);
-        setShowMobileSearch(false);
-      })
-      .catch(() => toast.error("Erro na busca"))
-      .finally(() => setSearchLoading(false));
+    navigate(`/search/${encodeURIComponent(term.trim())}`);
+    setShowSuggestions(false);
+    setShowMobileSearch(false);
   };
 
   const handleSearch = (e) => {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Form, Button, Spinner } from "react-bootstrap";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@features/auth";
 import * as funcionariosApi from "@shared/api/funcionarios";
 import * as setoresApi from "@shared/api/setores";
 import { getNodeChildren, normalizeNodeTipo } from "@features/setores/utils/setorNavigation";
@@ -63,7 +62,6 @@ function Step3Form({
   onSubmittingChange,
 }) {
   const queryClient = useQueryClient();
-  const { addFuncionarios, addFuncionariosPath } = useAuth();
   const searchRef = useRef(null);
 
   const [query, setQuery] = useState("");
@@ -195,8 +193,6 @@ function Step3Form({
       const created = await funcionariosApi.createFuncionario(formData);
       queryClient.invalidateQueries({ queryKey: funcionariosKeys.all });
       queryClient.invalidateQueries({ queryKey: ["setores"] });
-      addFuncionarios(created);
-      addFuncionariosPath(created);
       handleCloseModal({ force: true });
       toast.success("Funcionário cadastrado com sucesso");
     } catch (error) {

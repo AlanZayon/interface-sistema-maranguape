@@ -11,7 +11,6 @@ import {
   useFuncionariosBySetorId,
   useFuncionariosBySetorSubtree,
 } from "@features/funcionarios/hooks/useFuncionarios";
-import { useAuth } from "@features/auth";
 
 const SCOPE_KEY = "estrutura.lotacaoScope";
 
@@ -21,7 +20,6 @@ const SCOPE_KEY = "estrutura.lotacaoScope";
  */
 export default function EstruturaLotacaoPanel({ node, onDeleted }) {
   const queryClient = useQueryClient();
-  const { setFuncionarios } = useAuth();
   const shell = useShellActions();
   const id = String(node._id ?? node.id);
   const name = node.nome ?? node.name;
@@ -47,16 +45,7 @@ export default function EstruturaLotacaoPanel({ node, onDeleted }) {
   });
 
   const activeQuery = includeSubtree ? subtreeQuery : nodeQuery;
-  const { data, isLoading, isFetching, refetch } = activeQuery;
-
-  useEffect(() => {
-    if (!data) return;
-    const list = Array.isArray(data) ? data : data.funcionarios || [];
-    setFuncionarios((prev) => ({
-      ...(typeof prev === "object" && !Array.isArray(prev) ? prev : {}),
-      [id]: list,
-    }));
-  }, [data, id, setFuncionarios, scope]);
+  const { total, isLoading, isFetching, refetch } = activeQuery;
 
   useEffect(() => {
     setEditName(name);
@@ -97,9 +86,7 @@ export default function EstruturaLotacaoPanel({ node, onDeleted }) {
     },
   });
 
-  const count = Array.isArray(data)
-    ? data.length
-    : data?.funcionarios?.length ?? 0;
+  const count = total ?? 0;
 
   const countLabel = includeSubtree
     ? `${count} funcionário(s) neste nó e nos filhos`
@@ -120,8 +107,9 @@ export default function EstruturaLotacaoPanel({ node, onDeleted }) {
               />
               <button
                 type="button"
-                className="btn btn-sm btn-success"
-                onClick={() => renameMutation.mutate(editName)}
+                className="btn btn-sm btn-primary"
+                disabled={renameMutation.isPending || !editName.trim()}
+                onClick={() => renameMutation.mutate(editName.trim())}
               >
                 Salvar
               </button>
@@ -139,38 +127,28 @@ export default function EstruturaLotacaoPanel({ node, onDeleted }) {
           ) : (
             <h2 className="estrutura-divisao__title">{name}</h2>
           )}
-          <p className="text-muted mb-0 small">
+          <p className="estrutura-divisao__meta text-muted mb-0">
             {isLoading || isFetching ? "Carregando…" : countLabel}
           </p>
         </div>
-        <div className="estrutura-divisao__actions">
-          <button
-            type="button"
-            className="btn btn-sm btn-primary"
-            onClick={() => shell.openCreateFuncionario?.(id, name)}
-          >
-            <i className="bi bi-person-plus me-1" aria-hidden="true" />
-            Novo funcionário
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary"
-            onClick={() => {
-              setEditName(name);
-              setEditing(true);
-            }}
-            title="Renomear"
-          >
-            <i className="bi bi-pencil" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger"
-            onClick={() => setShowDelete(true)}
-            title="Excluir"
-          >
-            <i className="bi bi-trash" aria-hidden="true" />
-          </button>
+
+        <div className="estrutura-divisao__actions d-flex flex-wrap gap-2 align-items-center">
+          <div className="btn-group btn-group-sm" role="group" aria-label="Escopo">
+            <button
+              type="button"
+              className={`btn ${scope === "node" ? "btn-primary" : "btn-outline-primary"}`}
+              onClick={() => changeScope("node")}
+            >
+              Só este nó
+            </button>
+            <button
+              type="button"
+              className={`btn ${scope === "subtree" ? "btn-primary" : "btn-outline-primary"}`}
+              onClick={() => changeScope("subtree")}
+            >
+              Com filhos
+            </button>
+          </div>
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
@@ -179,47 +157,49 @@ export default function EstruturaLotacaoPanel({ node, onDeleted }) {
           >
             <i className="bi bi-arrow-clockwise" aria-hidden="true" />
           </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => setEditing(true)}
+          >
+            Renomear
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-danger"
+            onClick={() => setShowDelete(true)}
+          >
+            Excluir
+          </button>
+          {shell?.openCreateFuncionario && (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={() =>
+                shell.openCreateFuncionario({
+                  setorId: id,
+                  secretaria: name,
+                })
+              }
+            >
+              Novo funcionário
+            </button>
+          )}
         </div>
       </div>
 
-      <div
-        className="btn-group btn-group-sm estrutura-lotacao__scope"
-        role="group"
-        aria-label="Escopo da lista de funcionários"
-      >
-        <button
-          type="button"
-          className={`btn btn-outline-secondary${scope === "node" ? " active" : ""}`}
-          onClick={() => changeScope("node")}
-          title="Somente funcionários lotados neste nó"
-        >
-          Só neste nó
-        </button>
-        <button
-          type="button"
-          className={`btn btn-outline-secondary${scope === "subtree" ? " active" : ""}`}
-          onClick={() => changeScope("subtree")}
-          title="Incluir funcionários dos subsetores filhos"
-        >
-          + filhos
-        </button>
-      </div>
-
-      <div className="estrutura-divisao__list">
-        <FuncionariosList
-          key={`${id}-${scope}`}
-          setorId={id}
-          coordenadoriaId={id}
-          lotacaoScope={includeSubtree ? "subtree" : "node"}
-        />
-      </div>
+      <FuncionariosList
+        coordenadoriaId={id}
+        departmentName={name}
+        lotacaoScope={includeSubtree ? "subtree" : "node"}
+      />
 
       <ConfirmDeleteModal
-        showModal={showDelete}
-        handleClose={() => setShowDelete(false)}
-        handleConfirmDelete={() => deleteMutation.mutate()}
-        entityId={id}
-        entityType={getTipoLabel(tipo)}
+        show={showDelete}
+        onHide={() => setShowDelete(false)}
+        onConfirm={() => deleteMutation.mutate()}
+        entityName={name}
+        loading={deleteMutation.isPending}
       />
     </div>
   );

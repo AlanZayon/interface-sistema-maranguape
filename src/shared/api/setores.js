@@ -9,6 +9,13 @@ export const getSetoresOrganizados = () =>
 export const getSetorData = (setorId) =>
   apiClient.get(`/api/setores/dados/${setorId}`).then((r) => r.data);
 
+/** Direct children of a setor (or roots via getSetorRoots). Includes employee counts. */
+export const getSetorChildren = (id) =>
+  apiClient.get(`/api/setores/${id}/children`).then((r) => r.data);
+
+export const getSetorRoots = () =>
+  apiClient.get("/api/setores/roots").then((r) => r.data);
+
 export const createSetor = (data) =>
   apiClient.post("/api/setores", data).then((r) => r.data);
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Modal } from "react-bootstrap";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@features/auth";
 import * as setoresApi from "@shared/api/setores";
 import * as funcionariosApi from "@shared/api/funcionarios";
 import { getNodeChildren, normalizeNodeTipo } from "@features/setores/utils/setorNavigation";
@@ -84,7 +83,6 @@ function LotacaoMover({
   setShowSelectionControlsEdit,
   setActivateModified,
 }) {
-  const { addFuncionarios, addFuncionariosPath } = useAuth();
   const queryClient = useQueryClient();
   const searchRef = useRef(null);
   const [query, setQuery] = useState("");
@@ -198,10 +196,8 @@ function LotacaoMover({
         destino.id
       );
       try {
-        addFuncionarios(updated);
-        addFuncionariosPath(updated);
         setShowSelectionControlsEdit?.(false);
-        setActivateModified?.(true);
+        setActivateModified?.();
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: funcionariosKeys.all }),
           queryClient.invalidateQueries({ queryKey: ["setores"] }),
@@ -231,8 +227,6 @@ function LotacaoMover({
   }, [
     destino,
     usuariosIds,
-    addFuncionarios,
-    addFuncionariosPath,
     setShowSelectionControlsEdit,
     setActivateModified,
     onHide,

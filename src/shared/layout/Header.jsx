@@ -54,7 +54,7 @@ function Header() {
   const [showModal, setShowModal] = useState(false);
   const [showOrganogramModal, setShowOrganogramModal] = useState(false); // Estado para o modal do organograma
   const [currentStep, setCurrentStep] = useState(1);
-  const { logout, username, role, setFuncionariosPath } = useAuth();
+  const { logout, username, role } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [autocompleteResults, setAutocompleteResults] = useState([]);
@@ -127,61 +127,15 @@ function Header() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-
-    setSearchLoading(true);
-    searchApi
-      .searchFuncionarios(searchQuery)
-      .then((data) => {
-        const results = data.funcionarios || data;
-        const setoresInfo = data.setoresEncontrados || [];
-
-        const setoresFormatados = setoresInfo.map((setor) => ({
-          ...setor,
-          tipo: setor.tipo === "Coordenadoria" ? "Subsetor" : setor.tipo,
-        }));
-
-        setFuncionariosPath({
-          funcionarios: results,
-          setoresEncontrados: setoresFormatados,
-        });
-        navigate(`/search/${searchQuery}`);
-      })
-      .catch((error) => {
-        console.error("Search error:", error);
-        toast.error("Erro na busca");
-      })
-      .finally(() => setSearchLoading(false));
+    navigate(`/search/${encodeURIComponent(searchQuery.trim())}`);
+    setShowSuggestions(false);
   };
 
   const handleSuggestionSelect = (item) => {
-    const term = typeof item === 'string' ? item : item.nome;
-    
+    const term = typeof item === "string" ? item : item.nome;
     setSearchQuery(term);
     setShowSuggestions(false);
-    setSearchLoading(true);
-
-    searchApi
-      .searchFuncionarios(term)
-      .then((data) => {
-        const results = data.funcionarios || data;
-        const setoresInfo = data.setoresEncontrados || [];
-
-        const setoresFormatados = setoresInfo.map((setor) => ({
-          ...setor,
-          tipo: setor.tipo === "Coordenadoria" ? "Subsetor" : setor.tipo,
-        }));
-
-        setFuncionariosPath({
-          funcionarios: results,
-          setoresEncontrados: setoresFormatados,
-        });
-        navigate(`/search/${term}`);
-      })
-      .catch((error) => {
-        console.error("Search error:", error);
-        toast.error("Erro na busca");
-      })
-      .finally(() => setSearchLoading(false));
+    navigate(`/search/${encodeURIComponent(term)}`);
   };
 
   const toggleSearch = () => {

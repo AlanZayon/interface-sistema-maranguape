@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import {
   countEmployeesInSubtree,
   getNodeChildren,
@@ -6,6 +7,8 @@ import {
   normalizeNodeTipo,
 } from "../../utils/setorNavigation";
 import { EmptyState } from "@shared/ui";
+
+const EXPAND_ALL_MAX_NODES = 150;
 
 function transformApiNodes(setores) {
   const transformNode = (node) => {
@@ -16,12 +19,25 @@ function transformApiNodes(setores) {
       id,
       name: node.nome ?? node.name,
       type: tipo,
+      // Prefer API quantidadeFuncionariosSubtree via countEmployeesInSubtree
       employees: countEmployeesInSubtree(node),
       children: children.length ? children : undefined,
       raw: node,
     };
   };
   return (setores || []).map(transformNode);
+}
+
+function countTreeNodes(nodes) {
+  let total = 0;
+  const walk = (list) => {
+    for (const n of list || []) {
+      total += 1;
+      if (n.children?.length) walk(n.children);
+    }
+  };
+  walk(nodes);
+  return total;
 }
 
 function collectDescendantIds(node, set = new Set()) {
@@ -129,6 +145,13 @@ export default function EstruturaOrganogramView({
   );
 
   const expandAll = useCallback(() => {
+    const total = countTreeNodes(displayTree);
+    if (total > EXPAND_ALL_MAX_NODES) {
+      toast.warn(
+        `Árvore muito grande para expandir tudo (${total} nós; máx. ${EXPAND_ALL_MAX_NODES}). Expanda os ramos manualmente.`
+      );
+      return;
+    }
     const ids = new Set();
     const walk = (list) => {
       for (const n of list || []) {

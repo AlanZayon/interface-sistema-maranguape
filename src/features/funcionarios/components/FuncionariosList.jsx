@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Button,
   Form,
@@ -9,25 +8,31 @@ import {
   Badge,
   Dropdown,
 } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
-import { FixedSizeGrid as Grid } from "react-window";
+import { useNavigate, useLocation } from "react-router-dom";
+import { FixedSizeGrid as Grid, FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { useAuth, isElevatedRole } from '@features/auth';
+import { useAuth, isElevatedRole } from "@features/auth";
 import FilterModal, {
   countActiveFilters,
   createEmptyFilters,
 } from "./FilterModal";
-import { RelatorioTypeModal } from '@features/funcionarios';
-import { ObservationHistoryModal } from '@features/funcionarios';
-import { CoordEdit } from '@features/funcionarios';
-import { UserEdit } from '@features/funcionarios';
+import { RelatorioTypeModal } from "@features/funcionarios";
+import { ObservationHistoryModal } from "@features/funcionarios";
+import { CoordEdit } from "@features/funcionarios";
+import { UserEdit } from "@features/funcionarios";
 import UserCard from "./UserCard";
 import FuncionarioDetailModal from "./FuncionarioDetailModal";
-import * as funcionariosApi from '@shared/api/funcionarios';
-import { useFuncionariosByCoordenadoria } from "../hooks/useFuncionarios";
+import * as funcionariosApi from "@shared/api/funcionarios";
+import {
+  flattenPages,
+  useInfiniteFuncionarios,
+  useInfiniteFuncionariosBySetores,
+  useInfiniteFuncionariosBySetorId,
+  useInfiniteFuncionariosBySetorSubtree,
+  useFuncionariosFiltros,
+  useInvalidateFuncionarios,
+} from "../hooks/useFuncionarios";
 import { toast } from "react-toastify";
-import { set } from "lodash";
 import {
   PageHeader,
   AppBreadcrumb,
@@ -38,35 +43,96 @@ import {
 } from "@shared/ui";
 
 const VIEW_MODE_KEY = "funcionarios.viewMode";
+const PLACEHOLDER_PHOTO =
+  "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+const TABLE_ROW_HEIGHT = 52;
+const TABLE_VIEW_MAX_HEIGHT = 560;
+
+function validateBounds(value, fallback) {
+  return isFinite(value) ? value : fallback;
+}
+
+function sortFuncionariosAlphabetically(funcionarios) {
+  return [...funcionarios].sort((a, b) => {
+    const nomeA = (a.nome || "").toUpperCase();
+    const nomeB = (b.nome || "").toUpperCase();
+    if (nomeA < nomeB) return -1;
+    if (nomeA > nomeB) return 1;
+    return 0;
+  });
+}
 
 /**
- * Busca local na lista: todos os termos (espaço) precisam aparecer em algum campo.
+ * Client-side filters: salary / date / contrato.
+ * Natureza / função / bairro / referência are sent to the server (first item);
+ * extras beyond the first are re-applied here among loaded pages.
  */
-function matchesListSearch(user, term) {
-  const q = String(term || "").trim().toLowerCase();
-  if (!q) return true;
-  const tokens = q.split(/\s+/).filter(Boolean);
-  const hay = [
-    user?.nome,
-    user?.funcao,
-    user?.referencia,
-    user?.natureza,
-    user?.secretaria,
-    user?.bairro,
-    user?.cidade,
-    user?.telefone,
-    user?.tipo,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+function applyFilters(funcionarios, activeFilters) {
+  const allFuncionarios = Array.isArray(funcionarios)
+    ? funcionarios
+    : Object.values(funcionarios || {}).flat();
 
-  return tokens.every((token) => {
-    const t = token.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return hay.includes(t);
+  const filtered = allFuncionarios.filter((funcionario) => {
+    const salarioBrutoMin = validateBounds(
+      activeFilters.salarioBruto.min,
+      Number.MIN_SAFE_INTEGER
+    );
+    const salarioBrutoMax = validateBounds(
+      activeFilters.salarioBruto.max,
+      Number.MAX_SAFE_INTEGER
+    );
+
+    const isFimIndeterminado = (fim) =>
+      String(fim || "").toUpperCase() === "INDETERMINADO";
+
+    const inicioOk =
+      !activeFilters.inicioContrato ||
+      (funcionario.inicioContrato &&
+        new Date(funcionario.inicioContrato) >=
+          new Date(activeFilters.inicioContrato));
+
+    let contratoFilter = true;
+
+    if (activeFilters.contratoIndeterminado) {
+      contratoFilter =
+        isFimIndeterminado(funcionario.fimContrato) && inicioOk;
+    } else if (activeFilters.inicioContrato || activeFilters.fimContrato) {
+      if (funcionario.natureza === "TEMPORARIO") {
+        const fimOk =
+          !activeFilters.fimContrato ||
+          (funcionario.fimContrato &&
+            !isFimIndeterminado(funcionario.fimContrato) &&
+            new Date(funcionario.fimContrato) <=
+              new Date(activeFilters.fimContrato));
+        contratoFilter = inicioOk && fimOk;
+      }
+    }
+
+    return (
+      (activeFilters.natureza.length === 0 ||
+        activeFilters.natureza.includes(funcionario.natureza)) &&
+      (activeFilters.funcao.length === 0 ||
+        activeFilters.funcao.includes(funcionario.funcao)) &&
+      (activeFilters.referencia.length === 0 ||
+        activeFilters.referencia.includes(funcionario.referencia)) &&
+      funcionario.salarioBruto >= salarioBrutoMin &&
+      funcionario.salarioBruto <= salarioBrutoMax &&
+      (activeFilters.bairro.length === 0 ||
+        activeFilters.bairro.includes(funcionario.bairro)) &&
+      contratoFilter
+    );
   });
+
+  return sortFuncionariosAlphabetically(filtered);
+}
+
+function safeDecode(value) {
+  if (!value) return "";
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return String(value);
+  }
 }
 
 function FuncionairosList({
@@ -74,13 +140,17 @@ function FuncionairosList({
   setorPathId,
   departmentName,
   idsDivisoes,
-  /** "node" = só lotação exata; "subtree" = não filtrar por lotação (lista já vem completa) */
+  /** "node" = só lotação exata; "subtree" = nó + descendentes */
   lotacaoScope = "node",
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const invalidateFuncionarios = useInvalidateFuncionarios();
+
   const [searchTermFromURL, setSearchTermFromURL] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showModalEdit, setShowModalEdit] = useState(false);
   const [showModalSingleEdit, setShowModalSingleEdit] = useState(false);
@@ -96,6 +166,7 @@ function FuncionairosList({
     }
   });
   const [pendingDeleteIds, setPendingDeleteIds] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [activeFilters, setActiveFilters] = useState({
     natureza: [],
     funcao: [],
@@ -107,11 +178,11 @@ function FuncionairosList({
     bairro: [],
     inicioContrato: null,
     fimContrato: null,
-    contratoIndeterminado: false
-
+    contratoIndeterminado: false,
   });
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [selectingAllResult, setSelectingAllResult] = useState(false);
   const [showSelectionControlsDelete, setShowSelectionControlsDelete] =
     useState(false);
   const [showSelectionControlsReport, setShowSelectionControlsReport] =
@@ -124,48 +195,128 @@ function FuncionairosList({
   const [observations, setObservations] = useState({});
   const [showObservationModal, setShowObservationModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
-  const [naturezas, setNaturezas] = useState([]);
-  const [todasFuncoes, setTodasFuncoes] = useState([]);
-  const [todosBairros, setTodosBairros] = useState([]);
-  const [todasReferencias, setTodasReferencias] = useState([]);
-  const [todosSalariosBrutos, setTodosSalariosBrutos] = useState([]);
-  const [filteredFuncionarios, setFilteredFuncionarios] = useState([]);
   const [funcionarioEncontrado, setFuncionarioEncontrado] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [showReportTypeModal, setShowReportTypeModal] = useState(false);
-  const [selectedReportType, setSelectedReportType] = useState('geral');
-  const {
-    role,
-    funcionarios,
-    setFuncionarios,
-    funcionariosPath,
-    setFuncionariosPath,
-    activateModified,
-    setActivateModified,
-  } = useAuth();
-
-  const useLocalCoordQuery =
-    Boolean(coordenadoriaId) && !setorPathId && lotacaoScope !== "subtree";
-  const { data: coordQueryData, isFetching: coordFetching } =
-    useFuncionariosByCoordenadoria(coordenadoriaId, {
-      enabled: useLocalCoordQuery,
-    });
-
-  useEffect(() => {
-    if (!useLocalCoordQuery || !coordQueryData) return;
-    const list = Array.isArray(coordQueryData)
-      ? coordQueryData
-      : coordQueryData.funcionarios || [];
-    setFuncionarios((prev) => ({
-      ...(typeof prev === "object" && !Array.isArray(prev) ? prev : {}),
-      [coordenadoriaId]: list,
-    }));
-  }, [useLocalCoordQuery, coordQueryData, coordenadoriaId, setFuncionarios]);
-
-  useEffect(() => {
-    if (useLocalCoordQuery) setLoading(coordFetching);
-  }, [useLocalCoordQuery, coordFetching]);
+  const [selectedReportType, setSelectedReportType] = useState("geral");
   const [exportingCsv, setExportingCsv] = useState(false);
+
+  const modeMainscreen = setorPathId === "mainscreen";
+  const modeSelected = setorPathId === "selected";
+  const modeSearch = setorPathId === "search";
+  const modeNode =
+    Boolean(coordenadoriaId) &&
+    lotacaoScope === "node" &&
+    !modeMainscreen &&
+    !modeSelected &&
+    !modeSearch;
+  const modeSubtree =
+    Boolean(coordenadoriaId) &&
+    lotacaoScope === "subtree" &&
+    !modeMainscreen &&
+    !modeSelected &&
+    !modeSearch;
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(String(searchTerm || "").trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (location.pathname.startsWith("/search/")) {
+      const term = location.pathname.split("/search/")[1] || "";
+      setSearchTermFromURL(term);
+      setSearchTerm(safeDecode(term));
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (modeSearch && departmentName) {
+      setSearchTerm(safeDecode(departmentName));
+    }
+  }, [modeSearch, departmentName]);
+
+  const searchQ = useMemo(() => {
+    if (modeSearch) {
+      return (
+        debouncedQ ||
+        safeDecode(departmentName) ||
+        safeDecode(searchTermFromURL)
+      );
+    }
+    return debouncedQ;
+  }, [modeSearch, debouncedQ, departmentName, searchTermFromURL]);
+
+  const serverFilters = useMemo(
+    () => ({
+      q: searchQ,
+      natureza: activeFilters.natureza[0] || "",
+      funcao: activeFilters.funcao[0] || "",
+      bairro: activeFilters.bairro[0] || "",
+      referencia: activeFilters.referencia[0] || "",
+    }),
+    [searchQ, activeFilters.natureza, activeFilters.funcao, activeFilters.bairro, activeFilters.referencia]
+  );
+
+  const qAll = useInfiniteFuncionarios(serverFilters, {
+    enabled: modeMainscreen || modeSearch,
+  });
+  const qSetores = useInfiniteFuncionariosBySetores(idsDivisoes, serverFilters, {
+    enabled: modeSelected && Boolean(idsDivisoes?.length),
+  });
+  const qNode = useInfiniteFuncionariosBySetorId(
+    coordenadoriaId,
+    serverFilters,
+    { enabled: modeNode }
+  );
+  const qSubtree = useInfiniteFuncionariosBySetorSubtree(
+    coordenadoriaId,
+    serverFilters,
+    { enabled: modeSubtree }
+  );
+
+  const activeQuery = modeMainscreen || modeSearch
+    ? qAll
+    : modeSelected
+      ? qSetores
+      : modeNode
+        ? qNode
+        : modeSubtree
+          ? qSubtree
+          : null;
+
+  const loadedFuncionarios = useMemo(
+    () => flattenPages(activeQuery?.data),
+    [activeQuery?.data]
+  );
+
+  const total =
+    activeQuery?.data?.pages?.[0]?.total ?? loadedFuncionarios.length;
+
+  const isInitialLoading = Boolean(
+    activeQuery &&
+      (activeQuery.isLoading || (activeQuery.isFetching && !activeQuery.data))
+  );
+  const hasNextPage = Boolean(activeQuery?.hasNextPage);
+  const isFetchingNextPage = Boolean(activeQuery?.isFetchingNextPage);
+  const fetchNextPage = activeQuery?.fetchNextPage;
+
+  const { data: filtrosData } = useFuncionariosFiltros();
+  const naturezas = filtrosData?.naturezas || [];
+  const todasFuncoes = filtrosData?.funcoes || [];
+  const todosBairros = filtrosData?.bairros || [];
+  const todasReferencias = filtrosData?.referencias || [];
+
+  const todosSalariosBrutos = useMemo(() => {
+    const values = loadedFuncionarios
+      .map((f) => f.salarioBruto)
+      .filter((v) => v != null && isFinite(v));
+    return [...new Set(values)];
+  }, [loadedFuncionarios]);
+
+  const filteredFuncionarios = useMemo(
+    () => applyFilters(loadedFuncionarios, activeFilters),
+    [loadedFuncionarios, activeFilters]
+  );
 
   const changeViewMode = (mode) => {
     setViewMode(mode);
@@ -210,66 +361,16 @@ function FuncionairosList({
     }
   };
 
-  const fetchFuncionariosPorDivisoes = async (idsDivisoes) => {
-    setLoading(true);
-    let page = 1;
-    const limit = 1000; // Mantenha alto para reduzir chamadas (ajuste conforme necessário)
-    let totalPages = 1;
-    let allFuncionarios = [];
-
-    try {
-      while (page <= totalPages) {
-        const res = await funcionariosApi.buscarPorDivisoes({
-          ids: idsDivisoes,
-          page,
-          limit,
-        });
-
-        allFuncionarios = [...allFuncionarios, ...(res.funcionarios || [])];
-        totalPages = res.pages || 1;
-        page++;
-      }
-    } catch (error) {
-      console.error("Erro ao buscar funcionários:", error);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-
-    return allFuncionarios;
-  };
-
-  const fetchFuncionariosData = async () => {
-    setLoading(true);
-    let page = 1;
-    const limit = 1000;
-    let totalPages = 1;
-    let allFuncionarios = [];
-    try {
-      while (page <= totalPages) {
-        const res = await funcionariosApi.buscarFuncionarios({ page, limit });
-        allFuncionarios = [...allFuncionarios, ...(res.funcionarios || [])];
-        totalPages = res.pages || 1;
-        page++;
-      }
-    } catch (error) {
-      console.error("Erro ao buscar os dados:", error);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-
-    return allFuncionarios;
-  };
-
   const handleCloseModal = (result) => {
     setShowModalEdit(false);
     if (result?.transferred) {
       setSelectedUsers([]);
       setSelectAll(false);
       setShowSelectionControlsEdit(false);
+      invalidateFuncionarios();
     }
   };
+
   const handleCloseModalSingleEdit = (options = {}) => {
     const force = options === true || options?.force === true;
     if (editSubmitting && !force) return;
@@ -336,227 +437,15 @@ function FuncionairosList({
     setActiveFilters(createEmptyFilters(todosSalariosBrutos));
   };
 
-  const sortFuncionariosAlphabetically = (funcionarios) => {
-    return [...funcionarios].sort((a, b) => {
-      const nomeA = a.nome.toUpperCase();
-      const nomeB = b.nome.toUpperCase();
-      if (nomeA < nomeB) {
-        return -1;
-      }
-      if (nomeA > nomeB) {
-        return 1;
-      }
-      return 0;
-    });
-  };
+  const buscarFuncionario = (userId) =>
+    filteredFuncionarios.find((func) => func._id === userId) ||
+    loadedFuncionarios.find((func) => func._id === userId) ||
+    null;
 
-  const applyFilters = (funcionarios) => {
-    const allFuncionarios = Array.isArray(funcionarios)
-      ? funcionarios
-      : Object.values(funcionarios || {}).flat();
-
-    const filtered = allFuncionarios.filter((funcionario) => {
-      const salarioBrutoMin = validateBounds(
-        activeFilters.salarioBruto.min,
-        Number.MIN_SAFE_INTEGER
-      );
-      const salarioBrutoMax = validateBounds(
-        activeFilters.salarioBruto.max,
-        Number.MAX_SAFE_INTEGER
-      );
-
-      const isFimIndeterminado = (fim) =>
-        String(fim || "").toUpperCase() === "INDETERMINADO";
-
-      const inicioOk =
-        !activeFilters.inicioContrato ||
-        (funcionario.inicioContrato &&
-          new Date(funcionario.inicioContrato) >=
-            new Date(activeFilters.inicioContrato));
-
-      let contratoFilter = true;
-
-      if (activeFilters.contratoIndeterminado) {
-        // "Somente" = exclusivo: apenas contratos com fim indeterminado
-        contratoFilter =
-          isFimIndeterminado(funcionario.fimContrato) && inicioOk;
-      } else if (activeFilters.inicioContrato || activeFilters.fimContrato) {
-        // Datas restringem só temporários; demais naturezas passam
-        if (funcionario.natureza === "TEMPORARIO") {
-          const fimOk =
-            !activeFilters.fimContrato ||
-            (funcionario.fimContrato &&
-              !isFimIndeterminado(funcionario.fimContrato) &&
-              new Date(funcionario.fimContrato) <=
-                new Date(activeFilters.fimContrato));
-          contratoFilter = inicioOk && fimOk;
-        }
-      }
-
-
-      return (
-        (activeFilters.natureza.length === 0 ||
-          activeFilters.natureza.includes(funcionario.natureza)) &&
-        (activeFilters.funcao.length === 0 ||
-          activeFilters.funcao.includes(funcionario.funcao)) &&
-        (activeFilters.referencia.length === 0 ||
-          activeFilters.referencia.includes(funcionario.referencia)) &&
-        funcionario.salarioBruto >= salarioBrutoMin &&
-        funcionario.salarioBruto <= salarioBrutoMax &&
-        (activeFilters.bairro.length === 0 ||
-          activeFilters.bairro.includes(funcionario.bairro)) &&
-        (lotacaoScope === "subtree" ||
-          !coordenadoriaId ||
-          String(funcionario.setorId || funcionario.coordenadoria) ===
-            String(coordenadoriaId)) &&
-        contratoFilter
-      );
-    });
-
-    return sortFuncionariosAlphabetically(filtered);
-  };
-
-  useEffect(() => {
-    // Detecta se veio de uma pesquisa pela URL
-    if (location.pathname.startsWith("/search/")) {
-      const term = location.pathname.split("/search/")[1];
-      setSearchTermFromURL(term);
-    }
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (
-      setorPathId !== "mainscreen" &&
-      setorPathId !== "search" &&
-      setorPathId
-    ) {
-      if (!idsDivisoes?.length && setorPathId === "selected") {
-        setFuncionariosPath([]);
-        setFilteredFuncionarios([]);
-        return;
-      }
-      const fetchData = async () => {
-        try {
-          const data = await fetchFuncionariosPorDivisoes(idsDivisoes);
-          setFuncionariosPath(data);
-        } catch (error) {
-          console.error("Erro ao buscar os dados:");
-        }
-      };
-      fetchData();
-    } else if (setorPathId === "mainscreen") {
-      const fetchFunData = async () => {
-        try {
-          const data = await fetchFuncionariosData();
-          setFuncionariosPath(data);
-        } catch (error) {
-          console.error("Erro ao buscar os dados:");
-        }
-      };
-      fetchFunData();
-    }
-    setActivateModified(false);
-  }, [setorPathId, idsDivisoes, activateModified]);
-
-  const processarFuncionarios = (dados) => {
-    const observacoesPorFuncionario = dados.reduce((acc, item) => {
-      acc[item._id] = item.observacoes || [];
-      return acc;
-    }, {});
-
-    const uniqueNaturezas = [...new Set(dados.map((item) => item.natureza))];
-    const uniqueFuncoes = [...new Set(dados.map((item) => item.funcao))];
-    const uniqueBairros = [...new Set(dados.map((item) => item.bairro))];
-    const uniqueReferencias = [
-      ...new Set(dados.map((item) => item.referencia)),
-    ];
-    const uniqueSalariosBrutos = [
-      ...new Set(dados.map((item) => item.salarioBruto)),
-    ];
-
-    return {
-      observacoes: observacoesPorFuncionario,
-      naturezas: uniqueNaturezas,
-      funcoes: uniqueFuncoes,
-      bairros: uniqueBairros,
-      referencias: uniqueReferencias,
-      salarioBruto: uniqueSalariosBrutos,
-    };
-  };
-
-  useEffect(() => {
-    const dados = funcionarios[coordenadoriaId] || funcionariosPath;
-
-    if (dados && dados.length > 0) {
-      const {
-        observacoes,
-        naturezas,
-        funcoes,
-        bairros,
-        referencias,
-        salarioBruto,
-      } = processarFuncionarios(dados);
-
-      setNaturezas(naturezas);
-      setTodasFuncoes(funcoes);
-      setTodosBairros(bairros);
-      setTodasReferencias(referencias);
-      setObservations(observacoes);
-      setTodosSalariosBrutos(salarioBruto);
-    }
-  }, [funcionarios, funcionariosPath]);
-
-  // Monitora mudanças em funcionariosPath e aplica filtros
-  useEffect(() => {
-    if (setorPathId) {
-      setFilteredFuncionarios(applyFilters(funcionariosPath));
-    } else {
-      setFilteredFuncionarios(applyFilters(funcionarios[coordenadoriaId]));
-    }
-  }, [setorPathId, funcionariosPath, funcionarios, activeFilters]);
-
-  useEffect(() => {
-    let baseFuncionarios = [];
-
-    if (setorPathId === "selected") {
-      baseFuncionarios = Array.isArray(funcionariosPath)
-        ? funcionariosPath
-        : funcionariosPath?.funcionarios || [];
-    } else if (setorPathId && funcionariosPath?.funcionarios) {
-      baseFuncionarios = funcionariosPath.funcionarios;
-    } else if (Array.isArray(funcionariosPath)) {
-      baseFuncionarios = funcionariosPath;
-    } else if (Array.isArray(funcionarios[coordenadoriaId])) {
-      baseFuncionarios = funcionarios[coordenadoriaId];
-    }
-
-    const filtered = baseFuncionarios.filter((user) =>
-      matchesListSearch(user, searchTerm)
-    );
-
-    setFilteredFuncionarios(applyFilters(filtered));
-  }, [setorPathId, funcionariosPath, funcionarios, activeFilters, searchTerm, coordenadoriaId]);
-
-
-
-  const buscarFuncionario = (userId) => {
-    const funcionario =
-      funcionarios[coordenadoriaId]?.find((func) => func._id === userId) ||
-      funcionariosPath.find((func) => func._id === userId) ||
-      null;
-
-    return funcionario;
-  };
-
-  // Evento que é chamado quando o botão é clicado
   const handleClick = (id) => {
     const funcionario = buscarFuncionario(id);
     setFuncionarioEncontrado(funcionario);
     setShowModalSingleEdit(true);
-  };
-
-  const validateBounds = (value, fallback) => {
-    return isFinite(value) ? value : fallback;
   };
 
   const handleSelectAll = () => {
@@ -564,6 +453,30 @@ function FuncionairosList({
     setSelectedUsers(
       !selectAll ? filteredFuncionarios.map((user) => user._id) : []
     );
+  };
+
+  const handleSelectAllResult = async () => {
+    try {
+      setSelectingAllResult(true);
+      const body = { ...serverFilters };
+      if (modeSelected) {
+        body.ids = idsDivisoes || [];
+      } else if (modeNode) {
+        body.setorIds = [coordenadoriaId];
+      } else if (modeSubtree) {
+        body.subtreeRoot = coordenadoriaId;
+      }
+      const res = await funcionariosApi.buscarIds(body);
+      const ids = res?.ids || [];
+      setSelectedUsers(ids);
+      setSelectAll(ids.length > 0);
+      toast.success(`${ids.length} funcionário(s) selecionado(s)`);
+    } catch (error) {
+      console.error("Erro ao selecionar todos do resultado:", error);
+      toast.error("Não foi possível selecionar todos do resultado.");
+    } finally {
+      setSelectingAllResult(false);
+    }
   };
 
   const handleUserSelect = (userId) => {
@@ -592,52 +505,24 @@ function FuncionairosList({
       return;
     }
 
-    setLoading(true);
+    setDeleting(true);
     try {
       await funcionariosApi.deleteUsers(idsToDelete);
-
-      {
-        const remainingUsers = filteredFuncionarios.filter(
-          (user) => !idsToDelete.includes(user._id)
-        );
-
-        setFilteredFuncionarios(remainingUsers);
-        setFuncionarios((prev) => {
-          const deletedUsers = filteredFuncionarios.filter((user) =>
-            idsToDelete.includes(user._id)
-          );
-
-          const deletedUsersCoordenadoria = deletedUsers.map(
-            (user) => user.coordenadoria
-          );
-
-          const updatedState = { ...prev };
-          deletedUsersCoordenadoria.forEach((coordenadoria) => {
-            updatedState[coordenadoria] =
-              updatedState[coordenadoria]?.filter(
-                (user) => !idsToDelete.includes(user._id)
-              ) || [];
-          });
-
-          return updatedState;
-        });
-        setFuncionariosPath(remainingUsers);
-        setSelectedUsers([]);
-        setSelectAll(false);
-        setShowSelectionControlsDelete(false);
-        toast.success("Usuários removidos com sucesso");
-      }
+      setSelectedUsers([]);
+      setSelectAll(false);
+      setShowSelectionControlsDelete(false);
+      invalidateFuncionarios();
+      toast.success("Usuários removidos com sucesso");
     } catch (error) {
       console.error("Erro ao deletar usuários:", error);
       toast.error("Erro ao remover usuários. Tente novamente.");
     } finally {
-      setLoading(false);
+      setDeleting(false);
       setPendingDeleteIds(null);
     }
   };
 
   const handleReportSelected = async () => {
-    // Mostra o modal para seleção do tipo de relatório
     setShowReportTypeModal(true);
   };
 
@@ -696,6 +581,13 @@ function FuncionairosList({
 
   const handleViewObservations = (userId) => {
     setCurrentUserId(userId);
+    const user = buscarFuncionario(userId);
+    if (user?.observacoes) {
+      setObservations((prev) => ({
+        ...prev,
+        [userId]: prev[userId] || user.observacoes || [],
+      }));
+    }
     setShowObservationModal(true);
   };
 
@@ -723,19 +615,151 @@ function FuncionairosList({
     todosSalariosBrutos
   );
 
-  if (loading && !pendingDeleteIds) {
-    return <LoadingState label="Carregando funcionários..." minHeight="16rem" />;
+  const tableItemData = useMemo(
+    () => ({
+      users: filteredFuncionarios,
+      selectedUsers,
+      selectionActive,
+      role,
+      onSelect: handleUserSelect,
+      onDetails: setDetailUser,
+      onEdit: handleClick,
+      onDelete: handleDeleteSelected,
+    }),
+    [
+      filteredFuncionarios,
+      selectedUsers,
+      selectionActive,
+      role,
+    ]
+  );
+
+  const renderTableRow = useCallback(({ index, style, data }) => {
+    const user = data.users[index];
+    if (!user) return null;
+
+    return (
+      <div
+        style={style}
+        className="funcionarios-table-virtual-row d-flex align-items-center border-bottom px-2 bg-white"
+      >
+        {data.selectionActive ? (
+          <div style={{ width: 40, flexShrink: 0 }}>
+            <Form.Check
+              type="checkbox"
+              checked={data.selectedUsers.includes(user._id)}
+              onChange={() => data.onSelect(user._id)}
+              aria-label={`Selecionar ${user.nome}`}
+            />
+          </div>
+        ) : null}
+        <div style={{ width: 56, flexShrink: 0 }}>
+          <img
+            src={PLACEHOLDER_PHOTO}
+            alt=""
+            width={36}
+            height={36}
+            className="rounded-circle object-fit-cover"
+          />
+        </div>
+        <div className="fw-semibold flex-grow-1 text-truncate pe-2" title={user.nome}>
+          {user.nome}
+        </div>
+        <div className="text-truncate pe-2" style={{ width: "14%" }}>
+          {user.funcao || "—"}
+        </div>
+        <div className="text-truncate pe-2" style={{ width: "16%" }}>
+          {user.secretaria || "—"}
+        </div>
+        <div style={{ width: "12%" }}>
+          {user.natureza ? (
+            <Badge bg="secondary">{user.natureza}</Badge>
+          ) : (
+            "—"
+          )}
+        </div>
+        <div className="text-truncate pe-2" style={{ width: "12%" }}>
+          {user.referencia || "—"}
+        </div>
+        <div className="text-end" style={{ width: 56, flexShrink: 0 }}>
+          <Dropdown align="end" className="funcionarios-row-actions">
+            <Dropdown.Toggle
+              variant="outline-secondary"
+              size="sm"
+              id={`acoes-${user._id}`}
+              className="funcionarios-row-actions__toggle"
+              aria-label={`Ações de ${user.nome}`}
+            >
+              <i className="bi bi-three-dots-vertical" aria-hidden="true" />
+            </Dropdown.Toggle>
+            <Dropdown.Menu
+              className="shadow-sm funcionarios-row-actions__menu"
+              popperConfig={{ strategy: "fixed" }}
+            >
+              <Dropdown.Item onClick={() => data.onDetails(user)}>
+                <i className="bi bi-info-circle me-2" aria-hidden="true" />
+                Ver detalhes
+              </Dropdown.Item>
+              {isElevatedRole(data.role) && (
+                <>
+                  <Dropdown.Item onClick={() => data.onEdit(user._id)}>
+                    <i className="bi bi-pencil me-2" aria-hidden="true" />
+                    Editar
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item
+                    className="text-danger"
+                    onClick={() => data.onDelete(user._id)}
+                  >
+                    <i className="bi bi-trash me-2" aria-hidden="true" />
+                    Excluir
+                  </Dropdown.Item>
+                </>
+              )}
+            </Dropdown.Menu>
+          </Dropdown>
+        </div>
+      </div>
+    );
+  }, []);
+
+  if (isInitialLoading && !pendingDeleteIds) {
+    return (
+      <LoadingState label="Carregando funcionários..." minHeight="16rem" />
+    );
   }
 
   const listTitle =
     departmentName === "mainscreen"
       ? "Todos os funcionários"
       : !departmentName
-        ? decodeURIComponent(searchTermFromURL || "")
+        ? safeDecode(searchTermFromURL)
         : departmentName;
 
   const showPageChrome = Boolean(setorPathId);
   const searchActive = Boolean(String(searchTerm || "").trim());
+
+  const selectionControls = (actionButton) => (
+    <div className="d-flex flex-wrap align-items-center gap-2">
+      <Form.Check
+        type="checkbox"
+        label="Todos (carregados)"
+        checked={selectAll}
+        onChange={handleSelectAll}
+        className="checkbox-container"
+      />
+      <Button
+        size="sm"
+        variant="outline-secondary"
+        onClick={handleSelectAllResult}
+        disabled={selectingAllResult}
+        title="Selecionar todos os IDs do resultado no servidor"
+      >
+        {selectingAllResult ? "Selecionando…" : "Selecionar todos do resultado"}
+      </Button>
+      {actionButton}
+    </div>
+  );
 
   const listSearchField = (
     <div className="funcionarios-list-search">
@@ -766,11 +790,9 @@ function FuncionairosList({
       </InputGroup>
       {searchActive ? (
         <p className="funcionarios-list-search__hint mb-0">
-          {filteredFuncionarios.length === 0
+          {total === 0
             ? "Nenhum resultado para esta busca"
-            : `${filteredFuncionarios.length} resultado${
-                filteredFuncionarios.length === 1 ? "" : "s"
-              }`}
+            : `${total} resultado${total === 1 ? "" : "s"}`}
         </p>
       ) : null}
     </div>
@@ -781,14 +803,113 @@ function FuncionairosList({
       {listSearchField}
 
       <div className="d-flex flex-wrap align-items-center gap-2">
-      {isElevatedRole(role) ? (
-        <>
+        {isElevatedRole(role) ? (
+          <>
+            <Button
+              variant={activeFilterCount > 0 ? "primary" : "outline-primary"}
+              size="sm"
+              onClick={() => setShowModal(true)}
+              aria-label="Filtros"
+              title="Filtros"
+            >
+              <i className="bi bi-funnel me-1" aria-hidden="true" />
+              Filtros
+              {activeFilterCount > 0 ? (
+                <Badge bg="light" text="primary" pill className="ms-1">
+                  {activeFilterCount}
+                </Badge>
+              ) : null}
+            </Button>
+            {activeFilterCount > 0 ? (
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={handleClearAllFilters}
+                title="Limpar filtros"
+                aria-label="Limpar filtros"
+              >
+                <i className="bi bi-x-circle me-1" aria-hidden="true" />
+                Limpar
+              </Button>
+            ) : null}
+            <Button
+              variant={
+                showSelectionControlsEdit ? "secondary" : "outline-secondary"
+              }
+              size="sm"
+              onClick={toggleSelectionControlsEdit}
+              className={
+                showSelectionControlsDelete ||
+                showSelectionControlsReport ||
+                showSelectionControlsCsv
+                  ? "d-none"
+                  : ""
+              }
+              aria-label="Selecionar para editar"
+              title="Editar em lote"
+            >
+              <i className="bi bi-arrow-left-right" aria-hidden="true" />
+            </Button>
+            <Button
+              variant={
+                showSelectionControlsDelete ? "danger" : "outline-danger"
+              }
+              size="sm"
+              onClick={toggleSelectionControlsDelete}
+              className={
+                showSelectionControlsEdit ||
+                showSelectionControlsReport ||
+                showSelectionControlsCsv
+                  ? "d-none"
+                  : ""
+              }
+              aria-label="Selecionar para excluir"
+              title="Excluir em lote"
+            >
+              <i className="bi bi-trash" aria-hidden="true" />
+            </Button>
+            <Button
+              onClick={toggleSelectionControlsReport}
+              variant={
+                showSelectionControlsReport ? "warning" : "outline-warning"
+              }
+              size="sm"
+              className={
+                showSelectionControlsDelete ||
+                showSelectionControlsEdit ||
+                showSelectionControlsCsv
+                  ? "d-none"
+                  : ""
+              }
+              aria-label="Selecionar para relatório"
+              title="Relatório"
+            >
+              <i className="bi bi-file-earmark-text" aria-hidden="true" />
+            </Button>
+            <Button
+              variant={
+                showSelectionControlsCsv ? "success" : "outline-success"
+              }
+              size="sm"
+              onClick={toggleSelectionControlsCsv}
+              className={
+                showSelectionControlsDelete ||
+                showSelectionControlsEdit ||
+                showSelectionControlsReport
+                  ? "d-none"
+                  : ""
+              }
+              title="Exportar CSV"
+              aria-label="Selecionar para exportar CSV"
+            >
+              <i className="bi bi-filetype-csv" aria-hidden="true" />
+            </Button>
+          </>
+        ) : (
           <Button
             variant={activeFilterCount > 0 ? "primary" : "outline-primary"}
             size="sm"
             onClick={() => setShowModal(true)}
-            aria-label="Filtros"
-            title="Filtros"
           >
             <i className="bi bi-funnel me-1" aria-hidden="true" />
             Filtros
@@ -798,146 +919,50 @@ function FuncionairosList({
               </Badge>
             ) : null}
           </Button>
-          {activeFilterCount > 0 ? (
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={handleClearAllFilters}
-              title="Limpar filtros"
-              aria-label="Limpar filtros"
-            >
-              <i className="bi bi-x-circle me-1" aria-hidden="true" />
-              Limpar
-            </Button>
-          ) : null}
+        )}
+
+        {role !== "admin" && activeFilterCount > 0 ? (
           <Button
-            variant={showSelectionControlsEdit ? "secondary" : "outline-secondary"}
+            variant="outline-secondary"
             size="sm"
-            onClick={toggleSelectionControlsEdit}
-            className={
-              showSelectionControlsDelete ||
-              showSelectionControlsReport ||
-              showSelectionControlsCsv
-                ? "d-none"
-                : ""
-            }
-            aria-label="Selecionar para editar"
-            title="Editar em lote"
+            onClick={handleClearAllFilters}
+            title="Limpar filtros"
           >
-            <i className="bi bi-arrow-left-right" aria-hidden="true" />
+            <i className="bi bi-x-circle me-1" aria-hidden="true" />
+            Limpar
           </Button>
-          <Button
-            variant={showSelectionControlsDelete ? "danger" : "outline-danger"}
-            size="sm"
-            onClick={toggleSelectionControlsDelete}
-            className={
-              showSelectionControlsEdit ||
-              showSelectionControlsReport ||
-              showSelectionControlsCsv
-                ? "d-none"
-                : ""
-            }
-            aria-label="Selecionar para excluir"
-            title="Excluir em lote"
-          >
-            <i className="bi bi-trash" aria-hidden="true" />
-          </Button>
-          <Button
-            onClick={toggleSelectionControlsReport}
-            variant={
-              showSelectionControlsReport ? "warning" : "outline-warning"
-            }
-            size="sm"
-            className={
-              showSelectionControlsDelete ||
-              showSelectionControlsEdit ||
-              showSelectionControlsCsv
-                ? "d-none"
-                : ""
-            }
-            aria-label="Selecionar para relatório"
-            title="Relatório"
-          >
-            <i className="bi bi-file-earmark-text" aria-hidden="true" />
-          </Button>
-          <Button
-            variant={showSelectionControlsCsv ? "success" : "outline-success"}
-            size="sm"
-            onClick={toggleSelectionControlsCsv}
-            className={
-              showSelectionControlsDelete ||
-              showSelectionControlsEdit ||
-              showSelectionControlsReport
-                ? "d-none"
-                : ""
-            }
-            title="Exportar CSV"
-            aria-label="Selecionar para exportar CSV"
-          >
-            <i className="bi bi-filetype-csv" aria-hidden="true" />
-          </Button>
-        </>
-      ) : (
-        <Button
-          variant={activeFilterCount > 0 ? "primary" : "outline-primary"}
+        ) : null}
+
+        <ButtonGroup
           size="sm"
-          onClick={() => setShowModal(true)}
+          className="ms-auto"
+          aria-label="Modo de visualização"
         >
-          <i className="bi bi-funnel me-1" aria-hidden="true" />
-          Filtros
-          {activeFilterCount > 0 ? (
-            <Badge bg="light" text="primary" pill className="ms-1">
-              {activeFilterCount}
-            </Badge>
-          ) : null}
-        </Button>
-      )}
+          <Button
+            variant={viewMode === "card" ? "primary" : "outline-primary"}
+            onClick={() => changeViewMode("card")}
+            aria-pressed={viewMode === "card"}
+            title="Visualização em cards"
+          >
+            <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
+            <span className="visually-hidden">Cards</span>
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "primary" : "outline-primary"}
+            onClick={() => changeViewMode("table")}
+            aria-pressed={viewMode === "table"}
+            title="Visualização em tabela"
+          >
+            <i className="bi bi-table" aria-hidden="true" />
+            <span className="visually-hidden">Tabela</span>
+          </Button>
+        </ButtonGroup>
 
-      {role !== "admin" && activeFilterCount > 0 ? (
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          onClick={handleClearAllFilters}
-          title="Limpar filtros"
-        >
-          <i className="bi bi-x-circle me-1" aria-hidden="true" />
-          Limpar
-        </Button>
-      ) : null}
-
-      <ButtonGroup size="sm" className="ms-auto" aria-label="Modo de visualização">
-        <Button
-          variant={viewMode === "card" ? "primary" : "outline-primary"}
-          onClick={() => changeViewMode("card")}
-          aria-pressed={viewMode === "card"}
-          title="Visualização em cards"
-        >
-          <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
-          <span className="visually-hidden">Cards</span>
-        </Button>
-        <Button
-          variant={viewMode === "table" ? "primary" : "outline-primary"}
-          onClick={() => changeViewMode("table")}
-          aria-pressed={viewMode === "table"}
-          title="Visualização em tabela"
-        >
-          <i className="bi bi-table" aria-hidden="true" />
-          <span className="visually-hidden">Tabela</span>
-        </Button>
-      </ButtonGroup>
-
-      {showSelectionControlsDelete &&
-        !showSelectionControlsEdit &&
-        !showSelectionControlsReport &&
-        !showSelectionControlsCsv && (
-          <div className="d-flex align-items-center gap-2">
-            <Form.Check
-              type="checkbox"
-              label="Todos"
-              checked={selectAll}
-              onChange={handleSelectAll}
-              className="checkbox-container"
-            />
+        {showSelectionControlsDelete &&
+          !showSelectionControlsEdit &&
+          !showSelectionControlsReport &&
+          !showSelectionControlsCsv &&
+          selectionControls(
             <Button
               size="sm"
               variant="danger"
@@ -946,21 +971,13 @@ function FuncionairosList({
             >
               Apagar
             </Button>
-          </div>
-        )}
+          )}
 
-      {showSelectionControlsEdit &&
-        !showSelectionControlsDelete &&
-        !showSelectionControlsReport &&
-        !showSelectionControlsCsv && (
-          <div className="d-flex align-items-center gap-2">
-            <Form.Check
-              type="checkbox"
-              label="Todos"
-              checked={selectAll}
-              onChange={handleSelectAll}
-              className="checkbox-container"
-            />
+        {showSelectionControlsEdit &&
+          !showSelectionControlsDelete &&
+          !showSelectionControlsReport &&
+          !showSelectionControlsCsv &&
+          selectionControls(
             <Button
               size="sm"
               variant="secondary"
@@ -969,21 +986,13 @@ function FuncionairosList({
             >
               Transferir lotação
             </Button>
-          </div>
-        )}
+          )}
 
-      {showSelectionControlsReport &&
-        !showSelectionControlsEdit &&
-        !showSelectionControlsDelete &&
-        !showSelectionControlsCsv && (
-          <div className="d-flex align-items-center gap-2">
-            <Form.Check
-              type="checkbox"
-              label="Todos"
-              checked={selectAll}
-              onChange={handleSelectAll}
-              className="checkbox-container"
-            />
+        {showSelectionControlsReport &&
+          !showSelectionControlsEdit &&
+          !showSelectionControlsDelete &&
+          !showSelectionControlsCsv &&
+          selectionControls(
             <Button
               size="sm"
               variant="warning"
@@ -992,21 +1001,13 @@ function FuncionairosList({
             >
               Gerar
             </Button>
-          </div>
-        )}
+          )}
 
-      {showSelectionControlsCsv &&
-        !showSelectionControlsEdit &&
-        !showSelectionControlsDelete &&
-        !showSelectionControlsReport && (
-          <div className="d-flex align-items-center gap-2">
-            <Form.Check
-              type="checkbox"
-              label="Todos"
-              checked={selectAll}
-              onChange={handleSelectAll}
-              className="checkbox-container"
-            />
+        {showSelectionControlsCsv &&
+          !showSelectionControlsEdit &&
+          !showSelectionControlsDelete &&
+          !showSelectionControlsReport &&
+          selectionControls(
             <Button
               size="sm"
               variant="success"
@@ -1015,117 +1016,55 @@ function FuncionairosList({
             >
               {exportingCsv ? "Exportando…" : "Exportar CSV"}
             </Button>
-          </div>
-        )}
+          )}
       </div>
     </div>
   );
 
   const tableView = (
-    <div className="table-responsive border rounded bg-white">
-      <Table hover className="mb-0 align-middle funcionarios-table">
+    <div className="funcionarios-table-virtual border rounded bg-white">
+      <Table
+        hover
+        className="mb-0 align-middle funcionarios-table"
+        style={{ tableLayout: "fixed" }}
+      >
         <thead className="table-light sticky-top">
           <tr>
-            {(showSelectionControlsDelete ||
-              showSelectionControlsEdit ||
-              showSelectionControlsReport ||
-              showSelectionControlsCsv) && <th style={{ width: 40 }} />}
+            {selectionActive && <th style={{ width: 40 }} />}
             <th style={{ width: 56 }} />
             <th>Nome</th>
-            <th>Função</th>
-            <th>Secretaria</th>
-            <th>Natureza</th>
-            <th>Referência</th>
+            <th style={{ width: "14%" }}>Função</th>
+            <th style={{ width: "16%" }}>Secretaria</th>
+            <th style={{ width: "12%" }}>Natureza</th>
+            <th style={{ width: "12%" }}>Referência</th>
             <th className="text-end" style={{ width: 56 }}>
               <span className="visually-hidden">Ações</span>
             </th>
           </tr>
         </thead>
-        <tbody>
-          {filteredFuncionarios.map((user) => (
-            <tr key={user._id}>
-              {(showSelectionControlsDelete ||
-                showSelectionControlsEdit ||
-                showSelectionControlsReport ||
-                showSelectionControlsCsv) && (
-                <td>
-                  <Form.Check
-                    type="checkbox"
-                    checked={selectedUsers.includes(user._id)}
-                    onChange={() => handleUserSelect(user._id)}
-                    aria-label={`Selecionar ${user.nome}`}
-                  />
-                </td>
-              )}
-              <td>
-                <img
-                  src={
-                    user.fotoUrl ||
-                    "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
-                  }
-                  alt=""
-                  width={36}
-                  height={36}
-                  className="rounded-circle object-fit-cover"
-                />
-              </td>
-              <td className="fw-semibold">{user.nome}</td>
-              <td>{user.funcao || "—"}</td>
-              <td>{user.secretaria || "—"}</td>
-              <td>
-                {user.natureza ? (
-                  <Badge bg="secondary">{user.natureza}</Badge>
-                ) : (
-                  "—"
-                )}
-              </td>
-              <td>{user.referencia || "—"}</td>
-              <td className="text-end">
-                <Dropdown align="end" className="funcionarios-row-actions">
-                  <Dropdown.Toggle
-                    variant="outline-secondary"
-                    size="sm"
-                    id={`acoes-${user._id}`}
-                    className="funcionarios-row-actions__toggle"
-                    aria-label={`Ações de ${user.nome}`}
-                  >
-                    <i className="bi bi-three-dots-vertical" aria-hidden="true" />
-                  </Dropdown.Toggle>
-                  {createPortal(
-                    <Dropdown.Menu
-                      className="shadow-sm funcionarios-row-actions__menu"
-                      popperConfig={{ strategy: "fixed" }}
-                      renderOnMount
-                    >
-                      <Dropdown.Item onClick={() => setDetailUser(user)}>
-                        <i className="bi bi-info-circle me-2" aria-hidden="true" />
-                        Ver detalhes
-                      </Dropdown.Item>
-                      {isElevatedRole(role) && (
-                        <>
-                          <Dropdown.Item onClick={() => handleClick(user._id)}>
-                            <i className="bi bi-pencil me-2" aria-hidden="true" />
-                            Editar
-                          </Dropdown.Item>
-                          <Dropdown.Divider />
-                          <Dropdown.Item
-                            className="text-danger"
-                            onClick={() => handleDeleteSelected(user._id)}
-                          >
-                            <i className="bi bi-trash me-2" aria-hidden="true" />
-                            Excluir
-                          </Dropdown.Item>
-                        </>
-                      )}
-                    </Dropdown.Menu>,
-                    document.body
-                  )}
-                </Dropdown>
-              </td>
-            </tr>
-          ))}
-        </tbody>
       </Table>
+      <div
+        style={{
+          height: Math.min(
+            Math.max(filteredFuncionarios.length, 1) * TABLE_ROW_HEIGHT,
+            TABLE_VIEW_MAX_HEIGHT
+          ),
+        }}
+      >
+        <AutoSizer>
+          {({ height, width }) => (
+            <List
+              height={height}
+              width={width}
+              itemCount={filteredFuncionarios.length}
+              itemSize={TABLE_ROW_HEIGHT}
+              itemData={tableItemData}
+            >
+              {renderTableRow}
+            </List>
+          )}
+        </AutoSizer>
+      </div>
     </div>
   );
 
@@ -1134,7 +1073,9 @@ function FuncionairosList({
       <AutoSizer>
         {({ height, width }) => {
           const columnCount = getColumnCount(width);
-          const rowCount = Math.ceil(filteredFuncionarios.length / columnCount);
+          const rowCount = Math.ceil(
+            filteredFuncionarios.length / columnCount
+          );
           const columnWidth = width / columnCount;
           const rowHeight = 200;
 
@@ -1176,6 +1117,19 @@ function FuncionairosList({
     </div>
   );
 
+  const loadMoreButton =
+    hasNextPage && filteredFuncionarios.length > 0 ? (
+      <div className="d-flex justify-content-center mt-3 mb-2">
+        <Button
+          variant="outline-primary"
+          onClick={() => fetchNextPage?.()}
+          disabled={isFetchingNextPage}
+        >
+          {isFetchingNextPage ? "Carregando…" : "Carregar mais"}
+        </Button>
+      </div>
+    ) : null;
+
   return (
     <div className="funcionarios-list">
       {showPageChrome && (
@@ -1190,10 +1144,8 @@ function FuncionairosList({
             title={listTitle || "Funcionários"}
             subtitle={
               searchActive
-                ? `${filteredFuncionarios.length} resultado${
-                    filteredFuncionarios.length === 1 ? "" : "s"
-                  } para “${searchTerm.trim()}”`
-                : `${filteredFuncionarios.length} registro(s)`
+                ? `${total} resultado${total === 1 ? "" : "s"} para “${searchTerm.trim()}”`
+                : `${total} registro(s)`
             }
           />
         </>
@@ -1252,6 +1204,8 @@ function FuncionairosList({
         cardView
       )}
 
+      {loadMoreButton}
+
       <ConfirmDialog
         show={Boolean(pendingDeleteIds)}
         onHide={() => setPendingDeleteIds(null)}
@@ -1262,7 +1216,7 @@ function FuncionairosList({
         } funcionário(s)? Esta ação não pode ser desfeita.`}
         confirmLabel="Excluir"
         variant="danger"
-        loading={loading}
+        loading={deleting}
       />
 
       <ConfirmDialog
@@ -1297,7 +1251,7 @@ function FuncionairosList({
           selectedUsers.some((id) => String(id) === String(u._id))
         )}
         setShowSelectionControlsEdit={setShowSelectionControlsEdit}
-        setActivateModified={setActivateModified}
+        setActivateModified={() => invalidateFuncionarios()}
       />
 
       <AppModal
