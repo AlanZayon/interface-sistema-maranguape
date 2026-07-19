@@ -14,6 +14,8 @@ export const DEFAULT_BRANDING_POLICY = {
     ".btn-brand",
     ".dashboard-page",
     ".dashboard-stat",
+    ".relatorio-preview",
+    ".relatorio-document",
   ],
   editableFields: [
     "logoUrl",

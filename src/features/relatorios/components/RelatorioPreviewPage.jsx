@@ -2,6 +2,7 @@ import { useMemo, useEffect } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Spinner } from "react-bootstrap";
 import { useTenant } from "@shared/context/TenantContext";
+import { applyBrandingVars } from "@shared/lib/tenant";
 import { useRelatorioData } from "../hooks/useRelatorioData";
 import RelatorioDocument from "./RelatorioDocument";
 import { TITULOS_TIPO } from "../utils/format";
@@ -13,7 +14,7 @@ export default function RelatorioPreviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { branding } = useTenant();
+  const { branding: contextBranding } = useTenant();
 
   const { ids, tipo } = useMemo(() => {
     const stateIds = location.state?.ids;
@@ -33,18 +34,35 @@ export default function RelatorioPreviewPage() {
   const { data, isLoading, isError, error, refetch, isFetching } =
     useRelatorioData(ids, tipo, ids.length > 0);
 
+  /** Prefer branding snapshot from the API (tenant at report time). */
+  const branding = useMemo(() => {
+    if (data?.branding) {
+      return { ...contextBranding, ...data.branding };
+    }
+    return contextBranding;
+  }, [data?.branding, contextBranding]);
+
   const tipoLabel = TITULOS_TIPO[tipo] || "Relatório";
+
+  useEffect(() => {
+    if (data?.branding) {
+      applyBrandingVars(data.branding);
+    }
+  }, [data?.branding]);
 
   useEffect(() => {
     const prev = document.title;
     const date = new Date().toISOString().split("T")[0];
+    const org = branding?.displayName;
     document.title = data?.titulo
       ? `${data.titulo} — ${date}`
-      : `${tipoLabel} — ${date}`;
+      : org
+        ? `${tipoLabel} — ${org} — ${date}`
+        : `${tipoLabel} — ${date}`;
     return () => {
       document.title = prev;
     };
-  }, [data?.titulo, tipoLabel]);
+  }, [data?.titulo, tipoLabel, branding?.displayName]);
 
   const handleBack = () => {
     const returnTo = location.state?.returnTo;

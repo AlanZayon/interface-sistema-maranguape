@@ -18,15 +18,47 @@ function RelatorioBody({ data }) {
   }
 }
 
+/** CSS vars scoped to the print document so PDF mirrors tenant branding. */
+function buildDocumentStyle(branding) {
+  if (!branding) return undefined;
+  const style = {};
+  if (branding.primaryColor) {
+    style["--relatorio-brand"] = branding.primaryColor;
+  }
+  if (branding.textColor) {
+    style["--relatorio-ink"] = branding.textColor;
+  }
+  if (branding.mutedColor) {
+    style["--relatorio-muted"] = branding.mutedColor;
+  }
+  if (branding.borderColor) {
+    style["--relatorio-border"] = branding.borderColor;
+  }
+  if (branding.surfaceBg) {
+    style["--relatorio-surface"] = branding.surfaceBg;
+  }
+  if (branding.pageBg || branding.surfaceBg) {
+    style["--relatorio-paper"] = branding.surfaceBg || "#ffffff";
+  }
+  if (branding.fontFamily) {
+    style.fontFamily = branding.fontFamily;
+  }
+  return Object.keys(style).length ? style : undefined;
+}
+
 export default function RelatorioDocument({ data, branding }) {
   const logoUrl = branding?.logoUrl;
   const orgao =
     branding?.displayName ||
     branding?.orgName ||
-    "Prefeitura Municipal";
+    "Organização";
 
   return (
-    <article className="relatorio-document" aria-label={data.titulo}>
+    <article
+      className="relatorio-document"
+      aria-label={data.titulo}
+      style={buildDocumentStyle(branding)}
+    >
       <header className="relatorio-doc-header">
         <div className="relatorio-doc-header__brand">
           {logoUrl ? (
@@ -43,7 +75,7 @@ export default function RelatorioDocument({ data, branding }) {
           <div>
             <p className="relatorio-doc-header__orgao">{orgao}</p>
             <p className="relatorio-doc-header__sub">
-              Secretaria de Administração · Sistema de Gestão de Pessoal
+              Sistema de Gestão de Pessoal
             </p>
           </div>
         </div>
@@ -75,7 +107,7 @@ export default function RelatorioDocument({ data, branding }) {
       <RelatorioBody data={data} />
 
       <footer className="relatorio-doc-footer">
-        <span>Sistema de Gestão de Pessoal</span>
+        <span>{orgao}</span>
         <span>{formatarDataHora(data.geradoEm)}</span>
       </footer>
     </article>

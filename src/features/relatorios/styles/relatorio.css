@@ -1,16 +1,17 @@
 :root {
-  --relatorio-brand: var(--brand-primary);
-  --relatorio-ink: #1a1a1a;
-  --relatorio-muted: #5c6570;
-  --relatorio-border: #d0d7de;
-  --relatorio-surface: #f4f6f8;
-  --relatorio-paper: #ffffff;
+  --relatorio-brand: var(--brand-primary, #1a5f2a);
+  --relatorio-ink: var(--brand-text, #1a1a1a);
+  --relatorio-muted: var(--brand-muted, #5c6570);
+  --relatorio-border: var(--brand-border, #d0d7de);
+  --relatorio-surface: var(--brand-bg, #f4f6f8);
+  --relatorio-paper: var(--brand-surface, #ffffff);
 }
 
 .relatorio-preview {
   min-height: 100vh;
   background: var(--relatorio-surface);
   color: var(--relatorio-ink);
+  font-family: var(--font-family, inherit);
 }
 
 .relatorio-toolbar {
@@ -95,7 +96,9 @@
   margin: 0 auto;
   padding: 14mm 15mm 16mm;
   background: var(--relatorio-paper);
-  box-shadow: 0 8px 28px rgba(17, 84, 136, 0.12);
+  color: var(--relatorio-ink);
+  font-family: var(--font-family, inherit);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--relatorio-brand) 18%, transparent);
   border: 1px solid var(--relatorio-border);
   box-sizing: border-box;
 }
@@ -262,7 +265,7 @@
 }
 
 .relatorio-table tbody tr:nth-child(even) {
-  background: #fafbfc;
+  background: color-mix(in srgb, var(--relatorio-brand) 4%, var(--relatorio-paper));
 }
 
 .relatorio-table .is-right {
