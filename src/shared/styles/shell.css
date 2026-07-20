@@ -3337,19 +3337,21 @@ body.is-panel-resizing * {
 }
 
 .referencia-picker__menu {
-  position: absolute;
-  z-index: 1080;
-  left: 0;
-  right: 0;
-  top: calc(100% + 0.35rem);
-  max-height: 280px;
+  /* In-flow so modal scroll stays stable and the list isn't clipped */
+  position: relative;
+  z-index: 2;
+  margin-top: 0.35rem;
+  max-height: 240px;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--brand-border, #dee2e6);
   border-radius: 0.5rem;
   background: #fff;
   box-shadow:
     0 0 0 1px rgba(15, 23, 42, 0.04),
-    0 12px 28px rgba(15, 23, 42, 0.14);
+    0 8px 20px rgba(15, 23, 42, 0.1);
 }
 
 .referencia-picker__empty {

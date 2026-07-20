@@ -9,11 +9,27 @@ import { useTenant } from "@shared/context/TenantContext";
 const ShellActionsContext = createContext({
   openOrganogram: () => {},
   openFuncionariosSelect: () => {},
-  openCreateFuncionario: (_setorId, _secretaria) => {},
+  openCreateFuncionario: (_opts, _secretaria) => {},
 });
 
 export function useShellActions() {
   return useContext(ShellActionsContext);
+}
+
+function resolveCreateOpts(setorIdOrOpts = null, secretaria = "") {
+  if (setorIdOrOpts && typeof setorIdOrOpts === "object") {
+    return {
+      setorId:
+        setorIdOrOpts.setorId ||
+        setorIdOrOpts.coordenadoriaId ||
+        null,
+      secretaria: setorIdOrOpts.secretaria || "",
+    };
+  }
+  return {
+    setorId: setorIdOrOpts || null,
+    secretaria: secretaria || "",
+  };
 }
 
 /**
@@ -30,7 +46,7 @@ export default function AppShell({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showCreateFuncionario, setShowCreateFuncionario] = useState(false);
-  const [createCoordId, setCreateCoordId] = useState(null);
+  const [createSetorId, setCreateSetorId] = useState(null);
   const [createSecretaria, setCreateSecretaria] = useState("");
 
   useEffect(() => {
@@ -53,6 +69,12 @@ export default function AppShell({ children }) {
     }
   };
 
+  const closeCreateFuncionario = () => {
+    setShowCreateFuncionario(false);
+    setCreateSetorId(null);
+    setCreateSecretaria("");
+  };
+
   const actions = {
     openOrganogram: () => {
       if (!isPlatformConsole) navigate("/estrutura?view=organograma");
@@ -60,10 +82,11 @@ export default function AppShell({ children }) {
     openFuncionariosSelect: () => {
       if (!isPlatformConsole) navigate("/estrutura?view=funcionarios");
     },
-    openCreateFuncionario: (setorId = null, secretaria = "") => {
+    openCreateFuncionario: (setorIdOrOpts = null, secretaria = "") => {
       if (isPlatformConsole) return;
-      setCreateCoordId(setorId || null);
-      setCreateSecretaria(secretaria || "");
+      const opts = resolveCreateOpts(setorIdOrOpts, secretaria);
+      setCreateSetorId(opts.setorId);
+      setCreateSecretaria(opts.secretaria);
       setShowCreateFuncionario(true);
     },
   };
@@ -107,9 +130,9 @@ export default function AppShell({ children }) {
         {!isPlatformConsole && (
           <CreateFuncionarioModal
             show={showCreateFuncionario}
-            onHide={() => setShowCreateFuncionario(false)}
-            initialSetorId={createCoordId}
-            initialSecretaria={createSecretaria}
+            onHide={closeCreateFuncionario}
+            setorId={createSetorId}
+            secretaria={createSecretaria}
           />
         )}
       </div>

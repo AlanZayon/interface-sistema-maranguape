@@ -60,6 +60,7 @@ function UserEdit({
   });
   const [sendImage, setSendImage] = useState(null);
   const [sendFile, setSendFile] = useState(null);
+  const [fotoPreviewUrl, setFotoPreviewUrl] = useState(null);
   const [errors, setErrors] = useState({});
   const [summary, setSummary] = useState(null);
   const [apiError, setApiError] = useState(null);
@@ -113,6 +114,37 @@ function UserEdit({
     setErrors({});
     setSummary(null);
     setApiError(null);
+
+    const existingFotoUrl =
+      (typeof funcionario.fotoUrl === "string" &&
+      /^https?:\/\//i.test(funcionario.fotoUrl)
+        ? funcionario.fotoUrl
+        : null) ||
+      (typeof funcionario.foto === "string" &&
+      /^https?:\/\//i.test(funcionario.foto)
+        ? funcionario.foto
+        : null);
+
+    if (existingFotoUrl) {
+      setFotoPreviewUrl(existingFotoUrl);
+      return;
+    }
+
+    setFotoPreviewUrl(null);
+    if (!funcionario._id || !funcionario.foto) return;
+
+    let cancelled = false;
+    funcionariosApi
+      .buscarMidia(funcionario._id)
+      .then((data) => {
+        if (!cancelled) setFotoPreviewUrl(data?.fotoUrl || null);
+      })
+      .catch(() => {
+        if (!cancelled) setFotoPreviewUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [funcionario, onDirtyChange]);
 
   // Restaura campos originais se a natureza voltar à inicial
@@ -278,17 +310,11 @@ function UserEdit({
       <FormSection title="Foto de perfil">
         <PhotoUploadField
           value={sendImage}
-          previewUrl={
-            sendImage
-              ? null
-              : funcionario?.fotoUrl ||
-                (typeof funcionario?.foto === "string"
-                  ? funcionario.foto
-                  : null)
-          }
+          previewUrl={sendImage ? null : fotoPreviewUrl}
           onChange={(file) => {
             setSendImage(file);
             setUser((prev) => ({ ...prev, foto: file }));
+            if (!file) setFotoPreviewUrl(null);
           }}
           error={errors.foto}
           onError={(m) => setErrors((prev) => ({ ...prev, foto: m || null }))}

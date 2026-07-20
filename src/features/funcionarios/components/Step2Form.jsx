@@ -73,8 +73,9 @@ function Step2Form({
 
       return funcionariosApi.createFuncionario(formData);
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["funcionarios"] });
+      queryClient.invalidateQueries({ queryKey: ["setores"] });
       handleCloseModal({ force: true });
       toast.success("Funcionário cadastrado com sucesso");
     },

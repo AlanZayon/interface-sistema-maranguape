@@ -54,6 +54,9 @@ export default function UserCard({
             src={user.fotoUrl || PLACEHOLDER_PHOTO}
             alt=""
             className="user-card__photo"
+            onError={(e) => {
+              e.currentTarget.src = PLACEHOLDER_PHOTO;
+            }}
           />
           <dl className="user-card__meta">
             <div className="user-card__meta-item user-card__meta-item--primary">

@@ -36,10 +36,20 @@ export default function RelatorioPreviewPage() {
 
   /** Prefer branding snapshot from the API (tenant at report time). */
   const branding = useMemo(() => {
-    if (data?.branding) {
-      return { ...contextBranding, ...data.branding };
+    if (!data?.branding) return contextBranding;
+    const merged = { ...contextBranding, ...data.branding };
+    // Keep a usable HTTP/data URL if the API still returns a raw S3 key.
+    const apiLogo = data.branding.logoUrl;
+    const ctxLogo = contextBranding?.logoUrl;
+    if (
+      ctxLogo &&
+      typeof apiLogo === "string" &&
+      !/^https?:\/\//i.test(apiLogo) &&
+      !apiLogo.startsWith("data:")
+    ) {
+      merged.logoUrl = ctxLogo;
     }
-    return contextBranding;
+    return merged;
   }, [data?.branding, contextBranding]);
 
   const tipoLabel = TITULOS_TIPO[tipo] || "Relatório";

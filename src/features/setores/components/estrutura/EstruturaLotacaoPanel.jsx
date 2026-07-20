@@ -195,11 +195,11 @@ export default function EstruturaLotacaoPanel({ node, onDeleted }) {
       />
 
       <ConfirmDeleteModal
-        show={showDelete}
-        onHide={() => setShowDelete(false)}
-        onConfirm={() => deleteMutation.mutate()}
-        entityName={name}
-        loading={deleteMutation.isPending}
+        showModal={showDelete}
+        handleClose={() => setShowDelete(false)}
+        handleConfirmDelete={() => deleteMutation.mutateAsync()}
+        entityId={id}
+        entityType={getTipoLabel(tipo)}
       />
     </div>
   );

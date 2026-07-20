@@ -283,7 +283,7 @@ export default function EstruturaOverview({
         showModal={Boolean(deleteTarget)}
         handleClose={() => setDeleteTarget(null)}
         handleConfirmDelete={() => {
-          if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+          if (deleteTarget) return deleteMutation.mutateAsync(deleteTarget.id);
         }}
         entityId={deleteTarget?.id}
         entityType={deleteTarget?.tipo}

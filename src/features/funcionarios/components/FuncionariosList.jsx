@@ -544,12 +544,16 @@ function FuncionairosList({
   };
 
   const toggleSelectionControlsDelete = () => {
-    setShowSelectionControlsDelete(!showSelectionControlsDelete);
+    const next = !showSelectionControlsDelete;
+    setShowSelectionControlsDelete(next);
     setShowSelectionControlsReport(false);
     setShowSelectionControlsEdit(false);
     setShowSelectionControlsCsv(false);
     setSelectedUsers([]);
     setSelectAll(false);
+    if (next) {
+      toast.info("Selecione os funcionários e clique em Apagar");
+    }
   };
 
   const toggleSelectionControlsEdit = () => {
@@ -655,11 +659,14 @@ function FuncionairosList({
         ) : null}
         <div style={{ width: 56, flexShrink: 0 }}>
           <img
-            src={PLACEHOLDER_PHOTO}
+            src={user.fotoUrl || PLACEHOLDER_PHOTO}
             alt=""
             width={36}
             height={36}
             className="rounded-circle object-fit-cover"
+            onError={(e) => {
+              e.currentTarget.src = PLACEHOLDER_PHOTO;
+            }}
           />
         </div>
         <div className="fw-semibold flex-grow-1 text-truncate pe-2" title={user.nome}>

@@ -57,26 +57,32 @@ export default function FuncionarioDetailModal({
       setMidia({ fotoUrl: null, arquivoUrl: null });
       return;
     }
-    if (user.fotoUrl || user.arquivoUrl) {
+    const hasHttpFoto =
+      typeof user.fotoUrl === "string" && /^https?:\/\//i.test(user.fotoUrl);
+    const hasHttpArquivo =
+      typeof user.arquivoUrl === "string" &&
+      /^https?:\/\//i.test(user.arquivoUrl);
+    if (hasHttpFoto || hasHttpArquivo) {
       setMidia({
-        fotoUrl: user.fotoUrl || null,
-        arquivoUrl: user.arquivoUrl || null,
+        fotoUrl: hasHttpFoto ? user.fotoUrl : null,
+        arquivoUrl: hasHttpArquivo ? user.arquivoUrl : null,
       });
-      return;
+      if (hasHttpFoto && hasHttpArquivo) return;
+      // still fetch if one side is missing
     }
     let cancelled = false;
     funcionariosApi
       .buscarMidia(user._id)
       .then((data) => {
         if (!cancelled) {
-          setMidia({
-            fotoUrl: data?.fotoUrl || null,
-            arquivoUrl: data?.arquivoUrl || null,
-          });
+          setMidia((prev) => ({
+            fotoUrl: data?.fotoUrl || prev.fotoUrl || null,
+            arquivoUrl: data?.arquivoUrl || prev.arquivoUrl || null,
+          }));
         }
       })
       .catch(() => {
-        if (!cancelled) setMidia({ fotoUrl: null, arquivoUrl: null });
+        /* keep whatever we already have */
       });
     return () => {
       cancelled = true;
