@@ -22,6 +22,7 @@ import { CoordEdit } from "@features/funcionarios";
 import { UserEdit } from "@features/funcionarios";
 import UserCard from "./UserCard";
 import FuncionarioDetailModal from "./FuncionarioDetailModal";
+import { FuncionarioCadeiaModal } from "@features/referencias";
 import * as funcionariosApi from "@shared/api/funcionarios";
 import {
   flattenPages,
@@ -192,6 +193,7 @@ function FuncionairosList({
   const [showSelectionControlsCsv, setShowSelectionControlsCsv] =
     useState(false);
   const [detailUser, setDetailUser] = useState(null);
+  const [cadeiaUser, setCadeiaUser] = useState(null);
   const [observations, setObservations] = useState({});
   const [showObservationModal, setShowObservationModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -629,6 +631,7 @@ function FuncionairosList({
       onDetails: setDetailUser,
       onEdit: handleClick,
       onDelete: handleDeleteSelected,
+      onVerCadeia: setCadeiaUser,
     }),
     [
       filteredFuncionarios,
@@ -707,6 +710,12 @@ function FuncionairosList({
                 <i className="bi bi-info-circle me-2" aria-hidden="true" />
                 Ver detalhes
               </Dropdown.Item>
+              {user.referenciaId ? (
+                <Dropdown.Item onClick={() => data.onVerCadeia(user)}>
+                  <i className="bi bi-diagram-3 me-2" aria-hidden="true" />
+                  Cadeia de indicação
+                </Dropdown.Item>
+              ) : null}
               {isElevatedRole(data.role) && (
                 <>
                   <Dropdown.Item onClick={() => data.onEdit(user._id)}>
@@ -1103,6 +1112,7 @@ function FuncionairosList({
                 onDetails={setDetailUser}
                 onEdit={handleClick}
                 onDelete={handleDeleteSelected}
+                onVerCadeia={setCadeiaUser}
               />
             );
           };
@@ -1289,6 +1299,11 @@ function FuncionairosList({
         onHide={() => setDetailUser(null)}
         user={detailUser}
         onViewObservations={handleViewObservations}
+      />
+
+      <FuncionarioCadeiaModal
+        funcionario={cadeiaUser}
+        onHide={() => setCadeiaUser(null)}
       />
 
       <ObservationHistoryModal

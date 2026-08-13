@@ -13,6 +13,7 @@ import {
 import * as referenciasApi from "@shared/api/referencias";
 import * as funcionariosApi from "@shared/api/funcionarios";
 import { AppNotice } from "@shared/ui";
+import ReferenciaParentSelect from "./ReferenciaParentSelect";
 
 const EMPTY_FORM = { name: "", cargo: "", telefone: "" };
 const PAGE_SIZE = 15;
@@ -20,6 +21,7 @@ const PAGE_SIZE = 15;
 const IndicadorForm = ({ onIndicadorCriado }) => {
   const [modo, setModo] = useState("funcionario");
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [parentId, setParentId] = useState("");
   const [erro, setErro] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -148,12 +150,17 @@ const IndicadorForm = ({ onIndicadorCriado }) => {
         }
         await referenciasApi.createReferencia({
           funcionarioId: selectedFuncionario._id,
+          parentId: parentId || null,
         });
       } else {
-        await referenciasApi.createReferencia(formData);
+        await referenciasApi.createReferencia({
+          ...formData,
+          parentId: parentId || null,
+        });
       }
 
       setFormData(EMPTY_FORM);
+      setParentId("");
       clearSelectedFuncionario();
       clearFilters();
       onIndicadorCriado();
@@ -475,6 +482,12 @@ const IndicadorForm = ({ onIndicadorCriado }) => {
             </Form.Group>
           </>
         )}
+
+        <ReferenciaParentSelect
+          value={parentId}
+          onChange={(id) => setParentId(id || "")}
+          id="indicador-form-parent"
+        />
 
         <Button variant="primary" type="submit" disabled={isLoading}>
           {isLoading ? "Cadastrando..." : "Cadastrar"}

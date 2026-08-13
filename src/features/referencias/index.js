@@ -1,3 +1,13 @@
 export { default as IndicadoresPage } from "./components/IndicadoresPage";
 export { default as IndicadorForm } from "./components/IndicadorForm";
 export { default as IndicadorList } from "./components/IndicadorList";
+export { default as ReferenciaTree } from "./components/ReferenciaTree";
+export { default as ReferenciaTreeNode } from "./components/ReferenciaTreeNode";
+export { default as ReferenciaChain } from "./components/ReferenciaChain";
+export { default as ReferenciaDetailModal } from "./components/ReferenciaDetailModal";
+export { default as ReferenciaEditModal } from "./components/ReferenciaEditModal";
+export { default as ReferenciaParentSelect } from "./components/ReferenciaParentSelect";
+export { default as FuncionarioReferenciaChain } from "./components/FuncionarioReferenciaChain";
+export { default as FuncionarioCadeiaModal } from "./components/FuncionarioCadeiaModal";
+export * from "./hooks/useReferencias";
+export * from "./utils/tree";

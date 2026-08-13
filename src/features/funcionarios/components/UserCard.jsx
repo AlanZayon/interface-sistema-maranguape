@@ -19,6 +19,7 @@ export default function UserCard({
   onDetails,
   onEdit,
   onDelete,
+  onVerCadeia,
 }) {
   if (!user) return null;
 
@@ -70,7 +71,19 @@ export default function UserCard({
             {user.referencia ? (
               <div className="user-card__meta-item">
                 <dt>Referência</dt>
-                <dd title={user.referencia}>{user.referencia}</dd>
+                <dd title={user.referencia}>
+                  {user.referencia}
+                  {onVerCadeia && user.referenciaId ? (
+                    <button
+                      type="button"
+                      className="btn btn-link btn-sm p-0 ms-2 align-baseline"
+                      onClick={() => onVerCadeia(user)}
+                      aria-label={`Ver cadeia de indicação de ${user.nome}`}
+                    >
+                      Ver cadeia
+                    </button>
+                  ) : null}
+                </dd>
               </div>
             ) : null}
           </dl>

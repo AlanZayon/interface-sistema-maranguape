@@ -1,42 +1,29 @@
-import { useState, useEffect } from "react";
-import { IndicadorForm, IndicadorList } from "@features/referencias";
+import { useState } from "react";
 import { Tabs, Tab, Button } from "react-bootstrap";
-import * as referenciasApi from "@shared/api/referencias";
 import { PageHeader, AppBreadcrumb, LoadingState, AppNotice } from "@shared/ui";
+import IndicadorForm from "./IndicadorForm";
+import IndicadorList from "./IndicadorList";
+import ReferenciaTree from "./ReferenciaTree";
+import ReferenciaDetailModal from "./ReferenciaDetailModal";
+import { useArvoreReferencias, useReferencias } from "../hooks/useReferencias";
 
 const IndicadoresPage = () => {
-  const [indicadores, setIndicadores] = useState([]);
   const [key, setKey] = useState("list");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [detalhe, setDetalhe] = useState(null);
 
-  const handleIndicadorCriado = () => {
-    setKey("list");
-    fetchIndicadores();
+  const lista = useReferencias();
+  const arvore = useArvoreReferencias();
+
+  const abrirDetalhe = (node) => {
+    if (node?.tipo === "funcionario") return;
+    setDetalhe({ id: node._id || node.id, name: node.name });
   };
 
-  const fetchIndicadores = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await referenciasApi.getReferencias();
-      setIndicadores(data.referencias || data || []);
-    } catch (err) {
-      console.error("Erro ao carregar indicadores:", err);
-      setError(
-        err.response?.data?.message ||
-          "Não foi possível carregar as referências. Tente novamente."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (key === "list") {
-      fetchIndicadores();
-    }
-  }, [key]);
+  const erro =
+    lista.error || arvore.error
+      ? (lista.error || arvore.error)?.response?.data?.message ||
+        "Não foi possível carregar as referências. Tente novamente."
+      : null;
 
   return (
     <div>
@@ -48,14 +35,9 @@ const IndicadoresPage = () => {
       />
       <PageHeader
         title="Referências"
-        subtitle="Pessoas que podem indicar candidatos a cargos comissionados"
+        subtitle="Hierarquia de indicações: quem indicou quem, até o funcionário final"
         actions={
-          key === "list" ? (
-            <Button variant="primary" size="sm" onClick={() => setKey("form")}>
-              <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-              Cadastrar
-            </Button>
-          ) : (
+          key === "form" ? (
             <Button
               variant="outline-secondary"
               size="sm"
@@ -64,9 +46,16 @@ const IndicadoresPage = () => {
               <i className="bi bi-list-ul me-1" aria-hidden="true" />
               Ver lista
             </Button>
+          ) : (
+            <Button variant="primary" size="sm" onClick={() => setKey("form")}>
+              <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+              Cadastrar
+            </Button>
           )
         }
       />
+
+      {erro ? <AppNotice variant="danger">{erro}</AppNotice> : null}
 
       <Tabs
         id="indicadores-tabs"
@@ -75,20 +64,39 @@ const IndicadoresPage = () => {
         className="mb-3"
       >
         <Tab eventKey="list" title="Lista">
-          {error ? <AppNotice variant="danger">{error}</AppNotice> : null}
-          {loading ? (
+          {lista.isLoading ? (
             <LoadingState label="Carregando referências..." />
           ) : (
             <IndicadorList
-              indicadores={indicadores}
-              setIndicadores={setIndicadores}
+              indicadores={lista.data || []}
+              onVerArvore={abrirDetalhe}
             />
           )}
         </Tab>
+
+        <Tab eventKey="tree" title="Árvore">
+          {arvore.isLoading ? (
+            <LoadingState label="Montando árvore de indicações..." />
+          ) : (
+            <ReferenciaTree
+              nodes={arvore.data || []}
+              onSelect={abrirDetalhe}
+              selectedId={detalhe?.id || null}
+            />
+          )}
+        </Tab>
+
         <Tab eventKey="form" title="Cadastrar">
-          <IndicadorForm onIndicadorCriado={handleIndicadorCriado} />
+          <IndicadorForm onIndicadorCriado={() => setKey("list")} />
         </Tab>
       </Tabs>
+
+      <ReferenciaDetailModal
+        referenciaId={detalhe?.id || null}
+        nome={detalhe?.name}
+        onHide={() => setDetalhe(null)}
+        onSelectNode={abrirDetalhe}
+      />
     </div>
   );
 };

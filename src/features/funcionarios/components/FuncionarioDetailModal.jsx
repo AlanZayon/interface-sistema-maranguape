@@ -3,6 +3,7 @@ import { Badge, Button } from "react-bootstrap";
 import { AppModal } from "@shared/ui";
 import ObservationHistoryButton from "./ObservationHistoryButton";
 import * as funcionariosApi from "@shared/api/funcionarios";
+import { FuncionarioReferenciaChain } from "@features/referencias";
 
 const PLACEHOLDER_PHOTO =
   "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
@@ -29,6 +30,7 @@ function displayValue(value) {
 
 const TABS = [
   { id: "financeiro", label: "Financeiro", icon: "bi-cash-stack" },
+  { id: "indicacao", label: "Indicação", icon: "bi-diagram-3" },
   { id: "localidade", label: "Localidade", icon: "bi-geo-alt" },
   { id: "redes-sociais", label: "Redes", icon: "bi-share" },
   {
@@ -110,6 +112,19 @@ export default function FuncionarioDetailModal({
                 <dd>{formatCurrency(user.salarioBruto)}</dd>
               </div>
             </dl>
+          </div>
+        );
+      case "indicacao":
+        return (
+          <div className="info-card">
+            <h3 className="info-card__title">Cadeia de indicação</h3>
+            <p className="text-muted small">
+              Da referência raiz até o funcionário, percorrendo todos os níveis.
+            </p>
+            <FuncionarioReferenciaChain
+              funcionarioId={user._id}
+              enabled={show && activeTab === "indicacao"}
+            />
           </div>
         );
       case "localidade":
