@@ -21,7 +21,7 @@ export default function ContatoFields({ user, setUser, errors = {} }) {
           <Form.Label>Cidade</Form.Label>
           <Form.Control
             type="text"
-            placeholder="Ex: Maranguape"
+            placeholder="Ex: Centro"
             value={user?.cidade || ""}
             onChange={(e) => apply({ cidade: e.target.value })}
             isInvalid={!!errors.cidade}

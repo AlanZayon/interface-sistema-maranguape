@@ -4,9 +4,9 @@ This document describes the structure, features, and behavior of the system deve
 
 ### Access the Project
 
-API used - [API](https://github.com/AlanZayon/api-maranguape).
+API used - [Organograma API](https://github.com/AlanZayon/api-organograma).
 
-You can visit the [Project](https://interface-sistema-maranguape.vercel.app/). There you can to use functions and to experience for yourself.
+You can visit the deployed frontend when available. Configure `VITE_API_BASE_URL` to point at your API.
 
 ---
 
