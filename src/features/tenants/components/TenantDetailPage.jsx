@@ -156,7 +156,7 @@ export default function TenantDetailPage() {
               className="me-2"
               onClick={() =>
                 window.open(
-                  tenantHostUrl(data.slug, "/"),
+                  tenantHostUrl(data.slug, "/dashboard"),
                   "_blank",
                   "noopener,noreferrer"
                 )
