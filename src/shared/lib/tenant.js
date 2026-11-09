@@ -110,15 +110,30 @@ export function resolveTenantSlugFromLocation({
     return { slug: fromQueryTenant, isPlatform: false };
   }
 
-  // Persist tenant across in-app navigations that drop ?tenant= (same tab).
-  const storedTenant = getActAsTenant();
-  if (storedTenant && (isPaasSingleHost(host) || !baseDomain)) {
-    return { slug: storedTenant, isPlatform: false };
+  // Vercel/Netlify: entry URL (/) must always be the master console.
+  // Stale sessionStorage.actAsTenant from an older tab reuse (e.g. "Open" from
+  // the Vercel dashboard) used to force tenant mode and blank the first load.
+  // Keep stored tenant only for in-app paths like /dashboard after a soft nav.
+  if (isPaasSingleHost(host)) {
+    const path =
+      typeof window !== "undefined" ? window.location.pathname || "/" : "/";
+    const isEntryPath = path === "/" || path === "";
+    if (isEntryPath) {
+      return { slug: null, isPlatform: true };
+    }
+
+    const storedTenant = getActAsTenant();
+    if (storedTenant) {
+      return { slug: storedTenant, isPlatform: false };
+    }
+
+    return { slug: null, isPlatform: true };
   }
 
-  // Vercel/Netlify single-host apex → console master (lista de tenants)
-  if (isPaasSingleHost(host)) {
-    return { slug: null, isPlatform: true };
+  // Non-PaaS hosts: optional persisted tenant when there is no subdomain.
+  const storedTenant = getActAsTenant();
+  if (storedTenant && !baseDomain) {
+    return { slug: storedTenant, isPlatform: false };
   }
 
   // Optional default tenant (local / custom apex without subdomain)
