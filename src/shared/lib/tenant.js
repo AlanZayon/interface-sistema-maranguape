@@ -103,8 +103,15 @@ export function resolveTenantSlugFromLocation({
     }
   }
 
-  // Same-origin fallbacks (dev + single-host prod like Vercel)
+  // Explicit tenant on same host: /?tenant=demo
   if (fromQueryTenant) return { slug: fromQueryTenant, isPlatform: false };
+
+  // Vercel/Netlify single-host apex → console master (lista de tenants)
+  if (isPaasSingleHost(host)) {
+    return { slug: null, isPlatform: true };
+  }
+
+  // Optional default tenant (local / custom apex without subdomain)
   const fromEnv = (import.meta.env.VITE_TENANT_SLUG || "").trim();
   if (fromEnv) return { slug: fromEnv, isPlatform: false };
 

@@ -13,6 +13,7 @@ import {
   applyPlatformBranding,
   resolveVocabulary,
   getActAsTenant,
+  setActAsTenant,
 } from "@shared/lib/tenant";
 import { useAuth } from "@features/auth";
 
@@ -44,6 +45,12 @@ export function TenantProvider({ children }) {
     () => resolveTenantSlugFromLocation({ searchParams }),
     [searchParams]
   );
+
+  // Same-host tenant view (?tenant=): keep Act-As for superadmin impersonation.
+  useEffect(() => {
+    if (isPlatform) setActAsTenant(null);
+    else if (slug) setActAsTenant(slug);
+  }, [slug, isPlatform]);
 
   useEffect(() => {
     let cancelled = false;
