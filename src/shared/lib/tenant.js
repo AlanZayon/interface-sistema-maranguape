@@ -9,6 +9,9 @@ const RESERVED_SUBDOMAINS = new Set([
   "assets",
 ]);
 
+/** Single-host PaaS domains — first label is the app name, not a tenant slug. */
+const PAAS_HOST_SUFFIXES = [".vercel.app", ".netlify.app", ".pages.dev"];
+
 const DEFAULT_VOCABULARY = {
   funcionario: "Funcionário",
   setor: "Setor",
@@ -35,8 +38,13 @@ export function isDev() {
   return import.meta.env.DEV;
 }
 
+function isPaasSingleHost(host) {
+  return PAAS_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
+}
+
 /**
- * Resolve tenant slug from hostname subdomain, with optional dev fallbacks.
+ * Resolve tenant slug from hostname subdomain, querystring, or env fallback.
+ * On Vercel/Netlify apex hosts the first label is the app name — never a tenant.
  */
 export function resolveTenantSlugFromLocation({
   searchParams,
@@ -49,7 +57,16 @@ export function resolveTenantSlugFromLocation({
     .toLowerCase()
     .trim();
 
-  if (!host) return { slug: null, isPlatform: false };
+  const fromQueryTenant = searchParams?.get?.("tenant")?.trim();
+  const platformFlag = searchParams?.get?.("platform")?.trim()?.toLowerCase();
+  if (platformFlag === "1" || platformFlag === "true") {
+    return { slug: null, isPlatform: true };
+  }
+
+  if (!host) {
+    if (fromQueryTenant) return { slug: fromQueryTenant, isPlatform: false };
+    return { slug: null, isPlatform: false };
+  }
 
   // Platform master host
   if (
@@ -66,20 +83,17 @@ export function resolveTenantSlugFromLocation({
     if (sub && !RESERVED_SUBDOMAINS.has(sub)) {
       return { slug: sub, isPlatform: false };
     }
-    return { slug: null, isPlatform: false };
-  }
-
-  if (baseDomain) {
+  } else if (baseDomain) {
     if (host === baseDomain || host === `www.${baseDomain}`) {
-      return { slug: null, isPlatform: false };
-    }
-    if (host.endsWith(`.${baseDomain}`)) {
+      // apex of custom domain — fall through to query/env
+    } else if (host.endsWith(`.${baseDomain}`)) {
       const sub = host.slice(0, -(baseDomain.length + 1));
       if (sub && !sub.includes(".") && !RESERVED_SUBDOMAINS.has(sub)) {
         return { slug: sub, isPlatform: false };
       }
     }
-  } else {
+  } else if (!isPaasSingleHost(host)) {
+    // Custom host with subdomain (not Vercel/Netlify app name)
     const parts = host.split(".");
     if (parts.length >= 3) {
       const sub = parts[0];
@@ -89,13 +103,10 @@ export function resolveTenantSlugFromLocation({
     }
   }
 
-  // Dev fallbacks only
-  if (isDev()) {
-    const fromQuery = searchParams?.get?.("tenant")?.trim();
-    if (fromQuery) return { slug: fromQuery, isPlatform: false };
-    const fromEnv = (import.meta.env.VITE_TENANT_SLUG || "").trim();
-    if (fromEnv) return { slug: fromEnv, isPlatform: false };
-  }
+  // Same-origin fallbacks (dev + single-host prod like Vercel)
+  if (fromQueryTenant) return { slug: fromQueryTenant, isPlatform: false };
+  const fromEnv = (import.meta.env.VITE_TENANT_SLUG || "").trim();
+  if (fromEnv) return { slug: fromEnv, isPlatform: false };
 
   return { slug: null, isPlatform: false };
 }
@@ -129,7 +140,19 @@ export function tenantHostUrl(slug, path = "/") {
   if (baseDomain) {
     return `${protocol}//${slug}.${baseDomain}${port}${path}`;
   }
-  // local default
+
+  // Local multi-tenant via *.localhost
+  if (typeof window !== "undefined" && window.location.hostname.endsWith(".localhost")) {
+    return `${protocol}//${slug}.localhost${port}${path}`;
+  }
+
+  // Single-host deploy (Vercel/Netlify): keep origin, pass tenant in query
+  if (typeof window !== "undefined") {
+    const url = new URL(path || "/", window.location.origin);
+    url.searchParams.set("tenant", slug);
+    return url.toString();
+  }
+
   return `${protocol}//${slug}.localhost${port}${path}`;
 }
 
