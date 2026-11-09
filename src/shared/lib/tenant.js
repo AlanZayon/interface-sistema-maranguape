@@ -60,13 +60,11 @@ export function resolveTenantSlugFromLocation({
   const fromQueryTenant = searchParams?.get?.("tenant")?.trim();
   const platformFlag = searchParams?.get?.("platform")?.trim()?.toLowerCase();
   if (platformFlag === "1" || platformFlag === "true") {
-    setActAsTenant(null);
     return { slug: null, isPlatform: true };
   }
 
   if (!host) {
     if (fromQueryTenant) {
-      setActAsTenant(fromQueryTenant);
       return { slug: fromQueryTenant, isPlatform: false };
     }
     return { slug: null, isPlatform: false };
@@ -78,7 +76,6 @@ export function resolveTenantSlugFromLocation({
     (baseDomain && host === `${master}.${baseDomain}`) ||
     host.startsWith(`${master}.`)
   ) {
-    setActAsTenant(null);
     return { slug: null, isPlatform: true };
   }
 
@@ -110,7 +107,6 @@ export function resolveTenantSlugFromLocation({
 
   // Explicit tenant on same host: /?tenant=demo
   if (fromQueryTenant) {
-    setActAsTenant(fromQueryTenant);
     return { slug: fromQueryTenant, isPlatform: false };
   }
 
@@ -147,13 +143,17 @@ export function withTenantQuery(path, slug) {
   return `${pathname}?${params.toString()}${hash}`;
 }
 
+/** Build master-console path. Does not touch session — call clearTenantSession() on click. */
 export function platformConsoleUrl(path = "/tenants") {
-  setActAsTenant(null);
   const qIndex = path.indexOf("?");
   const pathname = qIndex >= 0 ? path.slice(0, qIndex) : path;
   const params = new URLSearchParams(qIndex >= 0 ? path.slice(qIndex + 1) : "");
   params.set("platform", "1");
   return `${pathname}?${params.toString()}`;
+}
+
+export function clearTenantSession() {
+  setActAsTenant(null);
 }
 
 export function getActAsTenant() {

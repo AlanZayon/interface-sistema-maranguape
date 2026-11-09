@@ -1,7 +1,11 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth, getHomePath } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
-import { platformConsoleUrl, withTenantQuery } from "@shared/lib/tenant";
+import {
+  clearTenantSession,
+  platformConsoleUrl,
+  withTenantQuery,
+} from "@shared/lib/tenant";
 
 /**
  * Master host (isPlatform): only /tenants* for superadmin.
@@ -34,6 +38,7 @@ export default function RouteModeGuard({ children, mode }) {
 
   if (mode === "tenant") {
     if (isPlatform) {
+      clearTenantSession();
       return <Navigate to={platformConsoleUrl("/tenants")} replace />;
     }
     if (isTenantsPath) {

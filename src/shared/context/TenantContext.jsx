@@ -47,6 +47,7 @@ export function TenantProvider({ children }) {
   );
 
   // Same-host tenant view (?tenant=): keep Act-As for superadmin impersonation.
+  // Only sync here — never clear/set during render (that caused blank screens).
   useEffect(() => {
     if (isPlatform) setActAsTenant(null);
     else if (slug) setActAsTenant(slug);

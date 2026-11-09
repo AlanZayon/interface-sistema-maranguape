@@ -2,7 +2,11 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth, isElevatedRole, canManageUsers, getHomePath } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
-import { platformConsoleUrl, withTenantQuery } from "@shared/lib/tenant";
+import {
+  clearTenantSession,
+  platformConsoleUrl,
+  withTenantQuery,
+} from "@shared/lib/tenant";
 
 /**
  * @param {{
@@ -93,7 +97,10 @@ export default function Sidebar({
                 <NavLink
                   to={platformConsoleUrl("/tenants")}
                   className={linkClass}
-                  onClick={handleNav}
+                  onClick={() => {
+                    clearTenantSession();
+                    handleNav();
+                  }}
                 >
                   <i className="bi bi-box-arrow-left" aria-hidden="true" />
                   <span className="sidebar__label">Console master</span>

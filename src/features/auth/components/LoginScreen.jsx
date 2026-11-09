@@ -20,15 +20,15 @@ function Login() {
 
   const goHome = (nextRole) => {
     const path = getHomePath({ isPlatform, role: nextRole });
-    navigate(isPlatform ? path : withTenantQuery(path, slug));
+    const target = isPlatform ? path : withTenantQuery(path, slug);
+    navigate(target, { replace: true });
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      goHome(role);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only redirect on auth/tenant identity changes
-  }, [isAuthenticated, isPlatform, role, slug, navigate]);
+    if (!isAuthenticated) return;
+    goHome(role);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- redirect once auth/tenant mode is known
+  }, [isAuthenticated, isPlatform, role, slug]);
 
   const { mutate } = useMutation({
     mutationFn: ({ id, password }) => authApi.login(id, password),
