@@ -6,6 +6,7 @@ import { Form, Button, Card } from "react-bootstrap";
 import { AppNotice } from "@shared/ui";
 import { useNavigate } from "react-router-dom";
 import * as authApi from "@shared/api/auth";
+import { withTenantQuery } from "@shared/lib/tenant";
 
 function Login() {
   const navigate = useNavigate();
@@ -17,17 +18,23 @@ function Login() {
   const { branding, loading: tenantLoading, error: tenantError, slug, isPlatform } =
     useTenant();
 
+  const goHome = (nextRole) => {
+    const path = getHomePath({ isPlatform, role: nextRole });
+    navigate(isPlatform ? path : withTenantQuery(path, slug));
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(getHomePath({ isPlatform, role }));
+      goHome(role);
     }
-  }, [isAuthenticated, isPlatform, role, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only redirect on auth/tenant identity changes
+  }, [isAuthenticated, isPlatform, role, slug, navigate]);
 
   const { mutate } = useMutation({
     mutationFn: ({ id, password }) => authApi.login(id, password),
     onSuccess: (data) => {
       login(data);
-      navigate(getHomePath({ isPlatform, role: data.role }));
+      goHome(data.role);
     },
     onError: (err) => {
       const apiMessage = err.response?.data?.message;

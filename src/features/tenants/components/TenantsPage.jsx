@@ -62,8 +62,12 @@ export default function TenantsPage() {
   }
 
   const openTenantSite = (slug) => {
-    // Same-origin (?tenant=) keeps the superadmin cookie; API uses X-Tenant-Slug.
-    window.open(tenantHostUrl(slug, "/"), "_blank", "noopener,noreferrer");
+    // Open tenant dashboard with ?tenant= so the tab stays in município mode.
+    window.open(
+      tenantHostUrl(slug, "/dashboard"),
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   return (

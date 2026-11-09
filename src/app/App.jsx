@@ -22,6 +22,7 @@ import {
   useAuth,
 } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
+import { withTenantQuery } from "@shared/lib/tenant";
 import { FuncionariosList } from "@features/funcionarios";
 import { IndicadoresPage } from "@features/referencias";
 import { DashboardPage } from "@features/dashboard";
@@ -85,13 +86,19 @@ function PlatformShell({ children }) {
 
 function TenantHomeRedirect() {
   const { isAuthenticated, role } = useAuth();
-  const { isPlatform } = useTenant();
+  const { isPlatform, slug } = useTenant();
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  return <Navigate to={getHomePath({ isPlatform, role })} replace />;
+  const home = getHomePath({ isPlatform, role });
+  return (
+    <Navigate
+      to={isPlatform ? home : withTenantQuery(home, slug)}
+      replace
+    />
+  );
 }
 
 function App() {

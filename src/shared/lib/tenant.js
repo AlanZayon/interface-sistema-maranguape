@@ -60,11 +60,15 @@ export function resolveTenantSlugFromLocation({
   const fromQueryTenant = searchParams?.get?.("tenant")?.trim();
   const platformFlag = searchParams?.get?.("platform")?.trim()?.toLowerCase();
   if (platformFlag === "1" || platformFlag === "true") {
+    setActAsTenant(null);
     return { slug: null, isPlatform: true };
   }
 
   if (!host) {
-    if (fromQueryTenant) return { slug: fromQueryTenant, isPlatform: false };
+    if (fromQueryTenant) {
+      setActAsTenant(fromQueryTenant);
+      return { slug: fromQueryTenant, isPlatform: false };
+    }
     return { slug: null, isPlatform: false };
   }
 
@@ -74,6 +78,7 @@ export function resolveTenantSlugFromLocation({
     (baseDomain && host === `${master}.${baseDomain}`) ||
     host.startsWith(`${master}.`)
   ) {
+    setActAsTenant(null);
     return { slug: null, isPlatform: true };
   }
 
@@ -104,7 +109,16 @@ export function resolveTenantSlugFromLocation({
   }
 
   // Explicit tenant on same host: /?tenant=demo
-  if (fromQueryTenant) return { slug: fromQueryTenant, isPlatform: false };
+  if (fromQueryTenant) {
+    setActAsTenant(fromQueryTenant);
+    return { slug: fromQueryTenant, isPlatform: false };
+  }
+
+  // Persist tenant across in-app navigations that drop ?tenant= (same tab).
+  const storedTenant = getActAsTenant();
+  if (storedTenant && (isPaasSingleHost(host) || !baseDomain)) {
+    return { slug: storedTenant, isPlatform: false };
+  }
 
   // Vercel/Netlify single-host apex → console master (lista de tenants)
   if (isPaasSingleHost(host)) {
@@ -116,6 +130,30 @@ export function resolveTenantSlugFromLocation({
   if (fromEnv) return { slug: fromEnv, isPlatform: false };
 
   return { slug: null, isPlatform: false };
+}
+
+/** Keep ?tenant= on SPA navigations (needed for Vercel single-host). */
+export function withTenantQuery(path, slug) {
+  if (!slug || !path) return path;
+  const hashIndex = path.indexOf("#");
+  const hash = hashIndex >= 0 ? path.slice(hashIndex) : "";
+  const withoutHash = hashIndex >= 0 ? path.slice(0, hashIndex) : path;
+  const qIndex = withoutHash.indexOf("?");
+  const pathname = qIndex >= 0 ? withoutHash.slice(0, qIndex) : withoutHash;
+  const params = new URLSearchParams(
+    qIndex >= 0 ? withoutHash.slice(qIndex + 1) : ""
+  );
+  params.set("tenant", slug);
+  return `${pathname}?${params.toString()}${hash}`;
+}
+
+export function platformConsoleUrl(path = "/tenants") {
+  setActAsTenant(null);
+  const qIndex = path.indexOf("?");
+  const pathname = qIndex >= 0 ? path.slice(0, qIndex) : path;
+  const params = new URLSearchParams(qIndex >= 0 ? path.slice(qIndex + 1) : "");
+  params.set("platform", "1");
+  return `${pathname}?${params.toString()}`;
 }
 
 export function getActAsTenant() {

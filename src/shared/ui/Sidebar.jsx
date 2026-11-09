@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth, isElevatedRole, canManageUsers, getHomePath } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
+import { platformConsoleUrl, withTenantQuery } from "@shared/lib/tenant";
 
 /**
  * @param {{
@@ -18,10 +19,11 @@ export default function Sidebar({
   onCreateFuncionario,
 }) {
   const { role } = useAuth();
-  const { branding, vocabulary, isPlatform } = useTenant();
+  const { branding, vocabulary, isPlatform, slug } = useTenant();
   const isElevated = isElevatedRole(role);
   const showUsers = canManageUsers(role);
   const isPlatformConsole = isPlatform && role === "superadmin";
+  const t = (path) => (isPlatformConsole ? path : withTenantQuery(path, slug));
 
   const displayName = isPlatformConsole
     ? "Console Master"
@@ -40,7 +42,7 @@ export default function Sidebar({
   const estruturaActive = ({ isActive }) =>
     `sidebar__link${isActive ? " sidebar__link--active" : ""}`;
 
-  const homeTo = getHomePath({ isPlatform: isPlatformConsole, role });
+  const homeTo = t(getHomePath({ isPlatform: isPlatformConsole, role }));
 
   return (
     <aside
@@ -87,15 +89,26 @@ export default function Sidebar({
             <>
               <div className="sidebar__section-label">Principal</div>
 
+              {role === "superadmin" && (
+                <NavLink
+                  to={platformConsoleUrl("/tenants")}
+                  className={linkClass}
+                  onClick={handleNav}
+                >
+                  <i className="bi bi-box-arrow-left" aria-hidden="true" />
+                  <span className="sidebar__label">Console master</span>
+                </NavLink>
+              )}
+
               {isElevated && (
-                <NavLink to="/dashboard" className={linkClass} onClick={handleNav}>
+                <NavLink to={t("/dashboard")} className={linkClass} onClick={handleNav}>
                   <i className="bi bi-bar-chart-line" aria-hidden="true" />
                   <span className="sidebar__label">Dashboard</span>
                 </NavLink>
               )}
 
               <NavLink
-                to="/estrutura"
+                to={t("/estrutura")}
                 className={estruturaActive}
                 onClick={handleNav}
                 end={false}
@@ -123,7 +136,7 @@ export default function Sidebar({
                   <div className="sidebar__section-label">Administração</div>
                   {showUsers && (
                     <NavLink
-                      to="/usuarios"
+                      to={t("/usuarios")}
                       className={linkClass}
                       onClick={handleNav}
                     >
@@ -132,7 +145,7 @@ export default function Sidebar({
                     </NavLink>
                   )}
                   <NavLink
-                    to="/cargos-comissionados"
+                    to={t("/cargos-comissionados")}
                     className={linkClass}
                     onClick={handleNav}
                   >
@@ -140,7 +153,7 @@ export default function Sidebar({
                     <span className="sidebar__label">Cargos comissionados</span>
                   </NavLink>
                   <NavLink
-                    to="/indicadores"
+                    to={t("/indicadores")}
                     className={linkClass}
                     onClick={handleNav}
                   >

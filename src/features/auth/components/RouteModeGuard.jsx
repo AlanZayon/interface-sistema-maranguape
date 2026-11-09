@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth, getHomePath } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
+import { platformConsoleUrl, withTenantQuery } from "@shared/lib/tenant";
 
 /**
  * Master host (isPlatform): only /tenants* for superadmin.
@@ -8,12 +9,15 @@ import { useTenant } from "@shared/context/TenantContext";
  */
 export default function RouteModeGuard({ children, mode }) {
   const { isAuthenticated, role } = useAuth();
-  const { isPlatform } = useTenant();
+  const { isPlatform, slug } = useTenant();
   const location = useLocation();
-  const tenantHome = getHomePath({ isPlatform: false, role });
+  const tenantHome = withTenantQuery(
+    getHomePath({ isPlatform: false, role }),
+    slug
+  );
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={withTenantQuery("/", slug)} replace />;
   }
 
   const isTenantsPath = location.pathname.startsWith("/tenants");
@@ -30,7 +34,7 @@ export default function RouteModeGuard({ children, mode }) {
 
   if (mode === "tenant") {
     if (isPlatform) {
-      return <Navigate to="/tenants" replace />;
+      return <Navigate to={platformConsoleUrl("/tenants")} replace />;
     }
     if (isTenantsPath) {
       return <Navigate to={tenantHome} replace />;
