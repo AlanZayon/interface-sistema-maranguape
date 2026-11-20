@@ -93,18 +93,22 @@ function Header() {
   }, []);
 
   useEffect(() => {
-    if (!searchQuery) {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    if (!searchQuery.trim()) {
       setAutocompleteResults([]);
+      setShowSuggestions(false);
+      setSearchLoading(false);
       return;
     }
 
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
+    let cancelled = false;
     setSearchLoading(true);
     timeoutRef.current = setTimeout(() => {
       searchApi
         .autocomplete(searchQuery)
         .then((data) => {
+          if (cancelled) return;
           const results = Array.isArray(data)
             ? data.map((item) => {
                 if (typeof item === "string") {
@@ -118,11 +122,19 @@ function Header() {
           setShowSuggestions(true);
         })
         .catch((err) => {
+          if (cancelled) return;
           console.error("Erro ao buscar autocomplete:", err);
           setAutocompleteResults([]);
         })
-        .finally(() => setSearchLoading(false));
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 300);
+
+    return () => {
+      cancelled = true;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [searchQuery]);
 
   const handleSearch = (e) => {

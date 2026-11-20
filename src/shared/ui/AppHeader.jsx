@@ -47,18 +47,22 @@ export default function AppHeader({ onToggleSidebar }) {
   }, []);
 
   useEffect(() => {
-    if (isPlatformConsole || !searchQuery) {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    if (isPlatformConsole || !searchQuery.trim()) {
       setAutocompleteResults([]);
+      setShowSuggestions(false);
+      setSearchLoading(false);
       return;
     }
 
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
+    let cancelled = false;
     setSearchLoading(true);
     timeoutRef.current = setTimeout(() => {
       searchApi
         .autocomplete(searchQuery)
         .then((data) => {
+          if (cancelled) return;
           const results = Array.isArray(data)
             ? data.map((item) =>
                 typeof item === "string" ? { nome: item, tipo: "" } : item
@@ -67,11 +71,17 @@ export default function AppHeader({ onToggleSidebar }) {
           setAutocompleteResults(results);
           setShowSuggestions(true);
         })
-        .catch(() => setAutocompleteResults([]))
-        .finally(() => setSearchLoading(false));
+        .catch(() => {
+          if (cancelled) return;
+          setAutocompleteResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
     }, 300);
 
     return () => {
+      cancelled = true;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [searchQuery, isPlatformConsole]);
