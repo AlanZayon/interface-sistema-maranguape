@@ -21,30 +21,68 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, isAuthenticated, authReady, role } = useAuth();
+  const { login, logout, isAuthenticated, authReady, role } = useAuth();
   const { branding, loading: tenantLoading, error: tenantError, slug, isPlatform } =
     useTenant();
 
+  const rejectMasterAccess = async () => {
+    setError(
+      "Acesso ao console master restrito a superadmin. Entre pela URL do seu município (?tenant=...)."
+    );
+    setIsSubmitting(false);
+    try {
+      await authApi.logout();
+    } catch {
+      // ignore
+    }
+    logout();
+  };
+
   const goHome = (nextRole) => {
+    // Tenant users must never land on the platform console.
+    if (nextRole !== "superadmin") {
+      if (isPlatform && !slug) return false;
+      const redirect = safeRedirectPath(searchParams.get("redirect"));
+      if (
+        redirect &&
+        !redirect.startsWith("/tenants") &&
+        !redirect.includes("platform=1")
+      ) {
+        navigate(redirect, { replace: true });
+        return true;
+      }
+      const path = getHomePath({ isPlatform: false, role: nextRole });
+      navigate(withTenantQuery(path, slug), { replace: true });
+      return true;
+    }
+
     const redirect = safeRedirectPath(searchParams.get("redirect"));
     if (redirect) {
       navigate(redirect, { replace: true });
-      return;
+      return true;
     }
     const path = getHomePath({ isPlatform, role: nextRole });
-    const target = isPlatform ? path : withTenantQuery(path, slug);
+    const target = isPlatform || !slug ? path : withTenantQuery(path, slug);
     navigate(target, { replace: true });
+    return true;
   };
 
   useEffect(() => {
     if (!authReady || !isAuthenticated) return;
-    goHome(role);
+    const ok = goHome(role);
+    if (ok === false) {
+      rejectMasterAccess();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- redirect once auth/tenant mode is known
   }, [authReady, isAuthenticated, isPlatform, role, slug]);
 
   const { mutate } = useMutation({
     mutationFn: ({ id, password }) => authApi.login(id, password),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      if (data.role !== "superadmin" && isPlatform && !slug) {
+        await rejectMasterAccess();
+        return;
+      }
       login(data);
       goHome(data.role);
     },

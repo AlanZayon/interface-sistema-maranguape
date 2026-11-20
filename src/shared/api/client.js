@@ -2,6 +2,7 @@ import axios from "axios";
 import {
   resolveTenantSlugFromLocation,
   getActAsTenant,
+  resolveLogoutPath,
 } from "@shared/lib/tenant";
 
 const AUTH_STORAGE_KEYS = ["isAuthenticated", "username", "role"];
@@ -59,8 +60,12 @@ apiClient.interceptors.response.use(
 
     if (status === 401 && !isAuthEndpoint) {
       clearAuthStorage();
-      if (window.location.pathname !== "/") {
-        window.location.href = "/";
+      const loginPath = resolveLogoutPath({
+        searchParams: new URLSearchParams(window.location.search),
+      });
+      const current = `${window.location.pathname}${window.location.search}`;
+      if (current !== loginPath) {
+        window.location.href = loginPath;
       }
     }
     return Promise.reject(error);

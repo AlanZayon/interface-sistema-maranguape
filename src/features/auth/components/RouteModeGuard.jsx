@@ -42,8 +42,9 @@ export default function RouteModeGuard({ children, mode }) {
     if (!isPlatform) {
       return <Navigate to={tenantHome} replace />;
     }
+    // Only superadmin may use the master console — everyone else stays in tenant.
     if (role !== "superadmin") {
-      return <Navigate to="/" replace />;
+      return <Navigate to={slug ? withTenantQuery("/", slug) : "/"} replace />;
     }
     return children;
   }

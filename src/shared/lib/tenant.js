@@ -158,6 +158,30 @@ export function withTenantQuery(path, slug) {
   return `${pathname}?${params.toString()}${hash}`;
 }
 
+/** Login URL that keeps the person inside their município (never the master console). */
+export function tenantLoginPath(slug) {
+  if (!slug) return "/";
+  return `/?tenant=${encodeURIComponent(slug)}`;
+}
+
+/**
+ * Resolve where to send the user after logout / 401.
+ * Tenant users must stay on their tenant login — never bare `/` on Vercel (master).
+ */
+export function resolveLogoutPath({
+  searchParams,
+  hostname = typeof window !== "undefined" ? window.location.hostname : "",
+} = {}) {
+  const { slug, isPlatform } = resolveTenantSlugFromLocation({
+    searchParams,
+    hostname,
+  });
+  if (!isPlatform && slug) return tenantLoginPath(slug);
+  const stored = getActAsTenant();
+  if (stored) return tenantLoginPath(stored);
+  return "/";
+}
+
 /** Build master-console path. Does not touch session — call clearTenantSession() on click. */
 export function platformConsoleUrl(path = "/tenants") {
   const qIndex = path.indexOf("?");

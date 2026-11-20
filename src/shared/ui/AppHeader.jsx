@@ -14,6 +14,7 @@ import { useAuth } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
 import * as authApi from "@shared/api/auth";
 import * as searchApi from "@shared/api/search";
+import { resolveLogoutPath } from "@shared/lib/tenant";
 
 /**
  * @param {{
@@ -22,7 +23,7 @@ import * as searchApi from "@shared/api/search";
  */
 export default function AppHeader({ onToggleSidebar }) {
   const { logout, username, role } = useAuth();
-  const { isPlatform } = useTenant();
+  const { isPlatform, slug } = useTenant();
   const isPlatformConsole = isPlatform && role === "superadmin";
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -94,13 +95,21 @@ export default function AppHeader({ onToggleSidebar }) {
   };
 
   const logoutUser = async () => {
+    const logoutPath = resolveLogoutPath({
+      searchParams: new URLSearchParams(window.location.search),
+    });
+    // Prefer explicit tenant slug from context when still in município mode.
+    const target =
+      !isPlatformConsole && slug
+        ? `/?tenant=${encodeURIComponent(slug)}`
+        : logoutPath;
     try {
       await authApi.logout();
     } catch {
       toast.error("Sessão encerrada localmente");
     } finally {
       logout();
-      navigate("/");
+      navigate(target, { replace: true });
     }
   };
 

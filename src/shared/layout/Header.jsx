@@ -17,6 +17,7 @@ import { Step1Form, Step2Form, Step3Form } from '@features/funcionarios';
 import { useAuth, isElevatedRole, canManageUsers } from '@features/auth';
 import * as authApi from '@shared/api/auth';
 import * as searchApi from '@shared/api/search';
+import { resolveLogoutPath } from '@shared/lib/tenant';
 import {
   FaSearch,
   FaPlus,
@@ -187,14 +188,17 @@ function Header() {
   const prevStep = () => setCurrentStep(currentStep - 1);
 
   const logoutUser = async () => {
+    const target = resolveLogoutPath({
+      searchParams: new URLSearchParams(window.location.search),
+    });
     try {
       await authApi.logout();
       logout();
-      navigate("/");
+      navigate(target, { replace: true });
     } catch (error) {
       console.error("Erro ao tentar fazer logout:", error);
       logout();
-      navigate("/");
+      navigate(target, { replace: true });
       toast.error("Sessão encerrada localmente");
     }
   };
