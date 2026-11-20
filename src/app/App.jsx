@@ -85,11 +85,15 @@ function PlatformShell({ children }) {
 }
 
 function TenantHomeRedirect() {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, authReady, role } = useAuth();
   const { isPlatform, slug } = useTenant();
 
+  if (!authReady) {
+    return null;
+  }
+
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={withTenantQuery("/", slug)} replace />;
   }
 
   const home = getHomePath({ isPlatform, role });

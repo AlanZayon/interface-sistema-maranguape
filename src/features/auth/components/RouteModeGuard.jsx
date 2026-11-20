@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth, getHomePath } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
+import { LoadingState } from "@shared/ui";
 import {
   clearTenantSession,
   platformConsoleUrl,
@@ -12,7 +13,7 @@ import {
  * Tenant host: block /tenants* (municipal app only).
  */
 export default function RouteModeGuard({ children, mode }) {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, authReady, role } = useAuth();
   const { isPlatform, slug } = useTenant();
   const location = useLocation();
   const tenantHome = withTenantQuery(
@@ -20,8 +21,19 @@ export default function RouteModeGuard({ children, mode }) {
     slug
   );
 
+  if (!authReady) {
+    return <LoadingState label="Validando sessão..." />;
+  }
+
   if (!isAuthenticated) {
-    return <Navigate to={withTenantQuery("/", slug)} replace />;
+    const params = new URLSearchParams();
+    if (slug) params.set("tenant", slug);
+    const redirect = `${location.pathname || "/"}${location.search || ""}`;
+    if (redirect.startsWith("/") && !redirect.startsWith("//") && redirect !== "/") {
+      params.set("redirect", redirect);
+    }
+    const qs = params.toString();
+    return <Navigate to={qs ? `/?${qs}` : "/"} replace />;
   }
 
   const isTenantsPath = location.pathname.startsWith("/tenants");

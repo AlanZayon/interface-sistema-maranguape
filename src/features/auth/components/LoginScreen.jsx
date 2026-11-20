@@ -3,32 +3,44 @@ import { useMutation } from "@tanstack/react-query";
 import { useAuth, getHomePath } from "@features/auth";
 import { useTenant } from "@shared/context/TenantContext";
 import { Form, Button, Card } from "react-bootstrap";
-import { AppNotice } from "@shared/ui";
-import { useNavigate } from "react-router-dom";
+import { AppNotice, LoadingState } from "@shared/ui";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import * as authApi from "@shared/api/auth";
 import { withTenantQuery } from "@shared/lib/tenant";
 
+function safeRedirectPath(value) {
+  if (!value || typeof value !== "string") return null;
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, isAuthenticated, role } = useAuth();
+  const { login, isAuthenticated, authReady, role } = useAuth();
   const { branding, loading: tenantLoading, error: tenantError, slug, isPlatform } =
     useTenant();
 
   const goHome = (nextRole) => {
+    const redirect = safeRedirectPath(searchParams.get("redirect"));
+    if (redirect) {
+      navigate(redirect, { replace: true });
+      return;
+    }
     const path = getHomePath({ isPlatform, role: nextRole });
     const target = isPlatform ? path : withTenantQuery(path, slug);
     navigate(target, { replace: true });
   };
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!authReady || !isAuthenticated) return;
     goHome(role);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- redirect once auth/tenant mode is known
-  }, [isAuthenticated, isPlatform, role, slug]);
+  }, [authReady, isAuthenticated, isPlatform, role, slug]);
 
   const { mutate } = useMutation({
     mutationFn: ({ id, password }) => authApi.login(id, password),
@@ -67,6 +79,10 @@ function Login() {
     ? "Console Master"
     : branding?.displayName || branding?.name || "Sistema";
   const logoUrl = isPlatform ? null : branding?.logoUrl;
+
+  if (!authReady || isAuthenticated) {
+    return <LoadingState label="Carregando..." />;
+  }
 
   return (
     <div className="login-page">

@@ -5,6 +5,13 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+function clearAuthStorage() {
+  sessionStorage.removeItem("isAuthenticated");
+  sessionStorage.removeItem("username");
+  sessionStorage.removeItem("role");
+  localStorage.removeItem("role");
+}
+
 export const AuthProvider = ({ children }) => {
   const storedAuth = sessionStorage.getItem("isAuthenticated");
   const storedUsername = sessionStorage.getItem("username");
@@ -13,6 +20,9 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(storedAuth === "true");
   const [username, setUsername] = useState(storedUsername || "");
   const [role, setRole] = useState(storedRole || "");
+  // New tabs share the auth cookie but not sessionStorage — wait for verify
+  // before ProtectedRoute redirects to login (which was dropping ?tenant=).
+  const [authReady, setAuthReady] = useState(false);
 
   const checkAuthentication = async () => {
     try {
@@ -28,30 +38,19 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         setUsername("");
         setRole("");
-        sessionStorage.removeItem("isAuthenticated");
-        sessionStorage.removeItem("username");
-        sessionStorage.removeItem("role");
+        clearAuthStorage();
       }
     } catch {
       setIsAuthenticated(false);
       setUsername("");
       setRole("");
-      sessionStorage.removeItem("isAuthenticated");
-      sessionStorage.removeItem("username");
-      sessionStorage.removeItem("role");
+      clearAuthStorage();
+    } finally {
+      setAuthReady(true);
     }
   };
 
   useEffect(() => {
-    const auth = sessionStorage.getItem("isAuthenticated");
-    const user = sessionStorage.getItem("username");
-    const userRole = sessionStorage.getItem("role");
-
-    if (auth === "true") {
-      setIsAuthenticated(true);
-      setUsername(user || "");
-      setRole(userRole || "");
-    }
     checkAuthentication();
   }, []);
 
@@ -59,6 +58,7 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(data.authenticated);
     setUsername(data.username);
     setRole(data.role);
+    setAuthReady(true);
     sessionStorage.setItem("isAuthenticated", "true");
     sessionStorage.setItem("username", data.username);
     sessionStorage.setItem("role", data.role);
@@ -69,16 +69,14 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     setUsername("");
     setRole("");
-    sessionStorage.removeItem("isAuthenticated");
-    sessionStorage.removeItem("username");
-    sessionStorage.removeItem("role");
-    localStorage.removeItem("role");
+    clearAuthStorage();
   };
 
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated,
+        authReady,
         username,
         login,
         logout,
